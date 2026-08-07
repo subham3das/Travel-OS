@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  body {
+    font-family: var(--font-sans);
+    background-color: #F8F9FC;
+    color: #111827;
+  }
+}
+
+/* Custom Soft Shadow Utilities matching RULES.md */
+.shadow-soft {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+}
+
+.shadow-soft-lg {
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 8px 20px -5px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-coral {
+  box-shadow: 0 12px 28px -6px rgba(255, 77, 109, 0.35);
+}
+
+/* Coral Gradient Button */
+.bg-gradient-coral {
+  background: linear-gradient(135deg, #FF4D6D 0%, #FF6B8B 100%);
+}
+
+.bg-gradient-coral:hover {
+  background: linear-gradient(135deg, #E63956 0%, #FF5275 100%);
+}
+
+/* Hide Scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

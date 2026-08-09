@@ -21,7 +21,7 @@ export const PaymentProgress: React.FC<PaymentProgressProps> = ({
 
   return (
     <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100/90 shadow-2xs select-none">
-      <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-3 space-y-3">
+      <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-2 space-y-2">
         {/* Top Header Bar */}
         <div className="flex items-center justify-between">
           <button

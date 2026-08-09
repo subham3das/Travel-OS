@@ -210,16 +210,17 @@ export const PaymentPage: React.FC = () => {
           accepted={termsAccepted}
           onToggle={(val) => setTermsAccepted(val)}
         />
-
-        {/* 9. Sticky Bottom Floating Card */}
-        <StickyPaymentBar
-          totalAmount={totalAmount}
-          isDisabled={!termsAccepted}
-          onOpenPriceBreakdown={() => setPriceBreakdownOpen(true)}
-          isBreakdownOpen={priceBreakdownOpen}
-          onPayClick={handleRazorpayPayment}
-        />
       </main>
+
+      {/* 9. Sticky Bottom Bar */}
+      <StickyPaymentBar
+        totalAmount={totalAmount}
+        isDisabled={!termsAccepted}
+        onOpenPriceBreakdown={() => setPriceBreakdownOpen(true)}
+        isBreakdownOpen={priceBreakdownOpen}
+        onPayClick={handleRazorpayPayment}
+        buttonText="Proceed to Payment"
+      />
 
       {/* Detailed Price Breakdown Modal */}
       {priceBreakdownOpen && (

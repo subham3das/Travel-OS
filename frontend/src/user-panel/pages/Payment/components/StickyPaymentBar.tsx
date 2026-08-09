@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface StickyPaymentBarProps {
   totalAmount: number;
@@ -7,6 +7,7 @@ interface StickyPaymentBarProps {
   onOpenPriceBreakdown: () => void;
   isBreakdownOpen?: boolean;
   onPayClick: () => void;
+  buttonText?: string;
 }
 
 export const StickyPaymentBar: React.FC<StickyPaymentBarProps> = ({
@@ -15,28 +16,29 @@ export const StickyPaymentBar: React.FC<StickyPaymentBarProps> = ({
   onOpenPriceBreakdown,
   isBreakdownOpen = false,
   onPayClick,
+  buttonText = 'Proceed to Payment',
 }) => {
   return (
-    <div className="sticky bottom-3 z-40 bg-white rounded-3xl p-4 sm:p-5 border border-purple-100 shadow-xl shadow-purple-500/10 my-4 select-none">
-      <div className="w-full flex items-center justify-between gap-3 sm:gap-6">
-        {/* Left Section: Total Amount */}
+    <div className="sticky bottom-0 inset-x-0 z-40 bg-white/98 backdrop-blur-md border-t border-slate-100 shadow-2xl py-3.5 px-4 sm:px-6 flex items-center justify-between select-none">
+      <div className="w-full max-w-3xl mx-auto flex items-center justify-between gap-4">
+        {/* Left Section: Total Amount & Breakdown */}
         <div className="flex flex-col justify-center min-w-0">
-          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block leading-tight">
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block leading-none pb-1">
             TOTAL PAYABLE
           </span>
-          <span className="text-lg sm:text-2xl font-black text-[#0F172A] tracking-tight block leading-tight">
+          <span className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight block leading-none pb-1">
             ₹{totalAmount.toLocaleString('en-IN')}
           </span>
           <button
             type="button"
             onClick={onOpenPriceBreakdown}
-            className="text-[11px] font-extrabold text-[#583BE8] hover:underline flex items-center gap-0.5 cursor-pointer focus:outline-none pt-0.5"
+            className="text-xs font-bold text-[#6356E5] hover:underline flex items-center gap-1 cursor-pointer focus:outline-none leading-none"
           >
-            <span>View Breakdown</span>
+            <span>View Price Breakdown</span>
             {isBreakdownOpen ? (
-              <ChevronUp className="w-3 h-3 text-[#583BE8]" />
+              <ChevronUp className="w-3.5 h-3.5 text-[#6356E5]" />
             ) : (
-              <ChevronDown className="w-3 h-3 text-[#583BE8]" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#6356E5]" />
             )}
           </button>
         </div>
@@ -46,17 +48,14 @@ export const StickyPaymentBar: React.FC<StickyPaymentBarProps> = ({
           type="button"
           disabled={isDisabled}
           onClick={onPayClick}
-          className={`h-12 sm:h-13 px-4 sm:px-6 rounded-2xl font-black text-xs sm:text-sm shadow-lg transition-all focus:outline-none flex items-center justify-center gap-2 shrink-0 ${
+          className={`h-12 sm:h-13 px-6 rounded-2xl font-extrabold text-sm sm:text-base shadow-md transition-all focus:outline-none flex items-center justify-center gap-2 shrink-0 ${
             isDisabled
               ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-              : 'bg-[#583BE8] hover:bg-[#472bd1] text-white shadow-[#583BE8]/25 cursor-pointer active:scale-[0.98]'
+              : 'bg-[#6356E5] hover:bg-[#5245d6] text-white shadow-[#6356E5]/25 cursor-pointer active:scale-[0.98]'
           }`}
         >
-          <Lock className="w-3.5 h-3.5 text-white shrink-0" />
-          <span className="whitespace-nowrap font-black tracking-tight">
-            Pay ₹{totalAmount.toLocaleString('en-IN')}
-          </span>
-          <ArrowRight className="w-3.5 h-3.5 text-white shrink-0" />
+          <span className="whitespace-nowrap font-black tracking-tight">{buttonText}</span>
+          <ArrowRight className="w-4 h-4 text-white shrink-0" />
         </button>
       </div>
     </div>

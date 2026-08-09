@@ -5,7 +5,7 @@ import {
   getOnboardingStateFromStorage,
   saveOnboardingStateToStorage,
   clearOnboardingStorage,
-} from '../utils/onboarding';
+} from '../user-panel/utils/onboarding';
 
 export interface AuthContextType extends OnboardingState {
   login: (userData: User) => void;

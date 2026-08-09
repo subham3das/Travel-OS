@@ -156,6 +156,7 @@ export const AgencyDetailsPage: React.FC = () => {
 
         {/* 5. About Section */}
         <motion.section
+          id="about-section"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -166,6 +167,7 @@ export const AgencyDetailsPage: React.FC = () => {
 
         {/* 6. Top Packages Carousel */}
         <motion.section
+          id="packages-section"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -176,6 +178,7 @@ export const AgencyDetailsPage: React.FC = () => {
 
         {/* 7. Sample Itinerary & Route Map */}
         <motion.section
+          id="itinerary-section"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -186,6 +189,7 @@ export const AgencyDetailsPage: React.FC = () => {
 
         {/* 8. Traveler Reviews */}
         <motion.section
+          id="reviews-section"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -196,6 +200,7 @@ export const AgencyDetailsPage: React.FC = () => {
 
         {/* 9. Meet Our Team */}
         <motion.section
+          id="team-section"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -206,6 +211,7 @@ export const AgencyDetailsPage: React.FC = () => {
 
         {/* 10. Certifications & Registrations */}
         <motion.section
+          id="certifications-section"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -216,6 +222,7 @@ export const AgencyDetailsPage: React.FC = () => {
 
         {/* 11. Office & Location */}
         <motion.section
+          id="office-section"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -359,6 +366,7 @@ export const AgencyDetailsPage: React.FC = () => {
 
         {/* 15. Policies Section */}
         <motion.section
+          id="policies-section"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -369,6 +377,7 @@ export const AgencyDetailsPage: React.FC = () => {
 
         {/* 16. Support Section */}
         <motion.section
+          id="support-section"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

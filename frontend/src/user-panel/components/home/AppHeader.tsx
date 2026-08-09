@@ -4,6 +4,7 @@ import { Bell, MessageSquare } from 'lucide-react';
 import { Logo } from '../common/Logo';
 
 interface AppHeaderProps {
+  title?: string;
   unreadNotificationsCount?: number;
   unreadMessagesCount?: number;
   onNotificationClick?: () => void;

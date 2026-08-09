@@ -10,6 +10,9 @@ export const useSearch = (initialQuery: string = '', initialFilters: FilterState
     destinations: [],
     packages: [],
     agencies: [],
+    bookings: [],
+    trips: [],
+    messages: [],
     totalCount: 0,
   });
 

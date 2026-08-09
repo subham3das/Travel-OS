@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type SearchTabType = 'all' | 'destinations' | 'packages' | 'agencies';
+export type SearchTabType = 'all' | 'destinations' | 'packages' | 'agencies' | 'bookings' | 'trips' | 'messages';
 
 interface SearchTabsProps {
   activeTab: SearchTabType;
@@ -9,6 +9,9 @@ interface SearchTabsProps {
     destinations: number;
     packages: number;
     agencies: number;
+    bookings?: number;
+    trips?: number;
+    messages?: number;
   };
 }
 
@@ -19,21 +22,25 @@ export const SearchTabs: React.FC<SearchTabsProps> = ({
 }) => {
   const tabs: { id: SearchTabType; label: string; count?: number }[] = [
     { id: 'all', label: 'All' },
-    { id: 'destinations', label: 'Destinations', count: counts.destinations },
     { id: 'packages', label: 'Packages', count: counts.packages },
+    { id: 'bookings', label: 'Bookings', count: counts.bookings },
+    { id: 'trips', label: 'Trips', count: counts.trips },
+    { id: 'messages', label: 'Messages', count: counts.messages },
     { id: 'agencies', label: 'Agencies', count: counts.agencies },
+    { id: 'destinations', label: 'Destinations', count: counts.destinations },
   ];
 
   return (
-    <div className="flex items-center gap-2 border-b border-slate-100 pb-1">
+    <div className="flex items-center gap-1.5 border-b border-slate-100 pb-1 overflow-x-auto scrollbar-none">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onTabChange(tab.id)}
-            className={`relative py-2 px-3 text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
-              isActive ? 'text-[#6356E5]' : 'text-slate-500 hover:text-slate-800'
+            className={`relative py-2 px-3 text-xs font-extrabold transition-all cursor-pointer shrink-0 ${
+              isActive ? 'text-[#583BE8]' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <span>{tab.label}</span>
@@ -43,7 +50,7 @@ export const SearchTabs: React.FC<SearchTabsProps> = ({
               </span>
             )}
             {isActive && (
-              <div className="absolute bottom-0 inset-x-0 h-0.5 bg-[#6356E5] rounded-full" />
+              <div className="absolute bottom-0 inset-x-0 h-0.5 bg-[#583BE8] rounded-full" />
             )}
           </button>
         );
@@ -51,3 +58,5 @@ export const SearchTabs: React.FC<SearchTabsProps> = ({
     </div>
   );
 };
+
+export default SearchTabs;

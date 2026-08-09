@@ -8,7 +8,7 @@ import { addReputationPoints, getUserReputation } from '../../data/reputation';
 export const TripReviewPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
-  const trip = getTripById(tripId);
+  const trip = getTripById(tripId || 'trip-001');
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [overallRating, setOverallRating] = useState(5);
@@ -131,7 +131,7 @@ export const TripReviewPage: React.FC = () => {
             {/* Category Ratings */}
             <div className="space-y-3 pt-2 border-t border-slate-100">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#0F172A]">Agency Service</span>
+                <span className="text-xs font-extrabold text-[#0F172A]">Trip Host ({trip.tripHost.name})</span>
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((s) => (
                     <Star key={s} onClick={() => setAgencyRating(s)} className={`w-4 h-4 cursor-pointer ${s <= agencyRating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
@@ -140,19 +140,19 @@ export const TripReviewPage: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#0F172A]">Hotel & Stay</span>
+                <span className="text-xs font-extrabold text-[#0F172A]">Tour Guide ({trip.guide.name})</span>
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} onClick={() => setHotelRating(s)} className={`w-4 h-4 cursor-pointer ${s <= hotelRating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                    <Star key={s} onClick={() => setGuideRating(s)} className={`w-4 h-4 cursor-pointer ${s <= guideRating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
                   ))}
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#0F172A]">Tour Guide</span>
+                <span className="text-xs font-extrabold text-[#0F172A]">Vehicle & Driver</span>
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} onClick={() => setGuideRating(s)} className={`w-4 h-4 cursor-pointer ${s <= guideRating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                    <Star key={s} onClick={() => setHotelRating(s)} className={`w-4 h-4 cursor-pointer ${s <= hotelRating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
                   ))}
                 </div>
               </div>

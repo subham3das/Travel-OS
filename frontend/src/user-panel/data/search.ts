@@ -1,12 +1,14 @@
 import { DESTINATIONS_DATA } from './destinations';
 import { agenciesData } from './agencies';
 import { packagesData } from './packages';
+import { TRIPS_DATA, USER_BOOKINGS_DATA } from './trips';
+import { INITIAL_CHATS } from './chats';
 import { Agency } from '../types/agency';
 import { TourPackage } from '../types/package';
 
 export interface SearchResultItem {
   id: string;
-  type: 'destination' | 'package' | 'agency';
+  type: 'destination' | 'package' | 'agency' | 'booking' | 'trip' | 'message';
   title: string;
   subtitle: string;
   image: string;
@@ -21,6 +23,9 @@ export interface GroupedSearchResults {
   destinations: SearchResultItem[];
   packages: SearchResultItem[];
   agencies: SearchResultItem[];
+  bookings: SearchResultItem[];
+  trips: SearchResultItem[];
+  messages: SearchResultItem[];
   totalCount: number;
 }
 
@@ -62,21 +67,21 @@ export const isFilterActive = (filters: FilterState): boolean => {
   );
 };
 
-const parsePrice = (priceStr?: string): number => {
+export const parsePrice = (priceStr?: string): number => {
   if (!priceStr) return 0;
-  const numeric = priceStr.replace(/[^0-9]/g, '');
-  return numeric ? parseInt(numeric, 10) : 0;
+  const cleaned = priceStr.replace(/[^0-9]/g, '');
+  return parseInt(cleaned, 10) || 0;
 };
 
-// Convert all domain items to unified SearchResultItem
 export const getAllSearchableItems = (): SearchResultItem[] => {
   const destItems: SearchResultItem[] = DESTINATIONS_DATA.map((d) => ({
     id: d.id,
     type: 'destination',
     title: d.name,
-    subtitle: `${d.state}, ${d.country}`,
+    subtitle: `${d.state} • ${d.region}`,
     image: d.heroImage,
     rating: d.rating,
+    badge: 'Destination',
     targetUrl: `/destination/${d.id}`,
     extraInfo: d.tagline,
     rawPrice: parsePrice(d.startingPrice),
@@ -89,8 +94,8 @@ export const getAllSearchableItems = (): SearchResultItem[] => {
     subtitle: `${a.location} • ${a.yearsExperience}+ yrs exp`,
     image: a.logo,
     rating: a.rating,
-    badge: a.isVerified ? 'Verified' : undefined,
-    targetUrl: `/agency/${a.id}`,
+    badge: a.isVerified ? 'Verified Agency' : 'Agency',
+    targetUrl: `/agencies/${a.id}`,
     extraInfo: `${a.tripsCompleted} Trips`,
     rawPrice: parsePrice(a.startingPrice),
   }));
@@ -108,7 +113,40 @@ export const getAllSearchableItems = (): SearchResultItem[] => {
     rawPrice: parsePrice(p.price),
   }));
 
-  return [...destItems, ...agencyItems, ...packageItems];
+  const bookingItems: SearchResultItem[] = USER_BOOKINGS_DATA.map((b) => ({
+    id: b.id,
+    type: 'booking',
+    title: `Booking: ${b.packageName}`,
+    subtitle: `Booking ID: ${b.id} • ${b.departureDate}`,
+    image: b.coverImage,
+    badge: b.bookingStatus,
+    targetUrl: `/trips`,
+    extraInfo: `₹${b.totalAmount.toLocaleString()} Paid`,
+  }));
+
+  const tripItems: SearchResultItem[] = TRIPS_DATA.map((t) => ({
+    id: t.id,
+    type: 'trip',
+    title: `Trip: ${t.title}`,
+    subtitle: `${t.locations} • Host: ${t.tripHost.name}`,
+    image: t.coverImage,
+    badge: t.status,
+    targetUrl: `/trips/${t.id}`,
+    extraInfo: `${t.duration}`,
+  }));
+
+  const messageItems: SearchResultItem[] = INITIAL_CHATS.map((c) => ({
+    id: c.id,
+    type: 'message',
+    title: `Chat with ${c.agencyName}`,
+    subtitle: c.lastMessage,
+    image: c.agencyLogo,
+    badge: `${c.unreadCount} Unread`,
+    targetUrl: `/chat/${c.id}`,
+    extraInfo: c.lastMessageTime,
+  }));
+
+  return [...destItems, ...agencyItems, ...packageItems, ...bookingItems, ...tripItems, ...messageItems];
 };
 
 export const searchItems = (
@@ -120,7 +158,6 @@ export const searchItems = (
 
   let matched = allItems;
 
-  // 1. Text Query Matching (if query present)
   if (q) {
     matched = matched.filter(
       (item) =>
@@ -130,7 +167,6 @@ export const searchItems = (
     );
   }
 
-  // 2. Budget Filter
   if (filters.minBudget > 5000 || filters.maxBudget < 150000) {
     matched = matched.filter((item) => {
       if (!item.rawPrice) return true;
@@ -138,7 +174,6 @@ export const searchItems = (
     });
   }
 
-  // 3. Destination Filter
   if (filters.selectedDestinations.length > 0) {
     matched = matched.filter((item) =>
       filters.selectedDestinations.some(
@@ -149,17 +184,14 @@ export const searchItems = (
     );
   }
 
-  // 4. Rating Filter
   if (filters.minRating > 0) {
     matched = matched.filter((item) => (item.rating || 0) >= filters.minRating);
   }
 
-  // 5. Verified Agencies Only
   if (filters.verifiedOnly) {
-    matched = matched.filter((item) => item.type !== 'agency' || item.badge === 'Verified');
+    matched = matched.filter((item) => item.type !== 'agency' || item.badge?.includes('Verified'));
   }
 
-  // 6. Sorting
   if (filters.sortBy === 'price_low') {
     matched.sort((a, b) => (a.rawPrice || 0) - (b.rawPrice || 0));
   } else if (filters.sortBy === 'price_high') {
@@ -171,11 +203,17 @@ export const searchItems = (
   const destinations = matched.filter((i) => i.type === 'destination');
   const packagesResults = matched.filter((i) => i.type === 'package');
   const agencies = matched.filter((i) => i.type === 'agency');
+  const bookings = matched.filter((i) => i.type === 'booking');
+  const trips = matched.filter((i) => i.type === 'trip');
+  const messages = matched.filter((i) => i.type === 'message');
 
   return {
     destinations,
     packages: packagesResults,
     agencies,
+    bookings,
+    trips,
+    messages,
     totalCount: matched.length,
   };
 };

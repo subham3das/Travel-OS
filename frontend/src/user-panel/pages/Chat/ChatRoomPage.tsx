@@ -65,7 +65,7 @@ export const ChatRoomPage: React.FC = () => {
             </button>
 
             <div
-              onClick={() => navigate(`/agency/${chat.agencyId}`)}
+              onClick={() => navigate(`/agencies/${chat.agencyId}`)}
               className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
             >
               <div className="relative shrink-0">
@@ -82,7 +82,7 @@ export const ChatRoomPage: React.FC = () => {
               <div>
                 <div className="flex items-center gap-1.5">
                   <h2 className="text-sm font-black text-[#0F172A] tracking-tight">{chat.agencyName}</h2>
-                  {chat.isVerified && <CheckCircle2 className="w-4 h-4 text-[#6356E5] fill-[#6356E5]/10 shrink-0" />}
+                  {chat.isVerified && <CheckCircle2 className="w-4 h-4 text-[#583BE8] fill-[#583BE8]/10 shrink-0" />}
                 </div>
                 <p className="text-[11px] font-semibold text-emerald-600">
                   {chat.isOnline ? 'Online now' : 'Active today'}
@@ -91,13 +91,24 @@ export const ChatRoomPage: React.FC = () => {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => alert('Chat options menu opened')}
-            className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer"
-          >
-            <MoreVertical className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.open(`tel:${chat.hostPhone || '+919876543210'}`)}
+              className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-all cursor-pointer"
+              title="Call Agency / Host"
+            >
+              <Phone className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => alert(`Sharing live GPS coordinates with ${chat.agencyName}...`)}
+              className="w-9 h-9 rounded-full bg-purple-50 text-[#583BE8] hover:bg-purple-100 flex items-center justify-center transition-all cursor-pointer"
+              title="Share Location"
+            >
+              📍
+            </button>
+          </div>
         </div>
       </header>
 

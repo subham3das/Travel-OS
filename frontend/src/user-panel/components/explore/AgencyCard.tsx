@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Star, CheckCircle2, Briefcase } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export interface TravelAgency {
   id: string;
@@ -25,11 +26,21 @@ export const AgencyCard: React.FC<AgencyCardProps> = ({
   onViewAgency,
   className = '',
 }) => {
+  const navigate = useNavigate();
+
+  const handleNavigate = () => {
+    if (onViewAgency) {
+      onViewAgency(agency);
+    } else {
+      navigate(`/agencies/${agency.id}`);
+    }
+  };
+
   return (
     <motion.div
       whileHover={{ y: -3 }}
       transition={{ duration: 0.2 }}
-      onClick={() => onViewAgency && onViewAgency(agency)}
+      onClick={handleNavigate}
       className={`bg-white rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between shrink-0 w-64 sm:w-72 cursor-pointer group ${className}`}
     >
       <div className="space-y-3">
@@ -82,11 +93,12 @@ export const AgencyCard: React.FC<AgencyCardProps> = ({
         </span>
 
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
-            if (onViewAgency) onViewAgency(agency);
+            handleNavigate();
           }}
-          className="text-xs font-bold text-[#FF4D6D] group-hover:underline focus:outline-none"
+          className="text-xs font-bold text-[#FF4D6D] group-hover:underline focus:outline-none cursor-pointer"
         >
           View Profile →
         </button>
@@ -94,3 +106,5 @@ export const AgencyCard: React.FC<AgencyCardProps> = ({
     </motion.div>
   );
 };
+
+export default AgencyCard;

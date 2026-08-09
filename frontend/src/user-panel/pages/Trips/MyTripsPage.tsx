@@ -1,325 +1,441 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Compass,
   CheckCircle2,
   Bookmark,
+  MapPin,
+  Clock,
+  User,
+  Users,
+  ShieldCheck,
+  Truck,
+  Building,
+  ArrowRight,
+  Sparkles,
+  Phone,
   FileText,
+  Star,
+  Download,
+  AlertTriangle,
 } from 'lucide-react';
 
 import { AppHeader } from '../../components/home/AppHeader';
-import { SectionHeader } from '../../components/common/SectionHeader';
-import { StatCard, StatItem } from '../../components/trips/StatCard';
-import { UpcomingTripCard, UpcomingTrip } from '../../components/trips/UpcomingTripCard';
-import { JourneyCard, OngoingJourney } from '../../components/trips/JourneyCard';
-import { QuickActionGrid } from '../../components/trips/QuickActionCard';
-import { PastTripCard, PastTrip } from '../../components/trips/PastTripCard';
-import { SavedTripCard, SavedTrip } from '../../components/trips/SavedTripCard';
-import { BookingCardGrid } from '../../components/trips/BookingCard';
-import { DocumentCardGrid } from '../../components/trips/DocumentCard';
-import { WriteStoryCard } from '../../components/trips/WriteStoryCard';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
-
-// Sample Mock Data matching my trips.png
-const statsData: StatItem[] = [
-  {
-    id: 'upcoming',
-    label: 'Upcoming',
-    count: 2,
-    icon: <Calendar className="w-5 h-5" />,
-    bgColor: 'bg-rose-50',
-    iconColor: 'text-[#FF4D6D]',
-  },
-  {
-    id: 'ongoing',
-    label: 'Ongoing',
-    count: 1,
-    icon: <Compass className="w-5 h-5" />,
-    bgColor: 'bg-emerald-50',
-    iconColor: 'text-emerald-600',
-  },
-  {
-    id: 'completed',
-    label: 'Completed',
-    count: 8,
-    icon: <CheckCircle2 className="w-5 h-5" />,
-    bgColor: 'bg-sky-50',
-    iconColor: 'text-sky-600',
-  },
-  {
-    id: 'saved',
-    label: 'Saved',
-    count: 5,
-    icon: <Bookmark className="w-5 h-5" />,
-    bgColor: 'bg-purple-50',
-    iconColor: 'text-purple-600',
-  },
-];
-
-const upcomingTripData: UpcomingTrip = {
-  id: 'ut-1',
-  title: 'Meghalaya Adventure',
-  dates: '12 – 16 Sept, 2024',
-  duration: '5 Days',
-  locations: 'Shillong, Cherrapunji, Dawki',
-  status: 'Confirmed',
-  imageUrl: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
-  companions: [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
-  ],
-  extraCompanionsCount: 2,
-};
-
-const ongoingJourneyData: OngoingJourney = {
-  id: 'oj-1',
-  title: 'Spiti Valley',
-  currentDay: 'Day 2 of 5',
-  date: '14 Sept, 2024',
-  locations: 'Kaza, Hikkim, Langza',
-  imageUrl: 'https://images.unsplash.com/photo-1568849676085-51415703900f?q=80&w=800&auto=format&fit=crop',
-};
-
-const pastTripsData: PastTrip[] = [
-  {
-    id: 'pt-1',
-    title: 'Manali Escape',
-    date: 'May 2024',
-    duration: '4 Days',
-    rating: 4.8,
-    imageUrl: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=600&auto=format&fit=crop',
-    isWishlisted: true,
-  },
-  {
-    id: 'pt-2',
-    title: 'Goa Getaway',
-    date: 'Jan 2024',
-    duration: '5 Days',
-    rating: 4.6,
-    imageUrl: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=600&auto=format&fit=crop',
-    isWishlisted: true,
-  },
-  {
-    id: 'pt-3',
-    title: 'Bali Bliss',
-    date: 'Oct 2023',
-    duration: '6 Days',
-    rating: 4.9,
-    imageUrl: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=600&auto=format&fit=crop',
-    isWishlisted: true,
-  },
-  {
-    id: 'pt-4',
-    title: 'Ladakh Road Trip',
-    date: 'Aug 2023',
-    duration: '6 Days',
-    rating: 4.7,
-    imageUrl: 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?q=80&w=600&auto=format&fit=crop',
-    isWishlisted: false,
-  },
-];
-
-const savedTripsData: SavedTrip[] = [
-  {
-    id: 'st-1',
-    title: 'Kashmir',
-    imageUrl: 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    id: 'st-2',
-    title: 'Iceland',
-    imageUrl: 'https://images.unsplash.com/photo-1504893524553-b855bce32c67?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    id: 'st-3',
-    title: 'Vietnam',
-    imageUrl: 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    id: 'st-4',
-    title: 'Japan',
-    imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=600&auto=format&fit=crop',
-  },
-];
+import {
+  TRIPS_DATA,
+  USER_BOOKINGS_DATA,
+  USER_TRAVEL_STATS,
+  Trip,
+  UserBooking,
+  MasterTripStatus,
+} from '../../data/trips';
 
 export const MyTripsPage: React.FC = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'trips' | 'bookings' | 'stats'>('trips');
+  const [selectedCompanionTrip, setSelectedCompanionTrip] = useState<Trip | null>(null);
+
+  const getStatusColor = (status: MasterTripStatus) => {
+    switch (status) {
+      case 'Trip Ready':
+      case 'Booking Confirmed':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'Preparing Your Trip':
+      case 'Upcoming':
+        return 'bg-purple-100 text-[#583BE8] border-purple-200';
+      case 'Ongoing':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'Completed':
+      case 'Reviewed':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-slate-100 text-slate-700 border-slate-200';
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#FF4D6D]/20 selection:text-[#FF4D6D]">
-      {/* 1. App Header */}
-      <AppHeader
-        unreadNotificationsCount={2}
-        unreadMessagesCount={1}
-        onNotificationClick={() => navigate('/notifications')}
-        onMessageClick={() => navigate('/chat')}
-      />
+    <div className="min-h-screen bg-[#FBFBFE] text-[#0F172A] font-sans select-none pb-24">
+      {/* Top Navigation */}
+      <AppHeader title="My Trips & Bookings" />
 
-      {/* Main Page Scroll Container */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 sm:space-y-10 pb-28">
-        {/* 2. Page Title & Subtitle */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="space-y-1"
-        >
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-            My Trips
-          </h2>
-          <p className="text-sm sm:text-base text-slate-500 font-medium">
-            Manage your journeys, memories & more ✨
-          </p>
-        </motion.div>
+      <main className="px-4 py-4 sm:px-6 max-w-4xl mx-auto space-y-5">
+        {/* 1. Synchronized Tab Switcher */}
+        <div className="bg-slate-100 p-1 rounded-2xl flex items-center justify-between text-xs font-black select-none shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab('trips')}
+            className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer text-center ${
+              activeTab === 'trips'
+                ? 'bg-white text-[#0F172A] shadow-xs'
+                : 'text-slate-500 hover:text-[#0F172A]'
+            }`}
+          >
+            My Trips ({TRIPS_DATA.length})
+          </button>
 
-        {/* 3. Quick Statistics Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.05 }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4"
-        >
-          {statsData.map((stat) => (
-            <StatCard key={stat.id} stat={stat} />
-          ))}
-        </motion.div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('bookings')}
+            className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer text-center ${
+              activeTab === 'bookings'
+                ? 'bg-white text-[#0F172A] shadow-xs'
+                : 'text-slate-500 hover:text-[#0F172A]'
+            }`}
+          >
+            My Bookings ({USER_BOOKINGS_DATA.length})
+          </button>
 
-        {/* 4. Section 1: Upcoming Trip */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="space-y-3"
-        >
-          <SectionHeader title="Upcoming Trip" onViewAll={() => {}} />
-          <UpcomingTripCard
-            trip={upcomingTripData}
-            onViewTrip={(trip) => navigate(`/trips/${trip.id || 'trip-001'}`)}
-          />
-        </motion.section>
+          <button
+            type="button"
+            onClick={() => setActiveTab('stats')}
+            className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer text-center ${
+              activeTab === 'stats'
+                ? 'bg-white text-[#0F172A] shadow-xs'
+                : 'text-slate-500 hover:text-[#0F172A]'
+            }`}
+          >
+            Travel Stats 🏆
+          </button>
+        </div>
 
-        {/* 5. Section 2: Quick Access */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="space-y-3"
-        >
-          <SectionHeader title="Quick Access" />
-          <QuickActionGrid onActionClick={(act) => alert(`Opened ${act.title}`)} />
-        </motion.section>
+        {/* 2. TAB CONTENT: MY TRIPS */}
+        {activeTab === 'trips' && (
+          <div className="space-y-4">
+            {TRIPS_DATA.map((trip) => (
+              <motion.div
+                key={trip.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-3xl p-5 border border-slate-100 shadow-2xs space-y-4"
+              >
+                {/* Trip Cover & Title Bar */}
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  <img
+                    src={trip.coverImage}
+                    alt={trip.title}
+                    className="w-full sm:w-32 h-32 rounded-2xl object-cover shrink-0"
+                  />
 
-        {/* 6. Section 3: Ongoing Trip */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="space-y-3"
-        >
-          <SectionHeader title="Ongoing Trip" />
+                  <div className="flex-1 min-w-0 space-y-1.5 w-full">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(trip.status)}`}>
+                        {trip.status}
+                      </span>
+                      <span className="text-xs font-extrabold text-[#583BE8] bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-100">
+                        {trip.duration}
+                      </span>
+                    </div>
 
-          {/* Highlighted Travel Documents Ready Card */}
-          <div className="bg-gradient-to-r from-[#F4F0FF] via-[#F8F5FF] to-[#FAF8FF] rounded-3xl p-4 sm:p-5 border border-[#E2D8FF] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#6356E5]/10 text-[#6356E5] flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5" />
+                    <h3 className="text-base sm:text-lg font-black text-[#0F172A] tracking-tight">
+                      {trip.title}
+                    </h3>
+
+                    <p className="text-xs font-semibold text-slate-400 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-[#FF4D6D]" />
+                      {trip.locations}
+                    </p>
+
+                    <div className="flex items-center gap-3 pt-1 text-xs font-extrabold text-slate-600">
+                      <span>{trip.tripStartDate} – {trip.tripEndDate}</span>
+                      <span>•</span>
+                      <span>{trip.travelerCount} Travelers</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Operations Info Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+                  {/* Trip Host & Guide */}
+                  <div className="p-3 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-[#583BE8]" />
+                      <span className="font-extrabold text-[#0F172A]">Trip Operations Team</span>
+                    </div>
+                    <div className="space-y-1 pl-6">
+                      <p className="font-bold text-slate-700">
+                        Host: <span className="text-[#0F172A] font-black">{trip.tripHost.name}</span> ({trip.tripHost.phone})
+                      </p>
+                      <p className="font-bold text-slate-700">
+                        Guide: <span className="text-[#0F172A] font-black">{trip.guide.name}</span> ({trip.guide.phone})
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Vehicle Details */}
+                  <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-100 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-amber-600" />
+                      <span className="font-extrabold text-[#0F172A]">Assigned Vehicle</span>
+                    </div>
+                    <div className="space-y-1 pl-6">
+                      <p className="font-bold text-slate-700">
+                        {trip.vehicle.name} (<span className="font-black text-[#0F172A]">{trip.vehicle.number}</span>)
+                      </p>
+                      <p className="font-semibold text-slate-500 text-[11px]">
+                        Pickup: {trip.vehicle.pickupTime} at {trip.vehicle.pickupLocation}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Hotel Details */}
+                  <div className="p-3 rounded-2xl bg-sky-50/60 border border-sky-100 space-y-1.5 sm:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building className="w-4 h-4 text-sky-600" />
+                        <span className="font-extrabold text-[#0F172A]">Hotel Reservation</span>
+                      </div>
+                      <span className="text-[10px] font-extrabold text-sky-700 bg-sky-100 px-2 py-0.5 rounded-md">
+                        Check-in: {trip.hotel.checkIn}
+                      </span>
+                    </div>
+                    <div className="pl-6 space-y-0.5">
+                      <p className="font-black text-[#0F172A]">{trip.hotel.name}</p>
+                      <p className="text-[11px] font-semibold text-slate-500">{trip.hotel.address}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Traveling With Companions */}
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Users className="w-4 h-4 text-slate-500 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="font-extrabold text-[#0F172A] text-xs block">Traveling With</span>
+                      <p className="text-[11px] font-medium text-slate-500 truncate">
+                        {trip.companions.map((c) => `${c.name} (${c.relationship})`).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCompanionTrip(trip)}
+                    className="text-[11px] font-extrabold text-[#583BE8] hover:underline shrink-0 cursor-pointer"
+                  >
+                    View Roster →
+                  </button>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/trips/${trip.id}`)}
+                    className="flex-1 py-2.5 rounded-2xl bg-[#583BE8] hover:bg-[#472bd1] text-white text-xs font-black shadow-md shadow-[#583BE8]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Compass className="w-4 h-4" />
+                    <span>View Timeline</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCompanionTrip(trip)}
+                    className="flex-1 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Users className="w-4 h-4 text-slate-500" />
+                    <span>View Travelers</span>
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* 3. TAB CONTENT: MY BOOKINGS */}
+        {activeTab === 'bookings' && (
+          <div className="space-y-4">
+            {USER_BOOKINGS_DATA.map((booking) => (
+              <motion.div
+                key={booking.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-3xl p-5 border border-slate-100 shadow-2xs space-y-4"
+              >
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  <img
+                    src={booking.coverImage}
+                    alt={booking.packageName}
+                    className="w-full sm:w-28 h-28 rounded-2xl object-cover shrink-0"
+                  />
+
+                  <div className="flex-1 min-w-0 space-y-1.5 w-full">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(booking.bookingStatus)}`}>
+                        {booking.bookingStatus}
+                      </span>
+                      <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                        {booking.paymentStatus}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-black text-[#0F172A] tracking-tight">
+                      {booking.packageName}
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-500 pt-0.5">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 block">BOOKING ID</span>
+                        <span className="font-extrabold text-[#0F172A]">{booking.id}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 block">DEPARTURE</span>
+                        <span className="font-extrabold text-[#0F172A]">{booking.departureDate}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Countdown & Payment Info */}
+                <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-100 flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#583BE8]" />
+                    <span className="font-extrabold text-[#0F172A]">
+                      Departure in {booking.countdownDays} Days
+                    </span>
+                  </div>
+
+                  <span className="font-black text-[#583BE8]">
+                    ₹{booking.totalAmount.toLocaleString()} Paid
+                  </span>
+                </div>
+
+                {/* Action CTA */}
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/chat')}
+                    className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-extrabold transition-all cursor-pointer"
+                  >
+                    Contact Support
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (booking.associatedTripId) {
+                        navigate(`/trips/${booking.associatedTripId}`);
+                      } else {
+                        alert('Trip details will unlock once the operational host confirms full trip readiness.');
+                      }
+                    }}
+                    className="px-5 py-2.5 rounded-2xl bg-[#583BE8] hover:bg-[#472bd1] text-white text-xs font-black shadow-md shadow-[#583BE8]/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>{booking.associatedTripId ? 'View Trip' : 'View Booking Status'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* 4. TAB CONTENT: TRAVEL STATS */}
+        {activeTab === 'stats' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-2xs space-y-5">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <Sparkles className="w-5 h-5 text-[#583BE8]" />
+                <div>
+                  <h3 className="text-base font-black text-[#0F172A]">Traveler Statistics</h3>
+                  <p className="text-[11px] font-semibold text-slate-400">Your lifetime journey metrics on Travel OS</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-sm font-black text-[#0F172A]">📄 Travel Documents Ready</h4>
-                <p className="text-xs font-semibold text-slate-500">Your booking vouchers and travel documents are available.</p>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-100">
+                  <span className="text-xl font-black text-[#583BE8] block">{USER_TRAVEL_STATS.totalTrips}</span>
+                  <span className="text-[11px] font-extrabold text-slate-500">Total Trips</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100">
+                  <span className="text-xl font-black text-emerald-700 block">{USER_TRAVEL_STATS.completedTrips}</span>
+                  <span className="text-[11px] font-extrabold text-slate-500">Completed</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-100">
+                  <span className="text-xl font-black text-amber-700 block">{USER_TRAVEL_STATS.countriesVisited}</span>
+                  <span className="text-[11px] font-extrabold text-slate-500">States & Countries</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100">
+                  <span className="text-xl font-black text-sky-700 block">{USER_TRAVEL_STATS.avgRatingGiven} ★</span>
+                  <span className="text-[11px] font-extrabold text-slate-500">Avg. Rating</span>
+                </div>
+              </div>
+
+              {/* Badges Section */}
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xs font-black text-[#0F172A] uppercase tracking-wider">
+                  Earned Travel Badges ({USER_TRAVEL_STATS.badges.length})
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {USER_TRAVEL_STATS.badges.map((b, i) => (
+                    <div key={i} className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3">
+                      <span className="text-2xl">{b.icon}</span>
+                      <div>
+                        <h5 className="font-extrabold text-xs text-[#0F172A]">{b.name}</h5>
+                        <p className="text-[10px] font-medium text-slate-400">{b.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => navigate('/trips/trip-001/documents')}
-              className="px-4 py-2 rounded-2xl bg-[#6356E5] hover:bg-[#5245d6] text-white text-xs font-black shadow-md shadow-[#6356E5]/20 cursor-pointer transition-all shrink-0 text-center"
-            >
-              Open Documents
-            </button>
           </div>
-
-          <JourneyCard
-            journey={ongoingJourneyData}
-            onActionClick={(action) => alert(`Action: ${action}`)}
-          />
-        </motion.section>
-
-        {/* 7. Section 4: Past Trips */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="space-y-3"
-        >
-          <SectionHeader title="Past Trips" onViewAll={() => {}} />
-
-          <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {pastTripsData.map((trip) => (
-              <PastTripCard key={trip.id} trip={trip} />
-            ))}
-          </div>
-        </motion.section>
-
-        {/* 8. Section 5: Saved Trips */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="space-y-3"
-        >
-          <SectionHeader title="Saved Trips" onViewAll={() => navigate('/explore')} />
-
-          <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {savedTripsData.map((trip) => (
-              <SavedTripCard key={trip.id} trip={trip} onClick={() => navigate('/explore')} />
-            ))}
-          </div>
-        </motion.section>
-
-        {/* 9. Section 6: Booking History */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="space-y-3"
-        >
-          <SectionHeader title="Booking History" onViewAll={() => {}} />
-          <BookingCardGrid onCategoryClick={(cat) => alert(`Booking history for ${cat.title}`)} />
-        </motion.section>
-
-        {/* 10. Section 7: Trip Documents */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="space-y-3"
-        >
-          <SectionHeader title="Trip Documents" onViewAll={() => {}} />
-          <DocumentCardGrid onCategoryClick={(doc) => alert(`Opened ${doc.title}`)} />
-        </motion.section>
-
-        {/* 11. Section 8: Write Your Story CTA Card */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-        >
-          <WriteStoryCard />
-        </motion.section>
+        )}
       </main>
 
-      {/* 12. Floating Bottom Navigation Bar */}
-      <BottomNavigation activeTab="trips" />
+      {/* Traveling With Companions Roster Modal */}
+      {selectedCompanionTrip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs select-none">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-[#0F172A]">Travel Companions</h3>
+                <p className="text-[11px] font-semibold text-slate-400">{selectedCompanionTrip.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCompanionTrip(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {selectedCompanionTrip.companions.map((comp) => (
+                <div key={comp.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={comp.photo} alt={comp.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
+                    <div>
+                      <h4 className="font-black text-xs text-[#0F172A]">{comp.name}</h4>
+                      <p className="text-[10px] font-semibold text-slate-400">{comp.gender} • {comp.age} yrs • {comp.relationship}</p>
+                    </div>
+                  </div>
+
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                    comp.isPrimary ? 'bg-purple-100 text-[#583BE8]' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {comp.isPrimary ? 'Primary Traveler' : 'Companion'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      <BottomNavigation />
     </div>
   );
 };

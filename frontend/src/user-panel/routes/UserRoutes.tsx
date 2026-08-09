@@ -95,6 +95,7 @@ export const UserRoutes = () => (
         <Route path="/agencies" element={<AgencyListingPage />} />
         <Route path="/agencies/:id" element={<AgencyDetailsPage />} />
         <Route path="/agencies/:agencyId" element={<AgencyDetailsPage />} />
+        <Route path="/agency/:agencyId" element={<AgencyDetailsPage />} />
         <Route path="/package/:id" element={<PackageDetailsPage />} />
         <Route path="/package/:packageId" element={<PackageDetailsPage />} />
         <Route path="/booking/traveler-details/:packageId" element={<TravelerDetailsPage />} />

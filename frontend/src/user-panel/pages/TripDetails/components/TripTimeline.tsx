@@ -1,53 +1,115 @@
 import React from 'react';
-import { Check, Luggage, Plane, Flag } from 'lucide-react';
-import { Trip } from '../../../data/trips';
+import { motion } from 'framer-motion';
+import { CheckCircle2, Clock, MapPin, AlertTriangle, ShieldAlert, Sparkles, MessageSquare } from 'lucide-react';
+import { Trip, TimelineMilestone } from '../../../data/trips';
 
 interface TripTimelineProps {
   trip: Trip;
 }
 
 export const TripTimeline: React.FC<TripTimelineProps> = ({ trip }) => {
-  const steps = [
-    { title: 'Booking Confirmed', date: '12 May, 2025', icon: <Check className="w-3.5 h-3.5 text-white stroke-[3]" />, status: 'completed' },
-    { title: 'Agency Preparing', date: 'In Progress', icon: <Luggage className="w-3.5 h-3.5 text-white" />, status: 'current' },
-    { title: 'Trip Starts', date: trip.tripStartDate, icon: <Plane className="w-3.5 h-3.5 text-white" />, status: 'upcoming' },
-    { title: 'Trip Ends', date: trip.tripEndDate, icon: <Flag className="w-3.5 h-3.5 text-slate-500" />, status: 'upcoming' },
-  ];
+  const milestones: TimelineMilestone[] = trip.timeline || [];
 
   return (
-    <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-4">
-      <h2 className="text-base sm:text-lg font-black text-[#0F172A] tracking-tight">
-        Trip Timeline
-      </h2>
-
-      <div className="relative pt-2 pb-1 px-4">
-        {/* Background Connecting Line aligned through middle center of circular icons (top-4) */}
-        <div className="absolute top-4 left-10 right-10 h-[2px] bg-slate-200 -translate-y-1/2 z-0" />
-        <div className="absolute top-4 left-10 w-1/3 h-[2px] bg-emerald-500 -translate-y-1/2 z-0" />
-
-        <div className="relative z-10 flex items-start justify-between">
-          {steps.map((s, idx) => {
-            let bgClass = 'bg-slate-200 border-slate-300 text-slate-400';
-            if (s.status === 'completed') bgClass = 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20';
-            if (s.status === 'current') bgClass = 'bg-[#6356E5] text-white shadow-md shadow-[#6356E5]/25 ring-4 ring-[#6356E5]/15';
-            if (s.title === 'Trip Starts') bgClass = 'bg-amber-500 text-white shadow-md shadow-amber-500/20';
-
-            return (
-              <div key={idx} className="flex flex-col items-center text-center space-y-2 max-w-[90px]">
-                {/* Smaller Circle Icon (w-8 h-8) */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${bgClass}`}>
-                  {s.icon}
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-extrabold text-[#0F172A] leading-tight">{s.title}</p>
-                  <p className="text-[10px] font-semibold text-slate-400 pt-0.5">{s.date}</p>
-                </div>
-              </div>
-            );
-          })}
+    <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-2xs space-y-5 select-none">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h2 className="text-base sm:text-lg font-black text-[#0F172A] tracking-tight">
+            Live Trip Timeline
+          </h2>
+          <p className="text-[11px] font-semibold text-slate-400">
+            Real-time activity updates & daily itinerary progression
+          </p>
         </div>
+
+        <span className="px-3 py-1 rounded-full bg-purple-50 text-[#583BE8] text-xs font-black border border-purple-100 shadow-2xs">
+          {trip.duration}
+        </span>
+      </div>
+
+      {/* Daily Milestones */}
+      <div className="space-y-4">
+        {milestones.map((m) => (
+          <div
+            key={m.id}
+            className={`p-4 rounded-2xl border space-y-3 transition-all ${
+              m.status === 'completed'
+                ? 'bg-emerald-50/40 border-emerald-200/80'
+                : m.status === 'current'
+                ? 'bg-purple-50/50 border-purple-200 ring-2 ring-[#583BE8]/10'
+                : 'bg-slate-50/60 border-slate-200/60 opacity-80'
+            }`}
+          >
+            {/* Header: Day Number & Status */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black ${
+                  m.status === 'completed'
+                    ? 'bg-emerald-600 text-white'
+                    : m.status === 'current'
+                    ? 'bg-[#583BE8] text-white'
+                    : 'bg-slate-300 text-slate-700'
+                }`}>
+                  D{m.dayNumber}
+                </span>
+
+                <h3 className="text-xs sm:text-sm font-black text-[#0F172A]">{m.title}</h3>
+              </div>
+
+              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                m.status === 'completed'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : m.status === 'current'
+                  ? 'bg-purple-100 text-[#583BE8]'
+                  : 'bg-slate-200 text-slate-600'
+              }`}>
+                {m.status}
+              </span>
+            </div>
+
+            <p className="text-xs font-medium text-slate-600 leading-relaxed pl-9">
+              {m.description}
+            </p>
+
+            {/* Current Activity Highlight */}
+            {m.currentActivity && (
+              <div className="ml-9 p-2.5 rounded-xl bg-purple-100/80 border border-purple-200 text-xs font-extrabold text-[#583BE8] flex items-center gap-2">
+                <Sparkles className="w-4 h-4 shrink-0" />
+                <span>Now In Progress: {m.currentActivity}</span>
+              </div>
+            )}
+
+            {/* Activities List */}
+            <div className="ml-9 space-y-1 text-xs">
+              {m.completedActivities.map((act, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>{act}</span>
+                </div>
+              ))}
+
+              {m.upcomingActivities.map((act, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-slate-400 font-medium">
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  <span>{act}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Shared Trip Notes / Notices */}
+            {m.tripNote && (
+              <div className="ml-9 p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 space-y-1">
+                <span className="font-extrabold text-[#583BE8] flex items-center gap-1">
+                  <MessageSquare className="w-3.5 h-3.5" /> Agency Host Note
+                </span>
+                <p className="font-medium text-slate-600 leading-relaxed">{m.tripNote}</p>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
 };
+
+export default TripTimeline;

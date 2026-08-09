@@ -17,7 +17,7 @@ export interface ChatConversation {
   agencyLogo: string;
   isVerified: boolean;
   isOnline: boolean;
-  category: 'agencies' | 'support' | 'bookings';
+  category: 'agencies' | 'support' | 'bookings' | 'hosts';
   lastMessage: string;
   lastMessageTime: string;
   unreadCount: number;
@@ -26,61 +26,44 @@ export interface ChatConversation {
   destinationName?: string;
   travelDates?: string;
   tripId?: string;
+  hostPhone?: string;
   messages: ChatMessage[];
 }
 
-export const INITIAL_CHATS: ChatConversation[] = [
+export let INITIAL_CHATS: ChatConversation[] = [
   {
     id: 'chat-001',
     agencyId: 'agency-001',
-    agencyName: 'Himalayan Explorers',
-    agencyLogo: 'https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Wander North Travel',
+    agencyLogo: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=200&auto=format&fit=crop',
     isVerified: true,
     isOnline: true,
     category: 'agencies',
-    lastMessage: 'Pickup location has been updated.',
+    lastMessage: 'Pickup point confirmed at Guwahati Airport Gate 3 at 08:30 AM.',
     lastMessageTime: '10:42 AM',
     unreadCount: 2,
-    bookingId: 'APTR12345',
-    packageName: 'Magical Meghalaya (5N/6D)',
+    bookingId: 'BK-2025-0012',
+    packageName: 'Magical Meghalaya Tour',
     destinationName: 'Meghalaya',
-    travelDates: '15 Oct – 20 Oct, 2025',
+    travelDates: '20 May – 26 May, 2025',
     tripId: 'trip-001',
+    hostPhone: '+91 98765 43210',
     messages: [
       {
         id: 'm1',
         senderId: 'agency-001',
-        senderName: 'Himalayan Explorers',
+        senderName: 'Wander North Travel',
         type: 'text',
-        text: 'Hello Subham! Welcome to Himalayan Explorers. We are excited to guide your Meghalaya expedition!',
+        text: 'Hello Subham! Your Meghalaya trip is confirmed. Our lead host Subham Das and guide Ramesh Sangma will accompany your group.',
         timestamp: '10:30 AM',
         status: 'read',
       },
       {
         id: 'm2',
-        senderId: 'system',
-        senderName: 'System',
-        type: 'system',
-        text: '🎉 Booking APTR12345 has been confirmed by Himalayan Explorers.',
-        timestamp: '10:32 AM',
-        status: 'read',
-        systemMessageType: 'booking',
-      },
-      {
-        id: 'm3',
-        senderId: 'user-001',
-        senderName: 'Subham Das',
-        type: 'text',
-        text: 'Thank you! Could you confirm the exact pickup location in Guwahati?',
-        timestamp: '10:38 AM',
-        status: 'read',
-      },
-      {
-        id: 'm4',
         senderId: 'agency-001',
-        senderName: 'Himalayan Explorers',
+        senderName: 'Wander North Travel',
         type: 'text',
-        text: 'Pickup location has been updated. Our driver Ramesh Sangma will meet you right outside Guwahati Railway Station Gate 1.',
+        text: 'Pickup point confirmed at Guwahati Airport Gate 3 at 08:30 AM.',
         timestamp: '10:42 AM',
         status: 'read',
       },
@@ -88,122 +71,69 @@ export const INITIAL_CHATS: ChatConversation[] = [
   },
   {
     id: 'chat-002',
-    agencyId: 'agency-002',
-    agencyName: 'North Wanderers',
-    agencyLogo: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=200&auto=format&fit=crop',
+    agencyId: 'host-001',
+    agencyName: 'Subham Das (Lead Trip Host)',
+    agencyLogo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
     isVerified: true,
     isOnline: true,
-    category: 'agencies',
-    lastMessage: "Hi Subham! Here's the itinerary for your trip.",
-    lastMessageTime: 'Yesterday',
+    category: 'hosts',
+    lastMessage: 'Hi Subham, I will meet you tomorrow morning at Guwahati Airport.',
+    lastMessageTime: '09:15 AM',
     unreadCount: 1,
-    bookingId: 'APTR67890',
-    packageName: 'Spiti Valley Motorbike Trek',
-    destinationName: 'Spiti Valley',
-    travelDates: '01 Nov – 07 Nov, 2025',
+    bookingId: 'BK-2025-0012',
+    packageName: 'Magical Meghalaya Tour',
+    destinationName: 'Shillong & Cherrapunji',
+    travelDates: '20 May – 26 May, 2025',
     tripId: 'trip-001',
+    hostPhone: '+91 98765 43210',
     messages: [
       {
-        id: 'm10',
-        senderId: 'agency-002',
-        senderName: 'North Wanderers',
+        id: 'hm1',
+        senderId: 'host-001',
+        senderName: 'Subham Das',
         type: 'text',
-        text: "Hi Subham! Here's the itinerary for your trip.",
-        timestamp: 'Yesterday',
+        text: 'Hi Subham, I will meet you tomorrow morning at Guwahati Airport.',
+        timestamp: '09:15 AM',
         status: 'read',
       },
     ],
   },
   {
     id: 'chat-003',
-    agencyId: 'agency-003',
-    agencyName: 'Wanderlust Trails',
-    agencyLogo: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=200&auto=format&fit=crop',
-    isVerified: true,
-    isOnline: true,
-    category: 'agencies',
-    lastMessage: 'Thank you! We look forward to hosting you.',
-    lastMessageTime: 'Yesterday',
-    unreadCount: 0,
-    bookingId: 'APTR54321',
-    packageName: 'Kerala Backwaters & Munnar',
-    destinationName: 'Kerala',
-    travelDates: '12 Dec – 18 Dec, 2025',
-    messages: [
-      {
-        id: 'm20',
-        senderId: 'agency-003',
-        senderName: 'Wanderlust Trails',
-        type: 'text',
-        text: 'Thank you! We look forward to hosting you.',
-        timestamp: 'Yesterday',
-        status: 'read',
-      },
-    ],
-  },
-  {
-    id: 'chat-004',
     agencyId: 'support-001',
-    agencyName: 'ApnaTrip Support',
-    agencyLogo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Travel OS 24x7 Customer Support',
+    agencyLogo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop',
     isVerified: true,
     isOnline: true,
     category: 'support',
-    lastMessage: 'How can we help you today?',
-    lastMessageTime: 'Mon',
-    unreadCount: 3,
-    messages: [
-      {
-        id: 'm30',
-        senderId: 'support-001',
-        senderName: 'ApnaTrip Support',
-        type: 'text',
-        text: 'How can we help you today?',
-        timestamp: 'Mon',
-        status: 'read',
-      },
-    ],
-  },
-  {
-    id: 'chat-005',
-    agencyId: 'agency-004',
-    agencyName: 'Adventure Kingdom',
-    agencyLogo: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=200&auto=format&fit=crop',
-    isVerified: true,
-    isOnline: false,
-    category: 'bookings',
-    lastMessage: 'Your documents are confirmed.',
-    lastMessageTime: 'Sun',
+    lastMessage: 'How can we help you with your upcoming booking BK-2025-0012?',
+    lastMessageTime: 'Yesterday',
     unreadCount: 0,
-    bookingId: 'APTR11223',
-    packageName: 'Kedarkantha Winter Trek',
-    destinationName: 'Uttarakhand',
-    travelDates: '20 Dec – 25 Dec, 2025',
+    bookingId: 'BK-2025-0012',
+    packageName: 'Travel OS Concierge',
+    destinationName: 'Global Support',
+    travelDates: '24x7 Support',
+    tripId: 'trip-001',
+    hostPhone: '+91 98765 99999',
     messages: [
       {
-        id: 'm40',
-        senderId: 'agency-004',
-        senderName: 'Adventure Kingdom',
+        id: 'sm1',
+        senderId: 'support-001',
+        senderName: 'Travel OS Support',
         type: 'text',
-        text: 'Your documents are confirmed.',
-        timestamp: 'Sun',
+        text: 'How can we help you with your upcoming booking BK-2025-0012?',
+        timestamp: 'Yesterday',
         status: 'read',
       },
     ],
   },
 ];
 
-let chatsStore = [...INITIAL_CHATS];
+export const getChats = (): ChatConversation[] => INITIAL_CHATS;
+export const getChatById = (id: string): ChatConversation =>
+  INITIAL_CHATS.find((c) => c.id === id) || INITIAL_CHATS[0];
 
-export const getChats = (): ChatConversation[] => {
-  return chatsStore;
-};
-
-export const getChatById = (id: string): ChatConversation | undefined => {
-  return chatsStore.find((c) => c.id === id || c.agencyId === id);
-};
-
-export const sendMessage = (chatId: string, text: string): ChatMessage => {
+export const sendMessage = (chatId: string, text: string) => {
   const newMsg: ChatMessage = {
     id: `m-${Date.now()}`,
     senderId: 'user-001',
@@ -214,7 +144,7 @@ export const sendMessage = (chatId: string, text: string): ChatMessage => {
     status: 'sent',
   };
 
-  chatsStore = chatsStore.map((c) => {
+  INITIAL_CHATS = INITIAL_CHATS.map((c) => {
     if (c.id === chatId) {
       return {
         ...c,
@@ -225,10 +155,13 @@ export const sendMessage = (chatId: string, text: string): ChatMessage => {
     }
     return c;
   });
-
-  return newMsg;
 };
 
-export const markChatRead = (chatId: string): void => {
-  chatsStore = chatsStore.map((c) => (c.id === chatId ? { ...c, unreadCount: 0 } : c));
+export const markChatRead = (chatId: string) => {
+  INITIAL_CHATS = INITIAL_CHATS.map((c) => {
+    if (c.id === chatId) {
+      return { ...c, unreadCount: 0 };
+    }
+    return c;
+  });
 };

@@ -545,7 +545,7 @@ export const ExplorePage: React.FC = () => {
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
             {topAgencies.map((agency) => (
-              <AgencyCard key={agency.id} agency={agency} onViewAgency={() => navigate(`/agency/${agency.id}`)} />
+              <AgencyCard key={agency.id} agency={agency} onViewAgency={() => navigate(`/agencies/${agency.id}`)} />
             ))}
           </div>
         </motion.section>

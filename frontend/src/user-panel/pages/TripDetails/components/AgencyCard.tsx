@@ -13,7 +13,7 @@ export const AgencyCard: React.FC<AgencyCardProps> = ({ trip }) => {
 
   return (
     <div
-      onClick={() => navigate(`/agency/${agency.id}`)}
+      onClick={() => navigate(`/agencies/${agency.id}`)}
       className="bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
     >
       <div className="flex items-center gap-3.5 min-w-0">
@@ -54,7 +54,7 @@ export const AgencyCard: React.FC<AgencyCardProps> = ({ trip }) => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/agency/${agency.id}`);
+            navigate(`/agencies/${agency.id}`);
           }}
           className="w-9 h-9 rounded-2xl bg-purple-50 text-[#6356E5] hover:bg-purple-100 flex items-center justify-center transition-colors cursor-pointer"
           title="Chat with agency"

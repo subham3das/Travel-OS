@@ -17,26 +17,26 @@ export const StickyPaymentBar: React.FC<StickyPaymentBarProps> = ({
   onPayClick,
 }) => {
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-100/90 shadow-2xl h-[88px] px-5 py-4 flex items-center justify-center">
-      <div className="w-full max-w-[768px] flex items-center justify-between gap-[24px]">
-        {/* Left Section */}
-        <div className="flex flex-col justify-center gap-[4px] shrink-0">
-          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider leading-none">
+    <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-100/90 shadow-2xl py-3 px-4 sm:px-6 flex items-center justify-center select-none">
+      <div className="w-full max-w-3xl flex items-center justify-between gap-3 sm:gap-6">
+        {/* Left Section: Total Amount */}
+        <div className="flex flex-col justify-center min-w-0">
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
             TOTAL PAYABLE
-          </p>
-          <p className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight leading-none">
+          </span>
+          <span className="text-lg sm:text-2xl font-black text-[#0F172A] tracking-tight block">
             ₹{totalAmount.toLocaleString('en-IN')}
-          </p>
+          </span>
           <button
             type="button"
             onClick={onOpenPriceBreakdown}
-            className="text-xs font-extrabold text-[#6356E5] hover:underline flex items-center gap-1 cursor-pointer focus:outline-none leading-none pt-[2px]"
+            className="text-[11px] font-extrabold text-[#583BE8] hover:underline flex items-center gap-0.5 cursor-pointer focus:outline-none"
           >
-            <span>View Price Breakdown</span>
+            <span>Breakdown</span>
             {isBreakdownOpen ? (
-              <ChevronUp className="w-3.5 h-3.5 text-[#6356E5]" />
+              <ChevronUp className="w-3 h-3 text-[#583BE8]" />
             ) : (
-              <ChevronDown className="w-3.5 h-3.5 text-[#6356E5]" />
+              <ChevronDown className="w-3 h-3 text-[#583BE8]" />
             )}
           </button>
         </div>
@@ -46,10 +46,10 @@ export const StickyPaymentBar: React.FC<StickyPaymentBarProps> = ({
           type="button"
           disabled={isDisabled}
           onClick={onPayClick}
-          className={`h-[56px] w-[62%] max-w-[320px] rounded-[16px] font-black text-xs sm:text-sm shadow-lg transition-all focus:outline-none flex items-center justify-center gap-[12px] shrink-0 ${
+          className={`h-12 sm:h-14 px-4 sm:px-6 rounded-2xl font-black text-xs sm:text-sm shadow-lg transition-all focus:outline-none flex items-center justify-center gap-2 shrink-0 ${
             isDisabled
               ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-              : 'bg-[#6356E5] hover:bg-[#5245d6] text-white shadow-[#6356E5]/25 cursor-pointer'
+              : 'bg-[#583BE8] hover:bg-[#472bd1] text-white shadow-[#583BE8]/25 cursor-pointer active:scale-[0.98]'
           }`}
         >
           <Lock className="w-4 h-4 text-white shrink-0" />
@@ -62,3 +62,5 @@ export const StickyPaymentBar: React.FC<StickyPaymentBarProps> = ({
     </div>
   );
 };
+
+export default StickyPaymentBar;

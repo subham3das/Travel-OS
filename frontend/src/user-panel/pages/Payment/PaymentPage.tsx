@@ -154,9 +154,10 @@ export const PaymentPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#583BE8]/20 selection:text-[#583BE8] pb-12">
+      {/* 1. Sticky Header & Stepper */}
+      <PaymentProgress currentStep={3} />
+
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* 1. Header & Stepper */}
-        <PaymentProgress currentStep={3} />
 
         {paymentFailed && (
           <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-3xl space-y-2">

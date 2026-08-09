@@ -4,9 +4,13 @@ import { ArrowLeft, Headphones, Check } from 'lucide-react';
 
 interface PaymentProgressProps {
   currentStep?: number; // 3 for Payment
+  stepTitle?: string;
 }
 
-export const PaymentProgress: React.FC<PaymentProgressProps> = ({ currentStep = 3 }) => {
+export const PaymentProgress: React.FC<PaymentProgressProps> = ({
+  currentStep = 3,
+  stepTitle = 'Payment',
+}) => {
   const navigate = useNavigate();
 
   const steps = [
@@ -16,26 +20,28 @@ export const PaymentProgress: React.FC<PaymentProgressProps> = ({ currentStep = 
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100/90 -mx-4 px-4 sm:-mx-6 sm:px-6 py-3 space-y-2.5 shadow-2xs select-none">
       {/* Top Header Bar */}
-      <div className="flex items-center justify-between">
+      <div className="max-w-3xl mx-auto flex items-center justify-between">
         <button
+          type="button"
           onClick={() => navigate(-1)}
-          className="w-10 h-10 rounded-full bg-white border border-slate-200/80 text-slate-800 flex items-center justify-center shadow-2xs hover:bg-slate-50 transition-all cursor-pointer focus:outline-none shrink-0"
+          className="w-9 h-9 rounded-full bg-slate-50 border border-slate-200/80 text-slate-800 flex items-center justify-center shadow-2xs hover:bg-slate-100 transition-all cursor-pointer focus:outline-none shrink-0"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
         </button>
 
-        <div className="text-center space-y-0.5">
-          <h1 className="text-lg sm:text-xl font-black text-[#0F172A] tracking-tight">
-            Payment
+        <div className="text-center">
+          <h1 className="text-base sm:text-lg font-black text-[#0F172A] tracking-tight leading-none">
+            {currentStep === 1 ? 'Traveler Details' : currentStep === 2 ? 'Review Booking' : stepTitle}
           </h1>
-          <p className="text-xs font-bold text-slate-400">Step {currentStep} of 3</p>
+          <p className="text-[10px] font-bold text-slate-400 pt-0.5">Step {currentStep} of 3</p>
         </div>
 
         <button
+          type="button"
           onClick={() => alert('Support team is available 24/7! Call +91 98765 43210')}
-          className="flex items-center gap-1.5 text-xs font-extrabold text-[#0F172A] hover:text-[#6356E5] transition-colors cursor-pointer"
+          className="flex items-center gap-1 text-xs font-extrabold text-[#0F172A] hover:text-[#583BE8] transition-colors cursor-pointer"
         >
           <Headphones className="w-4 h-4 text-[#0F172A]" />
           <span>Help</span>
@@ -43,12 +49,12 @@ export const PaymentProgress: React.FC<PaymentProgressProps> = ({ currentStep = 
       </div>
 
       {/* Stepper Progress Bar */}
-      <div className="relative flex items-center justify-between max-w-lg mx-auto px-4 py-2">
+      <div className="relative flex items-center justify-between max-w-md mx-auto px-4 pt-1">
         {/* Connecting Lines */}
-        <div className="absolute top-1/2 left-10 right-10 -translate-y-4 h-0.5 bg-slate-200 z-0" />
+        <div className="absolute top-1/2 left-8 right-8 -translate-y-3 h-0.5 bg-slate-200 z-0" />
         <div
-          className="absolute top-1/2 left-10 -translate-y-4 h-0.5 bg-[#6356E5] transition-all duration-500 z-0"
-          style={{ width: '100%' }}
+          className="absolute top-1/2 left-8 -translate-y-3 h-0.5 bg-[#583BE8] transition-all duration-500 z-0"
+          style={{ width: currentStep === 1 ? '0%' : currentStep === 2 ? '50%' : '100%' }}
         />
 
         {steps.map((st) => {
@@ -56,19 +62,22 @@ export const PaymentProgress: React.FC<PaymentProgressProps> = ({ currentStep = 
           const isActive = st.number === currentStep;
 
           return (
-            <div key={st.number} className="relative z-10 flex flex-col items-center gap-1.5">
+            <div key={st.number} className="relative z-10 flex flex-col items-center gap-0.5">
               <div
-                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                  isCompleted || isActive
-                    ? 'bg-[#6356E5] text-white shadow-md shadow-[#6356E5]/25'
-                    : 'bg-slate-200 text-slate-500'
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${
+                  isCompleted
+                    ? 'bg-[#583BE8] text-white shadow-xs'
+                    : isActive
+                    ? 'bg-[#583BE8] text-white ring-4 ring-[#583BE8]/15 shadow-md'
+                    : 'bg-slate-100 text-slate-400 border border-slate-200'
                 }`}
               >
-                {isCompleted ? <Check className="w-4 h-4 stroke-[3]" /> : st.number}
+                {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : st.number}
               </div>
+
               <span
-                className={`text-[10px] sm:text-xs font-extrabold whitespace-nowrap ${
-                  isActive || isCompleted ? 'text-[#6356E5]' : 'text-slate-400'
+                className={`text-[10px] font-extrabold transition-colors ${
+                  isActive ? 'text-[#583BE8]' : isCompleted ? 'text-[#0F172A]' : 'text-slate-400'
                 }`}
               >
                 {st.label}
@@ -80,3 +89,5 @@ export const PaymentProgress: React.FC<PaymentProgressProps> = ({ currentStep = 
     </div>
   );
 };
+
+export default PaymentProgress;

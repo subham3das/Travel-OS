@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Mic, X } from 'lucide-react';
+import { useToast } from '../../../context/ToastContext';
 
 interface SearchInputProps {
   query: string;
@@ -22,6 +23,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   isFilterActive = false,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     // Auto-focus input when search screen mounts
@@ -32,7 +34,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   }, []);
 
   const handleVoiceSearch = () => {
-    alert('Listening... Speak now to search destinations!');
+    showToast('Voice Search active: Speak destination name...', 'info');
   };
 
   return (

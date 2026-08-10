@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTripById } from '../../data/trips';
+import { useToast } from '../../context/ToastContext';
 
 import { TripHero } from './components/TripHero';
 import { BookingCard } from './components/BookingCard';
@@ -19,6 +20,7 @@ import { StickyItineraryButton } from './components/StickyItineraryButton';
 export const TripDetailsPage: React.FC = () => {
   const { tripId, id } = useParams<{ tripId?: string; id?: string }>();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
   const targetId = tripId || id || 'trip-001';
@@ -109,7 +111,7 @@ export const TripDetailsPage: React.FC = () => {
 
             <button
               onClick={() => {
-                alert(`PDF Invoice downloaded for ${trip.bookingId}`);
+                showToast(`PDF Invoice downloaded for ${trip.bookingId}`, 'success');
                 setIsInvoiceOpen(false);
               }}
               className="w-full py-3 rounded-2xl bg-[#6356E5] text-white font-extrabold text-xs cursor-pointer"

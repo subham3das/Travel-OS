@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Image, MapPin, Tag, Send } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
 
 export const CreatePostPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [content, setContent] = useState('');
   const [location, setLocation] = useState('Dawki, Meghalaya');
 
   const handlePublish = () => {
     if (!content.trim()) return;
-    alert('Post published to Community!');
+    showToast('Post published to Community!', 'success');
     navigate('/community');
   };
 

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Share2, Send, Smile, Filter } from 'lucide-react';
 
 import { getCommentsByPostId, addCommentToPost, addReplyToComment, CommentItem } from '../../data/comments';
+import { useToast } from '../../context/ToastContext';
 import { TravelerPost, PostData } from '../../components/community/TravelerPost';
 import { CommentCard } from './components/CommentCard';
 
@@ -26,9 +27,9 @@ const sampleFeedPost: PostData = {
 };
 
 export const PostCommentsPage: React.FC = () => {
-  const { postId } = useParams<{ postId: string }>();
+  const { postId } = useParams<{ postId?: string }>();
   const navigate = useNavigate();
-
+  const { showToast } = useToast();
   const targetPostId = postId || 'post-001';
   const [comments, setComments] = useState<CommentItem[]>(getCommentsByPostId(targetPostId));
   const [sortOption, setSortOption] = useState<'top' | 'newest' | 'oldest'>('top');
@@ -85,7 +86,10 @@ export const PostCommentsPage: React.FC = () => {
           </h1>
 
           <button
-            onClick={() => alert('Post link copied to clipboard!')}
+            onClick={() => {
+              if (navigator.clipboard) navigator.clipboard.writeText(window.location.href);
+              showToast('Post link copied to clipboard!', 'success');
+            }}
             className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer"
           >
             <Share2 className="w-5 h-5" />

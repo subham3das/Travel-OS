@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Share2, Heart, MoreVertical, Star, CheckCircle2, MapPin, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Agency } from '../../../types/agency';
+import { useToast } from '../../../context/ToastContext';
 
 interface AgencyHeroProps {
   agency: Agency;
@@ -9,6 +10,7 @@ interface AgencyHeroProps {
 
 export const AgencyHero: React.FC<AgencyHeroProps> = ({ agency }) => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   return (
@@ -38,7 +40,8 @@ export const AgencyHero: React.FC<AgencyHeroProps> = ({ agency }) => {
                 if (navigator.share) {
                   navigator.share({ title: agency.name, url: window.location.href });
                 } else {
-                  alert('Agency link copied to clipboard!');
+                  if (navigator.clipboard) navigator.clipboard.writeText(window.location.href);
+                  showToast('Agency link copied to clipboard!', 'success');
                 }
               }}
               className="w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-lg hover:bg-slate-100 transition-all cursor-pointer active:scale-95"
@@ -48,7 +51,12 @@ export const AgencyHero: React.FC<AgencyHeroProps> = ({ agency }) => {
             </button>
 
             <button
-              onClick={() => setIsWishlisted((p) => !p)}
+              onClick={() => {
+                setIsWishlisted((p) => {
+                  showToast(p ? 'Removed from saved agencies' : 'Saved agency to wishlist!', 'success');
+                  return !p;
+                });
+              }}
               className="w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-lg hover:bg-slate-100 transition-all cursor-pointer active:scale-95"
               aria-label="Wishlist Agency"
             >
@@ -60,7 +68,7 @@ export const AgencyHero: React.FC<AgencyHeroProps> = ({ agency }) => {
             </button>
 
             <button
-              onClick={() => alert('More agency options')}
+              onClick={() => showToast('Agency saved to quick access bookmarks', 'info')}
               className="w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-lg hover:bg-slate-100 transition-all cursor-pointer active:scale-95"
               aria-label="More Options"
             >

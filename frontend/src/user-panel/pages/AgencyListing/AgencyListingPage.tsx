@@ -21,6 +21,7 @@ import { AgencyCompareBar } from './components/AgencyCompareBar';
 import { SectionHeader } from './components/SectionHeader';
 import { FilterModal } from '../../components/common/FilterModal';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
+import { useToast } from '../../context/ToastContext';
 import { agenciesData } from '../../data/agencies';
 
 // Featured Agencies from demo data
@@ -85,6 +86,7 @@ const nearbyAgenciesList = [
 
 export const AgencyListingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('verified');
   const [isMapViewOpen, setIsMapViewOpen] = useState(false);
@@ -102,7 +104,7 @@ export const AgencyListingPage: React.FC = () => {
         return prev.filter((a) => a.id !== agency.id);
       } else {
         if (prev.length >= 3) {
-          alert('You can compare up to 3 agencies at a time.');
+          showToast('You can compare up to 3 agencies at a time.', 'info');
           return prev;
         }
         return [...prev, agency];

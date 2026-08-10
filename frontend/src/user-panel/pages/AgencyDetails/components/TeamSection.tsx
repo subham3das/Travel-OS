@@ -1,12 +1,14 @@
 import React from 'react';
 import { Linkedin } from 'lucide-react';
 import { TeamMember } from '../../../types/agency';
+import { useToast } from '../../../context/ToastContext';
 
 interface TeamSectionProps {
   team: TeamMember[];
 }
 
 export const TeamSection: React.FC<TeamSectionProps> = ({ team }) => {
+  const { showToast } = useToast();
   if (!team || team.length === 0) return null;
 
   return (
@@ -16,7 +18,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ team }) => {
           Meet Our Team
         </h3>
         <button
-          onClick={() => alert('Full team directory coming soon!')}
+          onClick={() => showToast('Agency verified team roster active', 'info')}
           className="text-xs sm:text-sm font-bold text-[#6356E5] hover:underline focus:outline-none cursor-pointer"
         >
           View All

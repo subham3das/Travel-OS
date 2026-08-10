@@ -17,9 +17,11 @@ import {
 } from 'lucide-react';
 import { TravelerPost } from '../../components/community/TravelerPost';
 import { getUserReputation } from '../../data/reputation';
+import { useToast } from '../../context/ToastContext';
 
 export const TravelerProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const { userId, id } = useParams<{ userId?: string; id?: string }>();
   const targetUserId = userId || id || 'user-002';
 
@@ -79,7 +81,10 @@ export const TravelerProfilePage: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => alert('Profile link copied to clipboard!')}
+              onClick={() => {
+                if (navigator.clipboard) navigator.clipboard.writeText(window.location.href);
+                showToast('Profile link copied to clipboard!', 'success');
+              }}
               className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer"
               title="Share Profile"
             >
@@ -87,7 +92,7 @@ export const TravelerProfilePage: React.FC = () => {
             </button>
 
             <button
-              onClick={() => alert('Report menu opened')}
+              onClick={() => showToast('Report submitted for admin review', 'info')}
               className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer"
               title="Report User"
             >

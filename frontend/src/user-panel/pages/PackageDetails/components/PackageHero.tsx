@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TourPackage } from '../../../types/package';
+import { useToast } from '../../../context/ToastContext';
 
 interface PackageHeroProps {
   pkg: TourPackage;
@@ -10,6 +11,7 @@ interface PackageHeroProps {
 
 export const PackageHero: React.FC<PackageHeroProps> = ({ pkg, onOpenGallery }) => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
 
@@ -28,8 +30,8 @@ export const PackageHero: React.FC<PackageHeroProps> = ({ pkg, onOpenGallery }) 
         console.log('Share canceled', err);
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
+      if (navigator.clipboard) navigator.clipboard.writeText(window.location.href);
+      showToast('Package link copied to clipboard!', 'success');
     }
   };
 

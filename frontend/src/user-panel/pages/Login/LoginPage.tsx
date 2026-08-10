@@ -8,11 +8,13 @@ import { Button } from '../../components/common/Button';
 import { Logo } from '../../components/common/Logo';
 import { SocialButton } from '../../components/common/SocialButton';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
 import bgAuth from '../../../assets/bg loginsignup.jpg';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showToast } = useToast();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ emailOrPhone?: string; password?: string }>({});
@@ -106,8 +108,8 @@ export const LoginPage: React.FC = () => {
               <div className="flex justify-end pr-1">
                 <button
                   type="button"
-                  onClick={() => alert('Password reset link sent to your email!')}
-                  className="text-xs font-bold text-[#FF4D6D] hover:underline focus:outline-none"
+                  onClick={() => showToast('Password reset link sent to your email!', 'success')}
+                  className="text-xs font-bold text-[#FF4D6D] hover:underline focus:outline-none cursor-pointer"
                 >
                   Forgot Password?
                 </button>

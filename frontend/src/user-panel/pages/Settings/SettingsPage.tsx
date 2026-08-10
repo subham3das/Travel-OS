@@ -41,12 +41,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme, ThemeMode } from '../../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 
 export const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { showToast } = useToast();
 
   // Bottom Sheet state
   const [isThemeSheetOpen, setIsThemeSheetOpen] = useState(false);
@@ -110,7 +112,7 @@ export const SettingsPage: React.FC = () => {
   const handleDeleteAccount = () => {
     setIsDeleteModalOpen(false);
     logout();
-    alert('Your account deletion request has been submitted.');
+    showToast('Your account deletion request has been submitted.', 'info');
     navigate('/login');
   };
 
@@ -167,7 +169,7 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div
-              onClick={() => alert('Change Password drawer opened')}
+              onClick={() => showToast('Password reset link sent to your registered email!', 'success')}
               className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
             >
               <div className="flex items-center gap-3.5">

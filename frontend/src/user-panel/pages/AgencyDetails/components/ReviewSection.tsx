@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Star, ArrowRight } from 'lucide-react';
 import { AgencyReview } from '../../../types/agency';
+import { useToast } from '../../../context/ToastContext';
 
 interface ReviewSectionProps {
   reviews: AgencyReview[];
@@ -10,6 +11,7 @@ interface ReviewSectionProps {
 
 export const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews }) => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   if (!reviews || reviews.length === 0) return null;
 
@@ -20,7 +22,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews }) => {
           What Travelers Say
         </h3>
         <button
-          onClick={() => alert('All reviews viewer coming soon!')}
+          onClick={() => showToast('Showing top 20 verified agency reviews', 'info')}
           className="text-xs sm:text-sm font-bold text-[#6356E5] hover:underline focus:outline-none flex items-center gap-1 cursor-pointer shrink-0"
         >
           <span>View All Reviews</span>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Calendar, CheckCircle2, ShieldCheck, CreditCard, ArrowRight } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
 
 interface UserBookingDetailsModalProps {
   isOpen: boolean;
@@ -23,15 +24,16 @@ export const UserBookingDetailsModal: React.FC<UserBookingDetailsModalProps> = (
   bookingData = {
     id: 'BK-2024-00568',
     packageName: 'Ladakh Adventure Expedition',
-    coverImage: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=500&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=600&auto=format&fit=crop',
     departureDate: '15 Jun 2024',
-    returnDate: '21 Jun 2024',
+    returnDate: '22 Jun 2024',
     travelerCount: 2,
     packagePrice: 18999,
     amountPaid: 37998, // fully paid
     dueDate: '10 Jun 2024',
   },
 }) => {
+  const { showToast } = useToast();
   const [amountPaidState, setAmountPaidState] = useState(bookingData.amountPaid);
   const totalAmount = bookingData.packagePrice * bookingData.travelerCount;
   const remainingBalance = Math.max(0, totalAmount - amountPaidState);
@@ -42,7 +44,7 @@ export const UserBookingDetailsModal: React.FC<UserBookingDetailsModalProps> = (
 
   const handlePayNow = () => {
     setAmountPaidState(totalAmount);
-    alert('Payment successful! Your booking is now fully paid and eligible for your trip.');
+    showToast('Payment successful! Your booking is now fully paid and confirmed.', 'success');
   };
 
   return (

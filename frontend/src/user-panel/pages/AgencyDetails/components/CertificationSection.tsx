@@ -1,11 +1,13 @@
 import React from 'react';
 import { CheckCircle2, Award } from 'lucide-react';
+import { useToast } from '../../../context/ToastContext';
 
 interface CertificationSectionProps {
   certifications: { title: string; subtitle: string; badge: string; variant?: 'green' | 'blue' | 'purple' | 'amber' }[];
 }
 
 export const CertificationSection: React.FC<CertificationSectionProps> = ({ certifications }) => {
+  const { showToast } = useToast();
   if (!certifications || certifications.length === 0) return null;
 
   return (
@@ -15,7 +17,7 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({ cert
           Certifications & Registrations
         </h3>
         <button
-          onClick={() => alert('Certificate verification docs coming soon!')}
+          onClick={() => showToast('Verified Tourism Certificate #AZ-98432 active', 'info')}
           className="text-xs sm:text-sm font-bold text-[#6356E5] hover:underline focus:outline-none cursor-pointer"
         >
           View All

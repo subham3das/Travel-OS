@@ -29,8 +29,6 @@ import { DestinationDetailsPage } from '../pages/Destination/DestinationDetailsP
 import { AgencyListingPage } from '../pages/AgencyListing/AgencyListingPage';
 import { AgencyDetailsPage } from '../pages/AgencyDetails/AgencyDetailsPage';
 import { PackageDetailsPage } from '../pages/PackageDetails/PackageDetailsPage';
-import { BookingSuccessPage } from '../pages/Booking/BookingSuccessPage';
-import { BookingCheckoutPage } from '../pages/BookingCheckout/BookingCheckoutPage';
 
 import { TravelerProfilePage } from '../pages/Community/TravelerProfilePage';
 import { PassportPage } from '../pages/Community/PassportPage';
@@ -95,12 +93,6 @@ export const UserRoutes = () => (
         <Route path="/agency/:agencyId" element={<AgencyDetailsPage />} />
         <Route path="/package/:id" element={<PackageDetailsPage />} />
         <Route path="/package/:packageId" element={<PackageDetailsPage />} />
-        <Route path="/booking/checkout/:packageId" element={<BookingCheckoutPage />} />
-        <Route path="/booking/checkout/:id" element={<BookingCheckoutPage />} />
-        <Route path="/booking/success/:bookingId" element={<BookingSuccessPage />} />
-        <Route path="/booking/success" element={<BookingSuccessPage />} />
-        <Route path="/booking/:packageId" element={<BookingCheckoutPage />} />
-        <Route path="/booking/*" element={<BookingCheckoutPage />} />
 
         {/* Community Routes */}
         <Route path="/create-post" element={<CreatePostPage />} />

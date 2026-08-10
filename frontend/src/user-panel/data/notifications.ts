@@ -61,7 +61,7 @@ export let INITIAL_NOTIFICATIONS: NotificationItem[] = [
     isRead: false,
     iconType: 'check',
     iconBgColor: 'bg-emerald-600 text-white',
-    actionRoute: '/booking/payment/BK-2025-0012',
+    actionRoute: '/booking/checkout/BK-2025-0012',
     tripId: 'trip-001',
   },
   {

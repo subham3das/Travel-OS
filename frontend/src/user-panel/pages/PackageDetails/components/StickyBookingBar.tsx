@@ -12,7 +12,7 @@ export const StickyBookingBar: React.FC<StickyBookingBarProps> = ({ pkg }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   const handleBookNow = () => {
-    navigate(`/booking/traveler-details/${pkg.id}`);
+    navigate(`/booking/checkout/${pkg.id}`);
   };
 
   return (

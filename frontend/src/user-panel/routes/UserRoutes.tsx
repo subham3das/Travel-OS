@@ -33,7 +33,7 @@ import { TravelerDetailsPage } from '../pages/TravelerDetails/TravelerDetailsPag
 import { BookingReviewPage } from '../pages/BookingReview/BookingReviewPage';
 import { PaymentPage } from '../pages/Payment/PaymentPage';
 import { BookingSuccessPage } from '../pages/Booking/BookingSuccessPage';
-import { BookingFlowPage } from '../pages/Booking/BookingFlowPage';
+import { BookingCheckoutPage } from '../pages/BookingCheckout/BookingCheckoutPage';
 
 import { TravelerProfilePage } from '../pages/Community/TravelerProfilePage';
 import { PassportPage } from '../pages/Community/PassportPage';
@@ -98,16 +98,12 @@ export const UserRoutes = () => (
         <Route path="/agency/:agencyId" element={<AgencyDetailsPage />} />
         <Route path="/package/:id" element={<PackageDetailsPage />} />
         <Route path="/package/:packageId" element={<PackageDetailsPage />} />
-        <Route path="/booking/traveler-details/:packageId" element={<BookingFlowPage />} />
-        <Route path="/booking/traveler-details/:id" element={<BookingFlowPage />} />
-        <Route path="/booking/review/:packageId" element={<BookingFlowPage />} />
-        <Route path="/booking/review/:id" element={<BookingFlowPage />} />
-        <Route path="/booking/payment/:packageId" element={<BookingFlowPage />} />
-        <Route path="/booking/payment/:id" element={<BookingFlowPage />} />
+        <Route path="/booking/checkout/:packageId" element={<BookingCheckoutPage />} />
+        <Route path="/booking/checkout/:id" element={<BookingCheckoutPage />} />
         <Route path="/booking/success/:bookingId" element={<BookingSuccessPage />} />
         <Route path="/booking/success" element={<BookingSuccessPage />} />
-        <Route path="/booking/:packageId" element={<BookingFlowPage />} />
-        <Route path="/booking/*" element={<BookingFlowPage />} />
+        <Route path="/booking/:packageId" element={<BookingCheckoutPage />} />
+        <Route path="/booking/*" element={<BookingCheckoutPage />} />
 
         {/* Community Routes */}
         <Route path="/create-post" element={<CreatePostPage />} />

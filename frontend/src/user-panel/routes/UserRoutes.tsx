@@ -98,12 +98,12 @@ export const UserRoutes = () => (
         <Route path="/agency/:agencyId" element={<AgencyDetailsPage />} />
         <Route path="/package/:id" element={<PackageDetailsPage />} />
         <Route path="/package/:packageId" element={<PackageDetailsPage />} />
-        <Route path="/booking/traveler-details/:packageId" element={<TravelerDetailsPage />} />
-        <Route path="/booking/traveler-details/:id" element={<TravelerDetailsPage />} />
-        <Route path="/booking/review/:packageId" element={<BookingReviewPage />} />
-        <Route path="/booking/review/:id" element={<BookingReviewPage />} />
-        <Route path="/booking/payment/:packageId" element={<PaymentPage />} />
-        <Route path="/booking/payment/:id" element={<PaymentPage />} />
+        <Route path="/booking/traveler-details/:packageId" element={<BookingFlowPage />} />
+        <Route path="/booking/traveler-details/:id" element={<BookingFlowPage />} />
+        <Route path="/booking/review/:packageId" element={<BookingFlowPage />} />
+        <Route path="/booking/review/:id" element={<BookingFlowPage />} />
+        <Route path="/booking/payment/:packageId" element={<BookingFlowPage />} />
+        <Route path="/booking/payment/:id" element={<BookingFlowPage />} />
         <Route path="/booking/success/:bookingId" element={<BookingSuccessPage />} />
         <Route path="/booking/success" element={<BookingSuccessPage />} />
         <Route path="/booking/:packageId" element={<BookingFlowPage />} />

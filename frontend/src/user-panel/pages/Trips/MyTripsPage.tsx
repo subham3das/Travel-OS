@@ -24,6 +24,7 @@ import {
 
 import { AppHeader } from '../../components/home/AppHeader';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
+import { EmptyState } from '../../components/common/EmptyState';
 import {
   TRIPS_DATA,
   USER_BOOKINGS_DATA,
@@ -105,7 +106,16 @@ export const MyTripsPage: React.FC = () => {
         {/* 2. TAB CONTENT: MY TRIPS */}
         {activeTab === 'trips' && (
           <div className="space-y-4">
-            {TRIPS_DATA.map((trip) => (
+            {TRIPS_DATA.length === 0 ? (
+              <EmptyState
+                emoji="🎒"
+                title="No Upcoming Trips Found"
+                description="You haven't booked any upcoming trips yet. Explore curated packages and start your adventure today!"
+                actionLabel="Explore Packages"
+                onAction={() => navigate('/explore')}
+              />
+            ) : (
+              TRIPS_DATA.map((trip) => (
               <motion.div
                 key={trip.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -241,7 +251,8 @@ export const MyTripsPage: React.FC = () => {
                   </button>
                 </div>
               </motion.div>
-            ))}
+            ))
+            )}
           </div>
         )}
 

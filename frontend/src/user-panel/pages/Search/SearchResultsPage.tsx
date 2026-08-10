@@ -2,9 +2,13 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, Star, MapPin, Building2, User, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { EmptyState } from '../../components/common/EmptyState';
+import { LazyImage } from '../../components/common/LazyImage';
+import { useToast } from '../../context/ToastContext';
 
 export const SearchResultsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || 'Meghalaya';
   const initialTab = searchParams.get('tab') || 'destinations';
@@ -13,10 +17,12 @@ export const SearchResultsPage: React.FC = () => {
   const [query, setQuery] = useState(initialQuery);
   const [followedTravelers, setFollowedTravelers] = useState<string[]>([]);
 
-  const toggleFollowTraveler = (id: string) => {
+  const toggleFollowTraveler = (id: string, name: string) => {
+    const isFollowing = followedTravelers.includes(id);
     setFollowedTravelers((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      isFollowing ? prev.filter((item) => item !== id) : [...prev, id]
     );
+    showToast(isFollowing ? `Unfollowed ${name}` : `Now following ${name}!`, isFollowing ? 'info' : 'success');
   };
 
   const tabs = [
@@ -207,7 +213,7 @@ export const SearchResultsPage: React.FC = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleFollowTraveler(item.id);
+                      toggleFollowTraveler(item.id, item.name);
                     }}
                     className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
                       isFollowing

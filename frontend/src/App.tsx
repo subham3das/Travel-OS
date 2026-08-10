@@ -10,6 +10,7 @@ import { ToastProvider, PermissionProvider } from './agency-panel/providers';
 
 // ── User Panel ─────────────────────────────────────────────────────────────
 import { UserRoutes } from './user-panel/routes/UserRoutes';
+import { ToastProvider as UserToastProvider } from './user-panel/context/ToastContext';
 
 // ── Super Admin Panel ────────────────────────────────────────────────────────
 import { AdminAuthProvider } from './admin-panel/context/AdminAuthContext';
@@ -19,10 +20,11 @@ export const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AgencyAuthProvider>
-          <PermissionProvider>
-            <ToastProvider>
-              <AdminAuthProvider>
+        <UserToastProvider>
+          <AgencyAuthProvider>
+            <PermissionProvider>
+              <ToastProvider>
+                <AdminAuthProvider>
                 <BrowserRouter>
                   <Routes>
                     {/* ── Agency Panel Routes (/agency/...) ─────────────────────── */}
@@ -42,8 +44,9 @@ export const App: React.FC = () => {
             </ToastProvider>
           </PermissionProvider>
         </AgencyAuthProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </UserToastProvider>
+    </AuthProvider>
+  </ThemeProvider>
   );
 };
 

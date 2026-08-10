@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Headphones } from 'lucide-react';
 import { usePackage } from '../../hooks/usePackage';
+import { useToast } from '../../context/ToastContext';
 
 import { 
   TravelerSectionData, BookingSummaryData, PromoCodeData, 
@@ -19,6 +20,7 @@ import { PriceBreakdown } from './components/PriceBreakdown';
 
 export const BookingCheckoutPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const { packageId, id } = useParams<{ packageId?: string; id?: string }>();
   const targetId = packageId || id || 'package-001';
 
@@ -222,22 +224,24 @@ export const BookingCheckoutPage: React.FC = () => {
   const handleApplyPromoCode = (code: string) => {
     if (code.trim().toUpperCase() === 'APNATRIP2000') {
       setPromoCode({ code: 'APNATRIP2000', discountAmount: 2000, isApplied: true, message: 'Promo applied!' });
+      showToast('Promo code APNATRIP2000 applied (₹2,000 Off!)', 'success');
     } else if (code.trim().toUpperCase() === 'FIRST1000') {
       setPromoCode({ code: 'FIRST1000', discountAmount: 1000, isApplied: true, message: 'Promo applied!' });
+      showToast('Promo code FIRST1000 applied (₹1,000 Off!)', 'success');
     } else {
-      alert('Invalid promo code. Try APNATRIP2000');
+      showToast('Invalid promo code. Try APNATRIP2000', 'error');
     }
   };
 
   const handleProceedPayment = () => {
     if (!stepCompletion.travelerDetails) {
-      alert('Please complete and save Traveler Details in Section 1.');
+      showToast('Please complete and save Traveler Details in Section 1.', 'error');
       scrollToSection('section-traveler');
       return;
     }
 
     if (!bookingSummary.termsAccepted) {
-      alert('Please accept the Terms & Conditions in Section 2.');
+      showToast('Please accept the Terms & Conditions in Section 2.', 'error');
       scrollToSection('section-review');
       return;
     }
@@ -333,7 +337,7 @@ export const BookingCheckoutPage: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => alert('Support team is available 24/7! Call +91 98765 43210')}
+          onClick={() => showToast('Support team available 24/7! Call +91 98765 43210', 'info')}
           className="flex items-center gap-1 text-xs font-extrabold text-[#0F172A] hover:text-[#583BE8] transition-colors cursor-pointer shrink-0"
         >
           <Headphones className="w-4 h-4 text-[#0F172A]" />

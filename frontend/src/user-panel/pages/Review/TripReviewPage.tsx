@@ -4,10 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Star, ThumbsUp, ThumbsDown, Smile, Sparkles, CheckCircle2, ImagePlus, ArrowRight } from 'lucide-react';
 import { getTripById } from '../../data/trips';
 import { addReputationPoints, getUserReputation } from '../../data/reputation';
+import { useToast } from '../../context/ToastContext';
 
 export const TripReviewPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const trip = getTripById(tripId || 'trip-001');
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -172,9 +174,21 @@ export const TripReviewPage: React.FC = () => {
             </div>
 
             {/* Photo Upload Trigger */}
+            <input
+              type="file"
+              id="review-photo-picker"
+              className="hidden"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  showToast(`Added photo: ${file.name} (+5 Reputation)`, 'success');
+                }
+              }}
+            />
             <button
               type="button"
-              onClick={() => alert('Photo uploader opened (+5 Reputation per photo!)')}
+              onClick={() => document.getElementById('review-photo-picker')?.click()}
               className="w-full p-3 rounded-2xl border border-dashed border-purple-200 bg-purple-50/50 text-[#6356E5] text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer"
             >
               <ImagePlus className="w-4 h-4" />

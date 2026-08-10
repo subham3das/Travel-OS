@@ -12,9 +12,11 @@ import { PublishedPreview } from './components/PublishedPreview';
 
 import { addNewPost, CommunityPost } from '../../data/posts';
 import { addTravelStory } from '../../data/stories';
+import { useToast } from '../../context/ToastContext';
 
 export const CreatePostPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const location = useLocation();
   const prefill = location.state || {};
 
@@ -221,6 +223,7 @@ export const CreatePostPage: React.FC = () => {
       setPublishedData(createdObj);
       setIsPublishing(false);
       setIsPublished(true);
+      showToast(isDraft ? 'Post saved as draft!' : 'Post published to Community!', 'success');
     }, 1200);
   };
 

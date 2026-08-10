@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, Calendar, ArrowRight } from 'lucide-react';
+import { EmptyState } from '../../components/common/EmptyState';
+import { LazyImage } from '../../components/common/LazyImage';
 
 export const SavedDestinationsPage: React.FC = () => {
   const navigate = useNavigate();

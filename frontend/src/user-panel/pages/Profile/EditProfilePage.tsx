@@ -1,20 +1,32 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, Check } from 'lucide-react';
+import { ArrowLeft, Camera, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
 
 export const EditProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { user, completeProfile } = useAuth();
+  const { showToast } = useToast();
 
   const [name, setName] = useState(user?.name || 'Subham Das');
   const [bio, setBio] = useState(user?.bio || 'Passionate about mountain treks & hidden beaches');
   const [location, setLocation] = useState(user?.location || 'Dibrugarh, Assam');
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    completeProfile({ name, bio, location });
-    navigate('/profile');
+    if (!name.trim()) {
+      showToast('Please enter a valid full name', 'error');
+      return;
+    }
+    setIsSaving(true);
+    setTimeout(() => {
+      completeProfile({ name, bio, location });
+      showToast('Profile updated successfully!', 'success');
+      setIsSaving(false);
+      navigate('/profile');
+    }, 400);
   };
 
   return (
@@ -24,7 +36,13 @@ export const EditProfilePage: React.FC = () => {
           <ArrowLeft className="w-5 h-5 text-slate-700" />
         </button>
         <h2 className="text-sm font-extrabold">Edit Profile</h2>
-        <button onClick={handleSave} className="text-xs font-extrabold text-[#FF4D6D]">Save</button>
+        <button
+          onClick={handleSave}
+          disabled={isSaving || !name.trim()}
+          className="text-xs font-extrabold text-[#6356E5] hover:text-[#5245d6] disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+        >
+          {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
+        </button>
       </header>
 
       <main className="flex-1 w-full max-w-xl mx-auto px-4 py-6 space-y-6">
@@ -46,8 +64,17 @@ export const EditProfilePage: React.FC = () => {
               <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-xs font-semibold text-[#0F172A]" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-600 block mb-1">Bio / Tagline</label>
-              <textarea rows={3} value={bio} onChange={(e) => setBio(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs font-semibold text-[#0F172A]" />
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs font-bold text-slate-600 block">Bio / Tagline</label>
+                <span className="text-[11px] font-semibold text-slate-400">{bio.length}/140</span>
+              </div>
+              <textarea
+                rows={3}
+                maxLength={140}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs font-semibold text-[#0F172A] focus:outline-none focus:bg-white focus:border-[#6356E5]"
+              />
             </div>
           </div>
         </div>

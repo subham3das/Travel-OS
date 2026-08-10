@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserCheck, Users, Plus, Trash2, AlertCircle, HeartPulse, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { TravelerSectionData, AdditionalTraveler } from '../types/checkout';
+import { useToast } from '../../../context/ToastContext';
 
 interface TravelerSectionProps {
   packageData: {
@@ -26,6 +27,7 @@ export const TravelerSection: React.FC<TravelerSectionProps> = ({
   onSave,
   onEdit,
 }) => {
+  const { showToast } = useToast();
   const [data, setData] = useState<TravelerSectionData>(initialData);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -87,12 +89,13 @@ export const TravelerSection: React.FC<TravelerSectionProps> = ({
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      alert('Please fill out all required fields for the primary traveler.');
+      showToast('Please fill out all required traveler details', 'error');
       return;
     }
 
     setErrors({});
     onSave(data);
+    showToast('Traveler details saved!', 'success');
   };
 
   if (isCollapsed) {

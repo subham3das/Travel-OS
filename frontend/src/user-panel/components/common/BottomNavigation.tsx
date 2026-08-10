@@ -27,7 +27,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     { id: 'explore', label: 'Explore', path: '/explore', icon: <Compass className="w-5 h-5" /> },
     { id: 'trips', label: 'My Trips', path: '/my-trips', icon: <Briefcase className="w-5 h-5" /> },
     { id: 'community', label: 'Community', path: '/community', icon: <Users className="w-5 h-5" /> },
-    { id: 'profile', label: 'Customer', path: '/profile', icon: <User className="w-5 h-5" /> },
+    { id: 'profile', label: 'Profile', path: '/profile', icon: <User className="w-5 h-5" /> },
   ];
 
   return (

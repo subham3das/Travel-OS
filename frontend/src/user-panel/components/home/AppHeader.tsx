@@ -25,7 +25,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     { label: 'Explore', path: '/explore' },
     { label: 'My Trips', path: '/my-trips' },
     { label: 'Community', path: '/community' },
-    { label: 'Customer', path: '/profile' },
+    { label: 'Profile', path: '/profile' },
   ];
 
   return (

@@ -14,7 +14,7 @@ export const RestaurantsSection: React.FC<RestaurantsSectionProps> = ({ destinat
           Restaurants Nearby
         </h2>
         <button
-          onClick={() => alert(`Showing all restaurants in ${destination.name}`)}
+          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination.name + ' restaurants')}`, '_blank')}
           className="text-xs font-bold text-[#6356E5] hover:underline cursor-pointer"
         >
           View All

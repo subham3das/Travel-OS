@@ -13,6 +13,7 @@ import { PackageCard, TravelPackage } from '../../components/home/PackageCard';
 import { NewsletterSection } from '../../components/home/NewsletterSection';
 import { TopTravelCategories } from '../../components/home/TopTravelCategories';
 import { AppDownloadBanner } from '../../components/home/AppDownloadBanner';
+import { FilterModal } from '../../components/common/FilterModal';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 
 // Sample Mock Data matching reference designs (home.png & home extended.png)
@@ -136,6 +137,7 @@ const recentlyViewedData: Destination[] = [
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   const handleDestinationExplore = (dest: Destination) => {
     navigate(`/explore?destination=${dest.id}`);
@@ -178,7 +180,7 @@ export const HomePage: React.FC = () => {
         >
           <SearchBar
             onSearch={(q) => setSearchQuery(q)}
-            onFilterClick={() => alert('Filters coming soon!')}
+            onFilterClick={() => setIsFilterModalOpen(true)}
           />
         </motion.div>
 
@@ -321,6 +323,12 @@ export const HomePage: React.FC = () => {
           <AppDownloadBanner />
         </motion.section>
       </main>
+
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApply={(f) => navigate(`/search/results?q=${f.category}`)}
+      />
 
       {/* 13. Floating Bottom Navigation Bar */}
       <BottomNavigation activeTab="home" />

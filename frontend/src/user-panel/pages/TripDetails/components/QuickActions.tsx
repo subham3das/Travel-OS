@@ -5,24 +5,27 @@ import { Trip } from '../../../data/trips';
 
 interface QuickActionsProps {
   trip: Trip;
+  onOpenInvoice?: () => void;
 }
 
-export const QuickActions: React.FC<QuickActionsProps> = ({ trip }) => {
+export const QuickActions: React.FC<QuickActionsProps> = ({ trip, onOpenInvoice }) => {
   const navigate = useNavigate();
 
   const handleAction = (actionId: string) => {
     switch (actionId) {
-      case 'itinerary':
-        alert(`Opening Itinerary for ${trip.title}`);
+      case 'itinerary': {
+        const elem = document.getElementById('itinerary-section');
+        if (elem) elem.scrollIntoView({ behavior: 'smooth' });
         break;
+      }
       case 'documents':
         navigate(`/trips/${trip.id}/documents`);
         break;
       case 'contact':
-        navigate(`/agency/${trip.agency.id}`);
+        navigate(`/agencies/${trip.agency.id}`);
         break;
       case 'invoice':
-        alert(`Downloading PDF Invoice for Booking ${trip.bookingId}...`);
+        if (onOpenInvoice) onOpenInvoice();
         break;
       case 'maps':
         window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.locations)}`, '_blank');
@@ -49,7 +52,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ trip }) => {
           Quick Actions
         </h2>
         <button
-          onClick={() => alert('All actions list')}
+          onClick={() => navigate(`/trips/${trip.id}/documents`)}
           className="text-xs font-bold text-[#6356E5] hover:underline cursor-pointer"
         >
           See All

@@ -51,6 +51,7 @@ export const SettingsPage: React.FC = () => {
   // Bottom Sheet state
   const [isThemeSheetOpen, setIsThemeSheetOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [activeModalContent, setActiveModalContent] = useState<{ title: string; body: string } | null>(null);
 
   // Notification Toggles state
   const [notifications, setNotifications] = useState(() => {
@@ -419,14 +420,14 @@ export const SettingsPage: React.FC = () => {
           </h2>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xs divide-y divide-slate-100 overflow-hidden">
             {[
-              { label: 'Help Center', subtitle: 'Guides, tutorials & support', icon: <HelpCircle className="w-5 h-5 text-indigo-600" /> },
-              { label: 'Contact Support', subtitle: 'Speak with 24/7 team', icon: <Headphones className="w-5 h-5 text-emerald-600" /> },
-              { label: 'Report a Problem', subtitle: 'Feedback & bug reporting', icon: <AlertTriangle className="w-5 h-5 text-rose-600" /> },
-              { label: 'FAQs', subtitle: 'Frequently asked questions', icon: <FileText className="w-5 h-5 text-purple-600" /> },
+              { label: 'Help Center', subtitle: 'Guides, tutorials & support', body: 'Welcome to ApnaTrip Help Center! For instant assistance with bookings, payments, or itineraries, contact our 24/7 helpline at +91 98765 43210 or email support@apnatrip.com.', icon: <HelpCircle className="w-5 h-5 text-indigo-600" /> },
+              { label: 'Contact Support', subtitle: 'Speak with 24/7 team', body: 'Need urgent help? Our dedicated travel support specialists are available 24/7 via phone (+91 98765 43210) and live chat in the app.', icon: <Headphones className="w-5 h-5 text-emerald-600" /> },
+              { label: 'Report a Problem', subtitle: 'Feedback & bug reporting', body: 'Found an issue or have suggestions? Send feedback directly to our engineering team at feedback@apnatrip.com. We review all submissions within 24 hours.', icon: <AlertTriangle className="w-5 h-5 text-rose-600" /> },
+              { label: 'FAQs', subtitle: 'Frequently asked questions', body: 'Q: How do refunds work? A: Refunds are processed within 3-5 business days.\nQ: Can I change traveler names? A: Yes, up to 48 hours before departure in My Trips.', icon: <FileText className="w-5 h-5 text-purple-600" /> },
             ].map((item) => (
               <div
                 key={item.label}
-                onClick={() => alert(`Opened ${item.label}`)}
+                onClick={() => setActiveModalContent({ title: item.label, body: item.body })}
                 className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-3.5">
@@ -451,13 +452,13 @@ export const SettingsPage: React.FC = () => {
           </h2>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xs divide-y divide-slate-100 overflow-hidden">
             {[
-              { label: 'Privacy Policy', subtitle: 'Data handling & privacy terms', icon: <ShieldCheck className="w-5 h-5 text-emerald-600" /> },
-              { label: 'Terms & Conditions', subtitle: 'Service usage guidelines', icon: <FileCheck className="w-5 h-5 text-sky-600" /> },
-              { label: 'Refund Policy', subtitle: 'Cancellations & refunds', icon: <Receipt className="w-5 h-5 text-purple-600" /> },
+              { label: 'Privacy Policy', subtitle: 'Data handling & privacy terms', body: 'ApnaTrip respects your privacy. We collect personal details strictly for trip bookings and verification. Your data is encrypted using 256-bit SSL technology and never shared with unverified third parties.', icon: <ShieldCheck className="w-5 h-5 text-emerald-600" /> },
+              { label: 'Terms & Conditions', subtitle: 'Service usage guidelines', body: 'By using ApnaTrip Travel OS, you agree to comply with host rules, local environmental guidelines, and payment policies. Booking confirmations are binding upon payment authorization.', icon: <FileCheck className="w-5 h-5 text-sky-600" /> },
+              { label: 'Refund Policy', subtitle: 'Cancellations & refunds', body: 'Cancellations made 7+ days prior to departure receive a 100% refund. Cancellations made 3-7 days prior receive a 50% refund. Refunds inside 48 hours are subject to host approval.', icon: <Receipt className="w-5 h-5 text-purple-600" /> },
             ].map((item) => (
               <div
                 key={item.label}
-                onClick={() => alert(`Opened ${item.label}`)}
+                onClick={() => setActiveModalContent({ title: item.label, body: item.body })}
                 className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-3.5">
@@ -495,7 +496,7 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div
-              onClick={() => alert('Release Notes: ApnaTrip v1.0.4 includes Chat Module, Notifications, and Theme Customization.')}
+              onClick={() => setActiveModalContent({ title: "What's New in v1.0.4", body: '• Single Checkout Flow (/booking/checkout/:packageId)\n• Unified Live Agency & Host Verification\n• Interactive Community & Traveler Profiles\n• Complete End-to-End Navigation Integration' })}
               className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
             >
               <div className="flex items-center gap-3.5">
@@ -511,7 +512,7 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div
-              onClick={() => alert('Thank you for rating ApnaTrip 5 stars!')}
+              onClick={() => setActiveModalContent({ title: 'Rate ApnaTrip', body: 'Thank you for supporting ApnaTrip Travel OS! We appreciate your 5-star rating on the App Store & Google Play.' })}
               className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
             >
               <div className="flex items-center gap-3.5">
@@ -712,6 +713,32 @@ export const SettingsPage: React.FC = () => {
           </>
         )}
       </AnimatePresence>
+
+        {/* Settings Info Modal */}
+        {activeModalContent && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-base font-black text-[#0F172A]">{activeModalContent.title}</h3>
+                <button
+                  onClick={() => setActiveModalContent(null)}
+                  className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-black cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="text-xs font-semibold text-slate-600 whitespace-pre-line leading-relaxed p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                {activeModalContent.body}
+              </div>
+              <button
+                onClick={() => setActiveModalContent(null)}
+                className="w-full py-3 rounded-2xl bg-[#6356E5] text-white text-xs font-extrabold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
 
       {/* Shared Bottom Navigation */}
       <BottomNavigation activeTab="profile" />

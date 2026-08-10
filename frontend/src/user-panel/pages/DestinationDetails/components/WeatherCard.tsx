@@ -37,7 +37,7 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ destination }) => {
       </div>
 
       <button
-        onClick={() => alert(`10-Day weather forecast for ${destination.name}: Sunny to mild clouds expected all week!`)}
+        onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(destination.name + ' weather forecast')}`, '_blank')}
         className="text-xs font-extrabold text-[#6356E5] hover:underline flex items-center gap-0.5 cursor-pointer pt-1"
       >
         <span>View full forecast</span>

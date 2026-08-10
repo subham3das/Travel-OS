@@ -55,7 +55,7 @@ export const ProfilePage: React.FC = () => {
         >
           <ProfileCard
             profile={currentUserProfile}
-            onEditProfile={() => alert('Edit profile clicked!')}
+            onEditProfile={() => navigate('/edit-profile')}
           />
 
           {/* Preview Traveler Profile Button (White Primary Style) */}
@@ -136,7 +136,7 @@ export const ProfilePage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="My Achievements" onViewAll={() => {}} />
+          <SectionHeader title="My Achievements" onViewAll={() => navigate('/passport')} />
           <AchievementGrid />
         </motion.section>
 
@@ -148,7 +148,7 @@ export const ProfilePage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="My Travel Map" onViewAll={() => {}} />
+          <SectionHeader title="My Travel Map" onViewAll={() => navigate('/passport')} />
           <MapCard />
         </motion.section>
 

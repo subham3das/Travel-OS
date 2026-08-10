@@ -14,7 +14,6 @@ export const EditProfilePage: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     completeProfile({ name, bio, location });
-    alert('Profile updated successfully!');
     navigate('/profile');
   };
 

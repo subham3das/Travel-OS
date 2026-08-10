@@ -11,6 +11,13 @@ export const SearchResultsPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [query, setQuery] = useState(initialQuery);
+  const [followedTravelers, setFollowedTravelers] = useState<string[]>([]);
+
+  const toggleFollowTraveler = (id: string) => {
+    setFollowedTravelers((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
   const tabs = [
     { id: 'destinations', label: 'Destinations' },
@@ -162,7 +169,15 @@ export const SearchResultsPage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-3 self-end sm:self-auto">
                   <span className="text-base font-black text-[#FF4D6D]">{item.price}</span>
-                  <span className="px-4 py-2 rounded-xl bg-[#FF4D6D] text-white text-xs font-bold">Book</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/booking/checkout/${item.id}`);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-[#FF4D6D] text-white text-xs font-bold hover:bg-[#e03e5c] transition-all cursor-pointer"
+                  >
+                    Book
+                  </button>
                 </div>
               </motion.div>
             ))}
@@ -172,26 +187,39 @@ export const SearchResultsPage: React.FC = () => {
         {/* TRAVELERS TAB */}
         {activeTab === 'travelers' && (
           <div className="space-y-3">
-            {sampleTravelers.map((item) => (
-              <motion.div
-                key={item.id}
-                whileHover={{ y: -2 }}
-                onClick={() => navigate(`/traveler/${item.id}`)}
-                className="bg-white rounded-3xl p-4 border border-slate-100 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4"
-              >
-                <div className="flex items-center gap-3.5">
-                  <img src={item.avatar} alt={item.name} className="w-14 h-14 rounded-full object-cover" />
-                  <div>
-                    <h4 className="text-base font-extrabold text-[#0F172A]">{item.name}</h4>
-                    <p className="text-xs font-medium text-slate-400">{item.username} • {item.trips} Trips</p>
-                    <p className="text-xs font-semibold text-slate-600 line-clamp-1">{item.bio}</p>
+            {sampleTravelers.map((item) => {
+              const isFollowing = followedTravelers.includes(item.id);
+              return (
+                <motion.div
+                  key={item.id}
+                  whileHover={{ y: -2 }}
+                  onClick={() => navigate(`/traveler/${item.id}`)}
+                  className="bg-white rounded-3xl p-4 border border-slate-100 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <img src={item.avatar} alt={item.name} className="w-14 h-14 rounded-full object-cover" />
+                    <div>
+                      <h4 className="text-base font-extrabold text-[#0F172A]">{item.name}</h4>
+                      <p className="text-xs font-medium text-slate-400">{item.username} • {item.trips} Trips</p>
+                      <p className="text-xs font-semibold text-slate-600 line-clamp-1">{item.bio}</p>
+                    </div>
                   </div>
-                </div>
-                <button className="px-4 py-2 rounded-full bg-rose-50 text-[#FF4D6D] text-xs font-bold hover:bg-[#FF4D6D] hover:text-white transition-all shrink-0">
-                  Follow
-                </button>
-              </motion.div>
-            ))}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFollowTraveler(item.id);
+                    }}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      isFollowing
+                        ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                        : 'bg-rose-50 text-[#FF4D6D] hover:bg-[#FF4D6D] hover:text-white'
+                    }`}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </button>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </main>

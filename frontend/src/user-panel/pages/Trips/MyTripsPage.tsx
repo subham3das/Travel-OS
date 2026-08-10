@@ -37,6 +37,7 @@ export const MyTripsPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'trips' | 'bookings' | 'stats'>('trips');
   const [selectedCompanionTrip, setSelectedCompanionTrip] = useState<Trip | null>(null);
+  const [selectedBookingForModal, setSelectedBookingForModal] = useState<any>(null);
 
   const getStatusColor = (status: MasterTripStatus) => {
     switch (status) {
@@ -318,7 +319,7 @@ export const MyTripsPage: React.FC = () => {
                       if (booking.associatedTripId) {
                         navigate(`/trips/${booking.associatedTripId}`);
                       } else {
-                        alert('Trip details will unlock once the operational host confirms full trip readiness.');
+                        setSelectedBookingForModal(booking);
                       }
                     }}
                     className="px-5 py-2.5 rounded-2xl bg-[#583BE8] hover:bg-[#472bd1] text-white text-xs font-black shadow-md shadow-[#583BE8]/20 transition-all cursor-pointer flex items-center gap-1.5"
@@ -432,6 +433,55 @@ export const MyTripsPage: React.FC = () => {
               ))}
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {/* Booking Status & Details Modal */}
+      {selectedBookingForModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-black text-[#0F172A]">Booking Status</h3>
+                <p className="text-xs font-semibold text-[#583BE8]">ID: {selectedBookingForModal.bookingId}</p>
+              </div>
+              <button
+                onClick={() => setSelectedBookingForModal(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-black cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs font-semibold text-slate-600">
+              <div className="p-3 rounded-2xl bg-purple-50/60 border border-purple-100">
+                <span className="font-extrabold text-[#0F172A] block text-sm">{selectedBookingForModal.packageTitle}</span>
+                <span className="text-slate-500">Agency: {selectedBookingForModal.agencyName}</span>
+              </div>
+
+              <div className="flex justify-between p-2.5 rounded-xl bg-slate-50">
+                <span>Status:</span>
+                <span className="font-black text-emerald-600">{selectedBookingForModal.status}</span>
+              </div>
+
+              <div className="flex justify-between p-2.5 rounded-xl bg-slate-50">
+                <span>Total Amount Paid:</span>
+                <span className="font-black text-[#0F172A]">₹{selectedBookingForModal.totalPrice?.toLocaleString('en-IN')}</span>
+              </div>
+
+              <div className="flex justify-between p-2.5 rounded-xl bg-slate-50">
+                <span>Travelers:</span>
+                <span className="font-black text-slate-800">{selectedBookingForModal.travelersCount} Person(s)</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedBookingForModal(null)}
+              className="w-full py-3 rounded-2xl bg-[#0F172A] text-white font-extrabold text-xs cursor-pointer"
+            >
+              Close Status Summary
+            </button>
+          </div>
         </div>
       )}
 

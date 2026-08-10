@@ -20,7 +20,6 @@ export const DestinationHero: React.FC<DestinationHeroProps> = ({ destination })
       });
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Destination link copied to clipboard!');
     }
   };
 

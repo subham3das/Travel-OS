@@ -57,6 +57,7 @@ export const SearchPage: React.FC = () => {
   const handleSelectTerm = (term: string) => {
     setQuery(term);
     saveSearchTerm(term);
+    navigate(`/search/results?q=${encodeURIComponent(term)}`);
   };
 
   const activeFiltersPresent = isFilterActive(filters);

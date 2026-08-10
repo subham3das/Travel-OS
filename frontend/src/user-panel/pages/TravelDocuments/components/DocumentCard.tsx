@@ -76,7 +76,15 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({ document: doc }) => 
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
       onClick={() => {
-        if (doc.available) alert(`Previewing ${doc.title} (${doc.fileType} • ${doc.fileSize})`);
+        if (doc.available) {
+          const element = document.createElement('a');
+          const file = new Blob([`Document: ${doc.title}`], { type: 'text/plain' });
+          element.href = URL.createObjectURL(file);
+          element.download = `${doc.title.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+          document.body.appendChild(element);
+          element.click();
+          document.body.removeChild(element);
+        }
       }}
       className={`bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-3 ${
         !doc.available ? 'opacity-60 cursor-not-allowed' : ''

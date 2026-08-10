@@ -14,7 +14,7 @@ export const AttractionsSection: React.FC<AttractionsSectionProps> = ({ destinat
           Top Attractions
         </h2>
         <button
-          onClick={() => alert(`Showing all attractions in ${destination.name}`)}
+          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination.name + ' attractions')}`, '_blank')}
           className="text-xs font-bold text-[#6356E5] hover:underline cursor-pointer"
         >
           View All

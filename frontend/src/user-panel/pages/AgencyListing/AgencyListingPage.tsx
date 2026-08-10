@@ -19,6 +19,7 @@ import { FeaturedAgencyCard, FeaturedAgency } from './components/FeaturedAgencyC
 import { AgencyCard, AgencyData } from './components/AgencyCard';
 import { AgencyCompareBar } from './components/AgencyCompareBar';
 import { SectionHeader } from './components/SectionHeader';
+import { FilterModal } from '../../components/common/FilterModal';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 import { agenciesData } from '../../data/agencies';
 
@@ -86,6 +87,9 @@ export const AgencyListingPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('verified');
+  const [isMapViewOpen, setIsMapViewOpen] = useState(false);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState<AgencyData[]>([
     mainAgenciesList[2],
     mainAgenciesList[1],
@@ -147,7 +151,7 @@ export const AgencyListingPage: React.FC = () => {
           <AgencySearch
             value={searchQuery}
             onChange={(val) => setSearchQuery(val)}
-            onFilterClick={() => alert('Advanced agency filters coming soon!')}
+            onFilterClick={() => setIsFilterModalOpen(true)}
           />
           <AgencyFilter
             activeFilter={activeFilter}
@@ -315,7 +319,7 @@ export const AgencyListingPage: React.FC = () => {
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => alert('Interactive agency map view coming soon!')}
+        onClick={() => setIsMapViewOpen(true)}
         className="fixed bottom-24 right-5 sm:right-8 z-40 w-14 h-14 rounded-full bg-[#6356E5] text-white shadow-xl shadow-[#6356E5]/30 flex items-center justify-center focus:outline-none cursor-pointer group"
       >
         <MapIcon className="w-6 h-6 group-hover:rotate-12 transition-transform" />
@@ -325,9 +329,72 @@ export const AgencyListingPage: React.FC = () => {
       <AgencyCompareBar
         selectedAgencies={selectedForCompare}
         onRemoveAgency={handleRemoveCompare}
-        onCompareNow={() =>
-          alert(`Comparing ${selectedForCompare.map((a) => a.name).join(' vs ')}`)
-        }
+        onCompareNow={() => setIsCompareModalOpen(true)}
+      />
+
+      {/* Map View Modal */}
+      {isMapViewOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-base font-black text-[#0F172A]">Interactive Agency Map</h3>
+              <button
+                onClick={() => setIsMapViewOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-black cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="h-64 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 text-xs font-bold">
+              🗺️ Map View: 6 Verified Agencies Located in Manali, Shillong & Guwahati
+            </div>
+            <button
+              onClick={() => setIsMapViewOpen(false)}
+              className="w-full py-3 rounded-2xl bg-[#6356E5] text-white text-xs font-extrabold cursor-pointer"
+            >
+              Close Map
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Compare Modal */}
+      {isCompareModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-base font-black text-[#0F172A]">Agency Comparison</h3>
+              <button
+                onClick={() => setIsCompareModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-black cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
+              {selectedForCompare.map((ag) => (
+                <div key={ag.id} className="p-3 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-1">
+                  <h4 className="font-extrabold text-[#0F172A]">{ag.name}</h4>
+                  <p className="text-slate-500">Rating: ★ {ag.rating}</p>
+                  <p className="text-slate-500">Location: {ag.location}</p>
+                  <p className="text-[#6356E5] font-extrabold">Starting: {ag.startingPrice}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setIsCompareModalOpen(false)}
+              className="w-full py-3 rounded-2xl bg-[#0F172A] text-white text-xs font-extrabold cursor-pointer"
+            >
+              Close Comparison
+            </button>
+          </div>
+        </div>
+      )}
+
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApply={(f) => setSearchQuery(f.category !== 'all' ? f.category : '')}
       />
 
       {/* 10. Bottom Navigation Bar */}

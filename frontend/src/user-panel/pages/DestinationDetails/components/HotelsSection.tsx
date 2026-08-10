@@ -14,7 +14,7 @@ export const HotelsSection: React.FC<HotelsSectionProps> = ({ destination }) => 
           Hotels Nearby
         </h2>
         <button
-          onClick={() => alert(`Showing all hotels in ${destination.name}`)}
+          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination.name + ' hotels')}`, '_blank')}
           className="text-xs font-bold text-[#6356E5] hover:underline cursor-pointer"
         >
           View All
@@ -47,7 +47,7 @@ export const HotelsSection: React.FC<HotelsSectionProps> = ({ destination }) => 
               <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                 <span className="text-xs font-black text-[#0F172A]">{hotel.price}</span>
                 <button
-                  onClick={() => alert(`Booking ${hotel.name}`)}
+                  onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.name + ' ' + destination.name)}`, '_blank')}
                   className="px-3 py-1.5 rounded-xl bg-[#6356E5] hover:bg-[#5245d6] text-white text-[11px] font-extrabold shadow-2xs transition-all cursor-pointer"
                 >
                   Book Hotel

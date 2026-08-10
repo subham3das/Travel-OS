@@ -31,7 +31,7 @@ export const TripHero: React.FC<TripHeroProps> = ({ trip }) => {
         </button>
 
         <button
-          onClick={() => alert('Options: Share Trip, Cancel Booking, Help & Support')}
+          onClick={() => navigate('/notifications')}
           className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/30 transition-all cursor-pointer focus:outline-none"
           title="More options"
         >

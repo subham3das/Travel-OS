@@ -306,11 +306,11 @@ export const CommunityPage: React.FC = () => {
               agencyName: dynPost.agencyName,
               agencyVerified: true,
             }}
-            onAgencyClick={() => navigate('/agency/agency-001')}
+            onAgencyClick={() => navigate('/agencies/agency-001')}
           />
         ))}
 
-        {/* 7. Section: Stories You Might Like 🔥 */}
+        {/* 7. Section: Stories You Might Like */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -318,13 +318,14 @@ export const CommunityPage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Stories You Might Like" emoji="🔥" onViewAll={() => {}} />
+          <SectionHeader title="Stories You Might Like" emoji="🔥" onViewAll={() => navigate('/story/st-1')} />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
             {storyItems.map((story) => (
               <motion.div
                 key={story.id}
                 whileHover={{ y: -3 }}
+                onClick={() => navigate(`/story/${story.id}`)}
                 className="relative w-56 sm:w-64 h-36 sm:h-40 rounded-2xl overflow-hidden shadow-2xs border border-slate-100/60 shrink-0 cursor-pointer group"
               >
                 <img
@@ -363,11 +364,13 @@ export const CommunityPage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Popular Travel Circles" onViewAll={() => {}} />
+          <SectionHeader title="Popular Travel Circles" onViewAll={() => navigate('/circle/circle-001')} />
 
           <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
             {circleItems.map((circle) => (
-              <TravelCircleCard key={circle.id} circle={circle} />
+              <div key={circle.id} onClick={() => navigate(`/circle/${circle.id}`)} className="cursor-pointer">
+                <TravelCircleCard circle={circle} />
+              </div>
             ))}
           </div>
         </motion.section>
@@ -380,7 +383,7 @@ export const CommunityPage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Ask the Community" onViewAll={() => {}} />
+          <SectionHeader title="Ask the Community" onViewAll={() => navigate('/community')} />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
             {questionItems.map((q) => (
@@ -397,11 +400,13 @@ export const CommunityPage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Upcoming Group Trips" onViewAll={() => {}} />
+          <SectionHeader title="Upcoming Group Trips" onViewAll={() => navigate('/my-trips')} />
 
           <div className="space-y-3">
             {groupTripsData.map((trip) => (
-              <GroupTripCard key={trip.id} trip={trip} />
+              <div key={trip.id} onClick={() => navigate(`/trips/${trip.id}`)} className="cursor-pointer">
+                <GroupTripCard trip={trip} />
+              </div>
             ))}
           </div>
         </motion.section>
@@ -414,8 +419,10 @@ export const CommunityPage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Traveler Passport" onViewAll={() => {}} />
-          <PassportCard />
+          <SectionHeader title="Traveler Passport" onViewAll={() => navigate('/passport')} />
+          <div onClick={() => navigate('/passport')} className="cursor-pointer">
+            <PassportCard />
+          </div>
         </motion.section>
 
         {/* 12. Section: Recent Stories Grid */}
@@ -426,13 +433,14 @@ export const CommunityPage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Recent Stories" onViewAll={() => {}} />
+          <SectionHeader title="Recent Stories" onViewAll={() => navigate('/story/st-1')} />
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {recentStoriesData.map((story) => (
               <motion.div
                 key={story.id}
                 whileHover={{ y: -3 }}
+                onClick={() => navigate(`/story/${story.id}`)}
                 className="relative h-44 rounded-2xl overflow-hidden border border-slate-100 shadow-2xs group cursor-pointer"
               >
                 <img

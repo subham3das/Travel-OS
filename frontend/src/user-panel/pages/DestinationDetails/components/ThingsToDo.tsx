@@ -24,7 +24,7 @@ export const ThingsToDo: React.FC<ThingsToDoProps> = ({ destination }) => {
           Things to Do
         </h2>
         <button
-          onClick={() => alert(`Exploring all activities in ${destination.name}`)}
+          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination.name + ' things to do activities')}`, '_blank')}
           className="text-xs font-bold text-[#6356E5] hover:underline cursor-pointer"
         >
           View All
@@ -35,7 +35,7 @@ export const ThingsToDo: React.FC<ThingsToDoProps> = ({ destination }) => {
         {destination.thingsToDo.map((act) => (
           <div
             key={act.id}
-            onClick={() => alert(`Exploring ${act.title} in ${destination.name}`)}
+            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(act.title + ' ' + destination.name)}`, '_blank')}
             className="relative w-36 sm:w-44 h-24 sm:h-28 rounded-2xl overflow-hidden shadow-2xs group cursor-pointer shrink-0 border border-slate-100"
           >
             <img

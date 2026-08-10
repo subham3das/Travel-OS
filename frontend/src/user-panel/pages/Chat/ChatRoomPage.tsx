@@ -94,15 +94,19 @@ export const ChatRoomPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => window.open(`tel:${chat.hostPhone || '+919876543210'}`)}
-              className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-all cursor-pointer"
-              title="Call Agency / Host"
+              onClick={() => {
+                window.location.href = 'tel:+919876543210';
+              }}
+              className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-all cursor-pointer"
+              title="Call Agency"
             >
               <Phone className="w-4 h-4" />
             </button>
             <button
               type="button"
-              onClick={() => alert(`Sharing live GPS coordinates with ${chat.agencyName}...`)}
+              onClick={() => {
+                handleSend('📍 Shared Location: Shillong, Meghalaya (25.5788° N, 91.8933° E)');
+              }}
               className="w-9 h-9 rounded-full bg-purple-50 text-[#583BE8] hover:bg-purple-100 flex items-center justify-center transition-all cursor-pointer"
               title="Share Location"
             >
@@ -160,7 +164,9 @@ export const ChatRoomPage: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => alert('Calling agency: +91 98765 43210')}
+                onClick={() => {
+                  window.location.href = 'tel:+919876543210';
+                }}
                 className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
                 title="Call Agency"
               >
@@ -243,9 +249,20 @@ export const ChatRoomPage: React.FC = () => {
             }}
             className="flex items-center gap-2"
           >
+            <input
+              type="file"
+              id="chat-file-attachment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleSend(`📎 Attached File: ${file.name} (${Math.round(file.size / 1024)} KB)`);
+                }
+              }}
+            />
             <button
               type="button"
-              onClick={() => alert('Attachment option selected')}
+              onClick={() => document.getElementById('chat-file-attachment')?.click()}
               className="p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer shrink-0"
               title="Attach File"
             >

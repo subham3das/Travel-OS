@@ -11,8 +11,7 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ trip }) => {
 
   return (
     <div
-      onClick={() => alert(`Weather forecast for ${weather.location}: Pleasant 22°C with light mountain mist`)}
-      className="bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-3 group"
+      className="bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-3 group"
     >
       <div className="flex items-center gap-3.5 min-w-0">
         <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">

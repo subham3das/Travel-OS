@@ -58,7 +58,15 @@ export const TravelDocumentsPage: React.FC = () => {
           </h1>
 
           <button
-            onClick={() => alert('Downloading all documents package...')}
+            onClick={() => {
+              const element = document.createElement('a');
+              const file = new Blob(['Mock Travel Documents Package ZIP'], { type: 'text/plain' });
+              element.href = URL.createObjectURL(file);
+              element.download = 'travel-documents-package.zip';
+              document.body.appendChild(element);
+              element.click();
+              document.body.removeChild(element);
+            }}
             className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer focus:outline-none"
             title="Download All Documents"
           >

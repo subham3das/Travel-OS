@@ -11,8 +11,7 @@ export const ExpensesCard: React.FC<ExpensesCardProps> = ({ trip }) => {
 
   return (
     <div
-      onClick={() => alert(`Total Budget: ₹${expenses.totalBudget.toLocaleString('en-IN')}\nSpent: ₹${expenses.spent.toLocaleString('en-IN')}\nRemaining: ₹${expenses.remaining.toLocaleString('en-IN')}`)}
-      className="bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs hover:shadow-md transition-all cursor-pointer space-y-3 group"
+      className="bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs space-y-3 group"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3.5 min-w-0">

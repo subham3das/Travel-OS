@@ -250,7 +250,7 @@ export const BookingCheckoutPage: React.FC = () => {
 
     const generatedBookingId = `BK-${Date.now().toString().slice(-6)}`;
 
-    if (window.Razorpay) {
+    if ((window as any).Razorpay) {
       const options = {
         key: 'rzp_test_mock_key',
         amount: totalPayable * 100,
@@ -281,7 +281,7 @@ export const BookingCheckoutPage: React.FC = () => {
       };
 
       try {
-        const rzp = new window.Razorpay(options);
+        const rzp = new (window as any).Razorpay(options);
         rzp.open();
       } catch (err) {
         simulateFallbackPayment(generatedBookingId);

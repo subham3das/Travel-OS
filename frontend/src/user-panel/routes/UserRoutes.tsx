@@ -29,9 +29,6 @@ import { DestinationDetailsPage } from '../pages/Destination/DestinationDetailsP
 import { AgencyListingPage } from '../pages/AgencyListing/AgencyListingPage';
 import { AgencyDetailsPage } from '../pages/AgencyDetails/AgencyDetailsPage';
 import { PackageDetailsPage } from '../pages/PackageDetails/PackageDetailsPage';
-import { TravelerDetailsPage } from '../pages/TravelerDetails/TravelerDetailsPage';
-import { BookingReviewPage } from '../pages/BookingReview/BookingReviewPage';
-import { PaymentPage } from '../pages/Payment/PaymentPage';
 import { BookingSuccessPage } from '../pages/Booking/BookingSuccessPage';
 import { BookingCheckoutPage } from '../pages/BookingCheckout/BookingCheckoutPage';
 

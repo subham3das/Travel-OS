@@ -187,6 +187,19 @@ export const MOCK_TEAM_MEMBERS: TeamMember[] = [
 
 export const MOCK_TRAVELERS: TripTraveler[] = [
   {
+    id: 'tr-subham',
+    name: 'Subham Das',
+    bookingId: 'BK-2025-0012',
+    phone: '+91 98765 43210',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    paymentStatus: 'Paid',
+    checkInStatus: 'Checked In',
+    emergencyContact: {
+      name: 'Operations Director',
+      phone: '+91 98765 00000',
+    },
+  },
+  {
     id: 'tr-1',
     name: 'Priya Nair',
     bookingId: 'BK-1023',

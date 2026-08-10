@@ -37,6 +37,24 @@ export const MOCK_TRIPS_STATS: TripsQuickStatsData = {
 
 export const MOCK_AGENCY_TRIPS: AgencyTrip[] = [
   {
+    id: 'trip-001',
+    tripId: 'BK-2025-0012',
+    packageName: 'Meghalaya Adventure & Living Root Trail',
+    dayBadge: '20 May',
+    departureDate: '2025-05-20',
+    returnDate: '2025-05-25',
+    dateRangeText: '20 May – 25 May 2025',
+    destinationRoute: 'Shillong, Cherrapunji, Dawki, Mawlynnong',
+    guideName: 'Ramesh Sangma (Eco Guide)',
+    travelerCount: 2,
+    capacity: 12,
+    vehicleAssigned: 'Toyota Innova Crysta (AS-06-AB-8921)',
+    statusCategory: 'Upcoming',
+    statusBadgeText: 'Trip Ready',
+    badgeColor: 'emerald',
+    coverImage: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=500',
+  },
+  {
     id: 'trip-pending-1',
     tripId: 'BK-2041-TRIP',
     packageName: 'Spiti Expedition (Newly Moved)',

@@ -121,6 +121,69 @@ export function computeTripEligibility(
 }
 
 export const MOCK_AGENCY_BOOKINGS: AgencyBooking[] = [
+  // ── Group 0: Magical Meghalaya Tour (20 May 2025) ──
+  {
+    id: 'BK-2025-0012',
+    packageId: 'package-001',
+    packageName: 'Magical Meghalaya Tour',
+    coverImage: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
+    departureDate: '20 May 2025',
+    returnDate: '25 May 2025',
+    bookingDate: '12 May 2025',
+    travelerCount: 2,
+    packagePrice: 22500,
+    totalAmount: 45000,
+    amountPaid: 45000,
+    remainingAmount: 0,
+    dueDate: '18 May 2025',
+    owner: {
+      id: 'cust-1',
+      name: 'Subham Das',
+      gender: 'Male',
+      age: 32,
+      phone: '+91 98765 43210',
+      email: 'subhamdas@gmail.com',
+      idProofType: 'Aadhaar Card',
+      idProofNumber: '9988-7766-5544',
+      emergencyContact: '+91 98765 00000',
+      isPrimary: true,
+    },
+    partners: [
+      {
+        id: 'TP-100',
+        name: 'Rahul Sharma',
+        gender: 'Male',
+        age: 30,
+        phone: '+91 98765 11111',
+        email: 'rahulsharma@gmail.com',
+        idProofType: 'Aadhaar Card',
+        idProofNumber: '1122-3344-5566',
+        emergencyContact: '+91 98765 00000',
+      },
+    ],
+    traveler: {
+      name: 'Subham Das',
+      phone: '+91 98765 43210',
+      email: 'subhamdas@gmail.com',
+      emergencyPhone: '+91 98765 00000',
+      idProofType: 'Aadhaar Card',
+    },
+    bookingStatus: 'CONFIRMED',
+    paymentStatus: 'PAID',
+    tripEligibility: 'ELIGIBLE',
+    specialRequests: 'Pure Vegetarian meals preferred',
+    assignedTripId: 'trip-001',
+    assignedTripName: 'Meghalaya Adventure & Living Root Trail',
+    timeline: [
+      { title: 'Booking Placed', timestamp: '12 May 2025, 10:30 AM', completed: true },
+      { title: 'Payment Confirmed (₹45,000)', timestamp: '12 May 2025, 10:32 AM', completed: true },
+      { title: 'Documents Verified', timestamp: '13 May 2025, 02:15 PM', completed: true },
+      { title: 'Moved to Active Trip', timestamp: '14 May 2025, 09:00 AM', completed: true, active: true },
+    ],
+    paymentHistory: [
+      { id: 'PAY-1', amount: 45000, date: '12 May 2025', method: 'UPI Online', reference: 'TXN-9988112233', status: 'SUCCESS' },
+    ],
+  },
   // ── Group 1: Ladakh Adventure Expedition (15 Jun 2024) ──
   {
     id: 'BK-2024-00568',

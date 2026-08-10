@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearch } from '../../hooks/useSearch';
 import { DEFAULT_FILTER_STATE, isFilterActive } from '../../data/search';
@@ -16,9 +16,26 @@ import { AskAICard } from './components/AskAICard';
 
 export const SearchPage: React.FC = () => {
   const navigate = useNavigate();
-  const { query, setQuery, filters, setFilters, results, loading } = useSearch('');
-  const [activeTab, setActiveTab] = useState<SearchTabType>('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const urlQuery = searchParams.get('q') || '';
+  const urlTab = (searchParams.get('tab') as SearchTabType) || 'all';
+
+  const { query, setQuery, filters, setFilters, results, loading } = useSearch(urlQuery);
+  const [activeTab, setActiveTab] = useState<SearchTabType>(urlTab);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  useEffect(() => {
+    if (urlQuery && urlQuery !== query) {
+      setQuery(urlQuery);
+    }
+  }, [urlQuery]);
+
+  useEffect(() => {
+    if (urlTab && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
 
   // Local storage for recent searches
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -57,10 +74,24 @@ export const SearchPage: React.FC = () => {
   const handleSelectTerm = (term: string) => {
     setQuery(term);
     saveSearchTerm(term);
-    navigate(`/search/results?q=${encodeURIComponent(term)}`);
+    setSearchParams(term ? { q: term, ...(activeTab !== 'all' ? { tab: activeTab } : {}) } : {});
+  };
+
+  const handleTabChange = (tab: SearchTabType) => {
+    setActiveTab(tab);
+    setSearchParams(query ? { q: query, ...(tab !== 'all' ? { tab } : {}) } : tab !== 'all' ? { tab } : {});
+  };
+
+  const handleCancel = () => {
+    if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate('/home');
+    }
   };
 
   const activeFiltersPresent = isFilterActive(filters);
+  const isDefaultState = query.trim() === '' && activeTab === 'all' && !activeFiltersPresent;
 
   return (
     <motion.div
@@ -78,9 +109,13 @@ export const SearchPage: React.FC = () => {
             onQueryChange={(q) => {
               setQuery(q);
               if (q.trim()) saveSearchTerm(q);
+              setSearchParams(q.trim() ? { q, ...(activeTab !== 'all' ? { tab: activeTab } : {}) } : {});
             }}
-            onClear={() => setQuery('')}
-            onCancel={() => navigate(-1)}
+            onClear={() => {
+              setQuery('');
+              setSearchParams(activeTab !== 'all' ? { tab: activeTab } : {});
+            }}
+            onCancel={handleCancel}
             onFilterToggle={() => setIsFilterOpen(!isFilterOpen)}
             isFilterOpen={isFilterOpen}
             isFilterActive={activeFiltersPresent}
@@ -104,7 +139,7 @@ export const SearchPage: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {query.trim() === '' && !activeFiltersPresent ? (
+          {isDefaultState ? (
             /* NO TYPING & NO ACTIVE FILTERS STATE */
             <div className="space-y-6">
               {/* 1. Recent Searches (100ms delay) */}
@@ -159,7 +194,7 @@ export const SearchPage: React.FC = () => {
               {/* Filter Tabs */}
               <SearchTabs
                 activeTab={activeTab}
-                onTabChange={(tab) => setActiveTab(tab)}
+                onTabChange={handleTabChange}
                 counts={{
                   destinations: results.destinations.length,
                   packages: results.packages.length,

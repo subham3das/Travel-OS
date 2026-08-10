@@ -327,7 +327,7 @@ export const HomePage: React.FC = () => {
       <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
-        onApply={(f) => navigate(`/search/results?q=${f.category}`)}
+        onApply={(f) => navigate(`/search?q=${encodeURIComponent(f.category)}`)}
       />
 
       {/* 13. Floating Bottom Navigation Bar */}

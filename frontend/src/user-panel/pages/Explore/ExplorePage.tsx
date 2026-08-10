@@ -434,7 +434,7 @@ export const ExplorePage: React.FC = () => {
           <SectionHeader
             title="Trending Right Now"
             emoji="🔥"
-            onViewAll={() => navigate('/search/results?q=trending')}
+            onViewAll={() => navigate('/search?q=trending')}
           />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -485,11 +485,11 @@ export const ExplorePage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Explore by Mood" onViewAll={() => navigate('/search/results?q=mood')} />
+          <SectionHeader title="Explore by Mood" onViewAll={() => navigate('/search?q=mood')} />
 
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-2.5 sm:gap-4">
             {moodItems.map((mood) => (
-              <MoodCard key={mood.id} mood={mood} onClick={() => navigate(`/search/results?q=${encodeURIComponent(mood.title)}`)} />
+              <MoodCard key={mood.id} mood={mood} onClick={() => navigate(`/search?q=${encodeURIComponent(mood.title)}`)} />
             ))}
           </div>
         </motion.section>
@@ -503,7 +503,7 @@ export const ExplorePage: React.FC = () => {
           className="space-y-3"
         >
           <div>
-            <SectionHeader title="Hidden Gems" onViewAll={() => navigate('/search/results?q=hidden+gems')} />
+            <SectionHeader title="Hidden Gems" onViewAll={() => navigate('/search?q=hidden+gems')} />
             <p className="text-xs font-medium text-slate-400 -mt-3 mb-3">
               Offbeat places worth exploring
             </p>
@@ -578,11 +578,11 @@ export const ExplorePage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Upcoming Festivals & Events" onViewAll={() => navigate('/search/results?q=festivals')} />
+          <SectionHeader title="Upcoming Festivals & Events" onViewAll={() => navigate('/search?q=festivals')} />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
             {festivalItems.map((fest) => (
-              <FestivalCard key={fest.id} festival={fest} onClick={() => navigate(`/search/results?q=${encodeURIComponent(fest.name)}`)} />
+              <FestivalCard key={fest.id} festival={fest} onClick={() => navigate(`/search?q=${encodeURIComponent(fest.name)}`)} />
             ))}
           </div>
         </motion.section>
@@ -596,7 +596,7 @@ export const ExplorePage: React.FC = () => {
           className="space-y-3"
         >
           <div>
-            <SectionHeader title="Seasonal Picks for You" onViewAll={() => navigate('/search/results?q=seasonal')} />
+            <SectionHeader title="Seasonal Picks for You" onViewAll={() => navigate('/search?q=seasonal')} />
             <p className="text-xs font-medium text-slate-400 -mt-3 mb-3">
               Handpicked for this season
             </p>
@@ -605,7 +605,7 @@ export const ExplorePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Monsoon Banner */}
             <div
-              onClick={() => navigate('/search/results?q=monsoon')}
+              onClick={() => navigate('/search?q=monsoon')}
               className="relative h-44 sm:h-52 rounded-3xl overflow-hidden shadow-xs border border-slate-100 group cursor-pointer"
             >
               <img
@@ -631,7 +631,7 @@ export const ExplorePage: React.FC = () => {
 
             {/* Summer Banner */}
             <div
-              onClick={() => navigate('/search/results?q=summer')}
+              onClick={() => navigate('/search?q=summer')}
               className="relative h-44 sm:h-52 rounded-3xl overflow-hidden shadow-xs border border-slate-100 group cursor-pointer"
             >
               <img
@@ -665,14 +665,14 @@ export const ExplorePage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Top Experiences" onViewAll={() => navigate('/search/results?q=experiences')} />
+          <SectionHeader title="Top Experiences" onViewAll={() => navigate('/search?q=experiences')} />
 
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {topExperiences.map((exp) => (
               <motion.div
                 key={exp.id}
                 whileHover={{ y: -3 }}
-                onClick={() => navigate(`/search/results?q=${encodeURIComponent(exp.title)}`)}
+                onClick={() => navigate(`/search?q=${encodeURIComponent(exp.title)}`)}
                 className="relative h-40 rounded-2xl overflow-hidden shadow-2xs border border-slate-100 group cursor-pointer"
               >
                 <img
@@ -702,7 +702,7 @@ export const ExplorePage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="space-y-3"
         >
-          <SectionHeader title="Popular Packages" onViewAll={() => navigate('/search/results?q=packages')} />
+          <SectionHeader title="Popular Packages" onViewAll={() => navigate('/search?tab=packages')} />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
             {popularPackages.map((pkg) => (
@@ -725,7 +725,7 @@ export const ExplorePage: React.FC = () => {
       <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
-        onApply={(f) => navigate(`/search/results?q=${f.category}`)}
+        onApply={(f) => navigate(`/search?q=${encodeURIComponent(f.category)}`)}
       />
 
       {/* 15. Floating Bottom Navigation Bar */}

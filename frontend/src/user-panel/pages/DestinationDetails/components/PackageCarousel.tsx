@@ -17,7 +17,7 @@ export const PackageCarousel: React.FC<PackageCarouselProps> = ({ destination })
           Popular Packages
         </h2>
         <button
-          onClick={() => navigate('/search/results')}
+          onClick={() => navigate('/search?tab=packages')}
           className="text-xs font-bold text-[#6356E5] hover:underline cursor-pointer"
         >
           View All

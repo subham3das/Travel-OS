@@ -23,7 +23,7 @@ export const StickyCTA: React.FC<StickyCTAProps> = ({ startingPrice }) => {
         {/* Right CTA Button */}
         <button
           type="button"
-          onClick={() => navigate('/search/results')}
+          onClick={() => navigate('/search?tab=packages')}
           className="h-[56px] px-7 rounded-[16px] bg-[#6356E5] hover:bg-[#5245d6] text-white font-black text-xs sm:text-sm shadow-lg shadow-[#6356E5]/25 transition-all focus:outline-none flex items-center justify-center gap-2.5 cursor-pointer shrink-0"
         >
           <span className="whitespace-nowrap font-black tracking-tight">Explore Packages</span>

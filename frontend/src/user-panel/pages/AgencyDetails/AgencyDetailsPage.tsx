@@ -328,7 +328,7 @@ export const AgencyDetailsPage: React.FC = () => {
                 Popular Destinations
               </h3>
               <button
-                onClick={() => navigate('/search/results?tab=destinations')}
+                onClick={() => navigate('/search?tab=destinations')}
                 className="text-xs sm:text-sm font-bold text-[#6356E5] hover:underline focus:outline-none cursor-pointer"
               >
                 View All
@@ -388,7 +388,7 @@ export const AgencyDetailsPage: React.FC = () => {
       </main>
 
       {/* 17. Sticky Booking Bottom CTA Bar */}
-      <StickyBookingBar startingPrice={agency.startingPrice} onViewPackages={() => navigate('/search/results?tab=packages')} />
+      <StickyBookingBar startingPrice={agency.startingPrice} onViewPackages={() => navigate('/search?tab=packages')} />
     </div>
   );
 };

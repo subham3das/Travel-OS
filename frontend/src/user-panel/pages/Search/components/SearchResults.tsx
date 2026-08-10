@@ -222,6 +222,34 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           </div>
         </div>
       )}
+
+      {activeTab === 'travelers' && (
+        <div className="space-y-3">
+          {renderSectionHeader('Travelers', <Users className="w-4 h-4 text-sky-600" />, 'travelers')}
+          <div className="space-y-3">
+            {[
+              { id: 'trv-subham', name: 'Subham Das', username: '@subham_travels', bio: 'Explorer of Northeast India & Himalayan peaks', trips: 18, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop' },
+              { id: 'trv-ananya', name: 'Ananya Sharma', username: '@ananya_wild', bio: 'Solo traveler & wildlife photographer', trips: 24, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop' },
+            ].map((trv) => (
+              <div
+                key={trv.id}
+                onClick={() => navigate(`/community/user/${trv.id}`)}
+                className="bg-white rounded-3xl p-4 border border-slate-100 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-3 group"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <img src={trv.avatar} alt={trv.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-extrabold text-[#0F172A] truncate group-hover:text-[#6356E5]">{trv.name}</h4>
+                    <p className="text-xs font-semibold text-slate-400">{trv.username} • {trv.trips} Trips Completed</p>
+                    <p className="text-xs font-medium text-slate-500 truncate">{trv.bio}</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-[#6356E5] shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

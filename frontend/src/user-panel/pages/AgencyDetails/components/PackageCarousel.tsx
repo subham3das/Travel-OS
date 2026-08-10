@@ -26,7 +26,7 @@ export const PackageCarousel: React.FC<PackageCarouselProps> = ({ packages }) =>
           Top Packages
         </h3>
         <button
-          onClick={() => navigate('/search/results?tab=packages')}
+          onClick={() => navigate('/search?tab=packages')}
           className="text-xs sm:text-sm font-bold text-[#6356E5] hover:underline focus:outline-none flex items-center gap-1 cursor-pointer shrink-0"
         >
           <span>View All</span>

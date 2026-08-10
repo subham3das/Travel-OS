@@ -48,7 +48,7 @@ export const StickyBookingBar: React.FC<StickyBookingBarProps> = ({
             whileTap={{ scale: 0.96 }}
             onClick={() => {
               if (onViewPackages) onViewPackages();
-              else navigate('/search/results?tab=packages');
+              else navigate('/search?tab=packages');
             }}
             className="flex-1 py-3.5 px-6 rounded-2xl bg-[#6356E5] hover:bg-[#5245d6] text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-[#6356E5]/25 transition-all flex items-center justify-center gap-2 focus:outline-none cursor-pointer"
           >

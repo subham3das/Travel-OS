@@ -24,7 +24,6 @@ import { NotificationsPage } from '../pages/Notifications/NotificationsPage';
 import { ProfilePage } from '../pages/Profile/ProfilePage';
 
 import { SearchPage } from '../pages/Search/SearchPage';
-import { SearchResultsPage } from '../pages/Search/SearchResultsPage';
 import { DestinationDetailsPage } from '../pages/Destination/DestinationDetailsPage';
 import { AgencyListingPage } from '../pages/AgencyListing/AgencyListingPage';
 import { AgencyDetailsPage } from '../pages/AgencyDetails/AgencyDetailsPage';
@@ -86,7 +85,6 @@ export const UserRoutes = () => (
 
         {/* Search & Marketplace Detail Routes */}
         <Route path="/search" element={<SearchPage />} />
-        <Route path="/search/results" element={<SearchResultsPage />} />
         <Route path="/destination/:id" element={<DestinationDetailsPage />} />
         <Route path="/destination/:destinationId" element={<DestinationDetailsPage />} />
         <Route path="/agencies" element={<AgencyListingPage />} />

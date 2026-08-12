@@ -34,6 +34,7 @@ export const AdminRoutes = () => (
         <Route path="/admin/agencies" element={<AdminAgenciesPage />} />
         <Route path="/admin/agencies/:agencyId" element={<AdminAgencyDetailsPage />} />
         <Route path="/admin/verification-pending" element={<AdminVerificationPendingPage />} />
+        <Route path="/super-admin/agency-requests" element={<AdminVerificationPendingPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
       </Route>
     </Route>

@@ -159,37 +159,57 @@ export const AdminVerificationPendingPage: React.FC = () => {
     setModalConfig({ isOpen: true, type: 'request_docs', targetRequest: request });
   };
 
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const handleConfirmDecision = async () => {
-    if (!modalConfig.targetRequest) return;
+    if (!modalConfig.targetRequest || isProcessing) return;
     const req = modalConfig.targetRequest;
+    setIsProcessing(true);
 
-    if (modalConfig.type === 'approve') {
-      await adminAgencyRequestService.approveRequest(req.id);
-      setRequests((prev) =>
-        prev.map((r) => (r.id === req.id ? { ...r, reviewStatus: 'Approved' } : r))
-      );
-      if (selectedRequest?.id === req.id) {
-        setSelectedRequest((prev) => (prev ? { ...prev, reviewStatus: 'Approved' } : null));
+    try {
+      if (modalConfig.type === 'approve') {
+        const res = await adminAgencyRequestService.approveRequest(req.id);
+        if (res.success) {
+          const remaining = requests.filter((r) => r.id !== req.id);
+          setRequests(remaining);
+          if (res.updatedStats) setStats(res.updatedStats);
+
+          // Update selection in drawer: select next request or close drawer
+          if (selectedRequest?.id === req.id) {
+            if (remaining.length > 0) {
+              setSelectedRequest(remaining[0]);
+            } else {
+              setSelectedRequest(null);
+              setIsDrawerOpen(false);
+            }
+          }
+
+          setSelectedIds((prev) => prev.filter((id) => id !== req.id));
+          showToast('Agency approved successfully.', 'success');
+        } else {
+          showToast(res.message || 'Failed to approve agency', 'error');
+        }
+      } else if (modalConfig.type === 'reject') {
+        const res = await adminAgencyRequestService.rejectRequest(req.id);
+        if (res.success) {
+          if (res.updatedRequests) setRequests(res.updatedRequests);
+          if (res.updatedStats) setStats(res.updatedStats);
+          showToast(`Agency "${req.agencyName}" request rejected`, 'info');
+        }
+      } else if (modalConfig.type === 'request_docs') {
+        const res = await adminAgencyRequestService.requestMoreDocuments(req.id);
+        if (res.success && res.updatedRequests) {
+          setRequests(res.updatedRequests);
+        }
+        showToast(`Document request sent to "${req.agencyName}"`, 'info');
       }
-      showToast(`Agency "${req.agencyName}" has been approved!`, 'success');
-    } else if (modalConfig.type === 'reject') {
-      await adminAgencyRequestService.rejectRequest(req.id);
-      setRequests((prev) =>
-        prev.map((r) => (r.id === req.id ? { ...r, reviewStatus: 'Rejected' } : r))
-      );
-      if (selectedRequest?.id === req.id) {
-        setSelectedRequest((prev) => (prev ? { ...prev, reviewStatus: 'Rejected' } : null));
-      }
-      showToast(`Agency "${req.agencyName}" request rejected`, 'info');
-    } else if (modalConfig.type === 'request_docs') {
-      await adminAgencyRequestService.requestMoreDocuments(req.id);
-      setRequests((prev) =>
-        prev.map((r) => (r.id === req.id ? { ...r, verificationStatus: 'Missing Docs' } : r))
-      );
-      showToast(`Document request sent to "${req.agencyName}"`, 'info');
+    } catch (err) {
+      console.error('Error in decision workflow', err);
+      showToast('An error occurred while processing the decision. Please try again.', 'error');
+    } finally {
+      setIsProcessing(false);
+      setModalConfig({ isOpen: false, type: 'approve', targetRequest: null });
     }
-
-    setModalConfig({ isOpen: false, type: 'approve', targetRequest: null });
   };
 
   // Row Action Menu handler
@@ -368,6 +388,7 @@ export const AdminVerificationPendingPage: React.FC = () => {
         isOpen={modalConfig.isOpen}
         type={modalConfig.type}
         agencyName={modalConfig.targetRequest?.agencyName || 'Agency'}
+        isProcessing={isProcessing}
         onConfirm={handleConfirmDecision}
         onCancel={() => setModalConfig({ isOpen: false, type: 'approve', targetRequest: null })}
       />

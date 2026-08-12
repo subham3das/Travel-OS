@@ -6,6 +6,7 @@ interface ConfirmationModalProps {
   isOpen: boolean;
   type: 'approve' | 'reject' | 'request_docs';
   agencyName: string;
+  isProcessing?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -14,6 +15,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isOpen,
   type,
   agencyName,
+  isProcessing = false,
   onConfirm,
   onCancel,
 }) => {
@@ -23,8 +25,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     switch (type) {
       case 'approve':
         return {
-          title: 'Approve Agency Registration?',
-          desc: `Are you sure you want to approve "${agencyName}"? They will gain immediate access to the Agency Portal and can start publishing packages.`,
+          title: 'Approve Agency?',
+          desc: 'This agency will be verified, activated, and moved to the Agencies section. It will no longer appear under Agency Requests.',
           icon: <CheckCircle2 className="w-6 h-6 text-emerald-600" />,
           btnText: 'Approve Agency',
           btnStyle: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20',
@@ -91,15 +93,18 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
             <button
               onClick={onCancel}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition-colors cursor-pointer"
+              disabled={isProcessing}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={onConfirm}
-              className={`px-5 py-2 rounded-xl text-xs font-extrabold shadow-md transition-all cursor-pointer ${content.btnStyle}`}
+              disabled={isProcessing}
+              className={`px-5 py-2 rounded-xl text-xs font-extrabold shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 ${content.btnStyle}`}
             >
-              {content.btnText}
+              {isProcessing && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              <span>{isProcessing ? 'Processing...' : content.btnText}</span>
             </button>
           </div>
         </motion.div>

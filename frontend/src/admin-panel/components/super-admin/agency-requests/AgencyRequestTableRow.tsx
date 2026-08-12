@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { MoreVertical, Eye, UserCheck, FileText, PauseCircle, Trash2 } from 'lucide-react';
 import { AgencyRequestItem } from '../../../types/agencyRequest';
 
@@ -67,7 +68,12 @@ export const AgencyRequestTableRow: React.FC<AgencyRequestTableRowProps> = ({
   };
 
   return (
-    <tr
+    <motion.tr
+      layout
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -20, height: 0 }}
+      transition={{ duration: 0.25 }}
       className={`border-b border-slate-100 hover:bg-slate-50/80 transition-colors text-xs font-semibold text-[#0F172A] group ${
         isSelected ? 'bg-[#EEF2FF]/40' : ''
       }`}
@@ -235,6 +241,6 @@ export const AgencyRequestTableRow: React.FC<AgencyRequestTableRowProps> = ({
           </div>
         </div>
       </td>
-    </tr>
+    </motion.tr>
   );
 };

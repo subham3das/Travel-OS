@@ -1,4 +1,5 @@
 import React from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { AgencyRequestItem } from '../../../types/agencyRequest';
 import { AgencyRequestTableHeader } from './AgencyRequestTableHeader';
 import { AgencyRequestTableRow } from './AgencyRequestTableRow';
@@ -59,16 +60,18 @@ export const AgencyRequestsTable: React.FC<AgencyRequestsTableProps> = ({
             onToggleSelectAll={onToggleSelectAll}
           />
           <tbody>
-            {requests.map((req) => (
-              <AgencyRequestTableRow
-                key={req.id}
-                request={req}
-                isSelected={selectedIds.includes(req.id)}
-                onToggleSelect={onToggleSelect}
-                onOpenDrawer={onOpenDrawer}
-                onRowAction={onRowAction}
-              />
-            ))}
+            <AnimatePresence initial={false}>
+              {requests.map((req) => (
+                <AgencyRequestTableRow
+                  key={req.id}
+                  request={req}
+                  isSelected={selectedIds.includes(req.id)}
+                  onToggleSelect={onToggleSelect}
+                  onOpenDrawer={onOpenDrawer}
+                  onRowAction={onRowAction}
+                />
+              ))}
+            </AnimatePresence>
           </tbody>
         </table>
       </div>

@@ -28,7 +28,7 @@ export const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<TravelerUser[]>([]);
   const [kpiStats, setKpiStats] = useState<UserKPIStats>(initialUserKPIStats);
   const [selectedUser, setSelectedUser] = useState<TravelerUser | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [quickSearch, setQuickSearch] = useState('');
@@ -94,10 +94,7 @@ export const AdminUsersPage: React.FC = () => {
       setUsers(fetchedUsers);
       setKpiStats(fetchedStats);
 
-      // Default select the first user in drawer if none selected
-      if (fetchedUsers.length > 0 && !selectedUser) {
-        setSelectedUser(fetchedUsers[0]);
-      } else if (fetchedUsers.length > 0 && selectedUser) {
+      if (fetchedUsers.length > 0 && selectedUser) {
         const stillPresent = fetchedUsers.find((u) => u.id === selectedUser.id);
         setSelectedUser(stillPresent || fetchedUsers[0]);
       } else if (fetchedUsers.length === 0) {
@@ -457,7 +454,7 @@ export const AdminUsersPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ── 5. MAIN CONTENT AREA: TABLE + STICKY RIGHT DRAWER ── */}
+      {/* ── 5. MAIN CONTENT AREA: TABLE ── */}
       {error ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-rose-100 shadow-2xs space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
@@ -476,55 +473,50 @@ export const AdminUsersPage: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col xl:flex-row gap-5 items-start">
-          {/* Table Container */}
-          <div className="flex-1 min-w-0 w-full space-y-3">
-            <UsersTable
-              users={paginatedUsers}
-              selectedIds={selectedIds}
-              selectedUser={selectedUser}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-              onToggleSelectAll={handleToggleSelectAll}
-              onToggleSelect={handleToggleSelect}
-              onSelectUser={handleSelectUserForDrawer}
-              onRowAction={handleRowAction}
-              onRefresh={fetchUsersData}
-            />
+        <div className="space-y-3">
+          <UsersTable
+            users={paginatedUsers}
+            selectedIds={selectedIds}
+            selectedUser={selectedUser}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            onToggleSelectAll={handleToggleSelectAll}
+            onToggleSelect={handleToggleSelect}
+            onSelectUser={handleSelectUserForDrawer}
+            onRowAction={handleRowAction}
+            onRefresh={fetchUsersData}
+          />
 
-            {/* Pagination Footer */}
-            {users.length > 0 && (
-              <UserPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={users.length}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={(size) => {
-                  setPageSize(size);
-                  setCurrentPage(1);
-                }}
-              />
-            )}
-          </div>
-
-          {/* Sticky Right Details Drawer */}
-          {selectedUser && (
-            <UserDetailsDrawer
-              user={selectedUser}
-              isOpen={isDrawerOpen}
-              onClose={() => setIsDrawerOpen(false)}
-              onEdit={(u) => setEditModalUser(u)}
-              onVerify={(u) => setConfirmModal({ isOpen: true, type: 'verify', user: u })}
-              onSuspend={(u) => setConfirmModal({ isOpen: true, type: 'suspend', user: u })}
-              onActivate={(u) => setConfirmModal({ isOpen: true, type: 'activate', user: u })}
-              onSendNotification={(u) => setNotifModalUser(u)}
+          {/* Pagination Footer */}
+          {users.length > 0 && (
+            <UserPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={users.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
             />
           )}
         </div>
       )}
 
-      {/* ── 6. MODALS ── */}
+      {/* ── 6. RIGHT DETAILS DRAWER OVERLAY (SLIDE IN FROM RIGHT) ── */}
+      <UserDetailsDrawer
+        user={selectedUser}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onEdit={(u) => setEditModalUser(u)}
+        onVerify={(u) => setConfirmModal({ isOpen: true, type: 'verify', user: u })}
+        onSuspend={(u) => setConfirmModal({ isOpen: true, type: 'suspend', user: u })}
+        onActivate={(u) => setConfirmModal({ isOpen: true, type: 'activate', user: u })}
+        onSendNotification={(u) => setNotifModalUser(u)}
+      />
+
+      {/* ── 7. MODALS ── */}
       <AddUserModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

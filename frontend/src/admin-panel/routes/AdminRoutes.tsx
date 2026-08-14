@@ -13,6 +13,7 @@ import { AdminAgencyDetailsPage } from '../pages/AgencyDetails/AdminAgencyDetail
 import { AdminVerificationPendingPage } from '../pages/VerificationPending/AdminVerificationPendingPage';
 import { AdminUsersPage } from '../pages/Users/AdminUsersPage';
 import { AdminPackagesPage } from '../pages/Packages/AdminPackagesPage';
+import { AdminBookingsPage } from '../pages/Bookings/AdminBookingsPage';
 import { AdminSettingsPage } from '../pages/Settings/AdminSettingsPage';
 import { AdminNotFoundPage } from '../pages/NotFound/AdminNotFoundPage';
 
@@ -41,6 +42,8 @@ export const AdminRoutes = () => (
         <Route path="/super-admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/packages" element={<AdminPackagesPage />} />
         <Route path="/super-admin/packages" element={<AdminPackagesPage />} />
+        <Route path="/admin/bookings" element={<AdminBookingsPage />} />
+        <Route path="/super-admin/bookings" element={<AdminBookingsPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
       </Route>
     </Route>

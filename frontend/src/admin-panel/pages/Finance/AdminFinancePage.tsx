@@ -216,10 +216,10 @@ export const AdminFinancePage: React.FC = () => {
       <div className="flex flex-col xl:flex-row gap-5 items-start">
         {/* Left Scrollable Analytics Columns */}
         <div className="flex-1 min-w-0 w-full space-y-5">
-          {/* ── FIRST ANALYTICS ROW ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-            {/* Revenue Overview (5 cols) */}
-            <div className="lg:col-span-5 h-full">
+          {/* ── FIRST ANALYTICS ROW (3 CARDS) ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 items-stretch">
+            {/* Revenue Overview */}
+            <div className="h-full min-w-0 md:col-span-2 2xl:col-span-1">
               <RevenueOverviewChart
                 data={revenueChartData}
                 timeframe={timeframe}
@@ -227,21 +227,21 @@ export const AdminFinancePage: React.FC = () => {
               />
             </div>
 
-            {/* Commission Breakdown (4 cols) */}
-            <div className="lg:col-span-4 h-full">
+            {/* Commission Breakdown */}
+            <div className="h-full min-w-0">
               <CommissionBreakdown items={commissionItems} />
             </div>
 
-            {/* Revenue by Destination (3 cols) */}
-            <div className="lg:col-span-3 h-full">
+            {/* Revenue by Destination */}
+            <div className="h-full min-w-0">
               <RevenueDestinationChart destinations={destinationRevenues} />
             </div>
           </div>
 
-          {/* ── SECOND ANALYTICS ROW ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-            {/* Top Performing Agencies (5 cols) */}
-            <div className="lg:col-span-5 h-full">
+          {/* ── SECOND ANALYTICS ROW (3 CARDS) ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 items-stretch">
+            {/* Top Performing Agencies */}
+            <div className="h-full min-w-0 md:col-span-2 2xl:col-span-1">
               <TopPerformingAgencies
                 agencies={topAgencies}
                 selectedAgencyName={sidebarData.agencyName}
@@ -249,13 +249,13 @@ export const AdminFinancePage: React.FC = () => {
               />
             </div>
 
-            {/* Monthly Financial Summary (3 cols) */}
-            <div className="lg:col-span-3 h-full">
+            {/* Monthly Financial Summary */}
+            <div className="h-full min-w-0">
               <FinancialSummary summary={financialSummary} />
             </div>
 
-            {/* Refund Analytics (4 cols) */}
-            <div className="lg:col-span-4 h-full">
+            {/* Refund Analytics */}
+            <div className="h-full min-w-0">
               <RefundAnalytics data={refundAnalytics} />
             </div>
           </div>
@@ -263,7 +263,7 @@ export const AdminFinancePage: React.FC = () => {
           {/* ── THIRD ANALYTICS ROW ── */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
             {/* Agency Settlement Overview (7 cols) */}
-            <div className="lg:col-span-7 h-full">
+            <div className="lg:col-span-7 h-full min-w-0">
               <SettlementTable
                 settlements={settlements}
                 onViewDetails={(s) => setSelectedSettlementForModal(s)}
@@ -274,7 +274,7 @@ export const AdminFinancePage: React.FC = () => {
             </div>
 
             {/* Financial Timeline (5 cols) */}
-            <div className="lg:col-span-5 h-full">
+            <div className="lg:col-span-5 h-full min-w-0">
               <FinancialTimeline
                 items={timelineItems}
                 onViewFullTimeline={() => showToast('Full financial audit timeline loaded', 'info')}

@@ -14,12 +14,12 @@ export const CommissionBreakdown: React.FC<CommissionBreakdownProps> = ({ items 
   let cumulativeAngle = 0;
 
   return (
-    <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-4 select-none flex flex-col justify-between h-full">
-      <h3 className="text-sm font-black text-[#0F172A]">Commission Breakdown</h3>
+    <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-3 select-none flex flex-col justify-between h-full w-full min-w-0 overflow-hidden">
+      <h3 className="text-sm font-black text-[#0F172A] truncate">Commission Breakdown</h3>
 
-      <div className="flex items-center gap-6 justify-center flex-1 py-1">
+      <div className="flex flex-col sm:flex-row items-center gap-4 justify-center flex-1 py-1 min-w-0">
         {/* SVG Donut */}
-        <div className="relative w-36 h-36 shrink-0 flex items-center justify-center">
+        <div className="relative w-32 h-32 sm:w-36 sm:h-36 shrink-0 flex items-center justify-center">
           <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
             {items.map((item, idx) => {
               const strokeLength = (item.value / total) * circumference;
@@ -51,10 +51,10 @@ export const CommissionBreakdown: React.FC<CommissionBreakdownProps> = ({ items 
         </div>
 
         {/* Legend */}
-        <div className="space-y-2 text-xs flex-1 min-w-0">
+        <div className="space-y-1.5 text-xs flex-1 w-full min-w-0">
           {items.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 min-w-0">
+            <div key={idx} className="flex items-center justify-between gap-1.5 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: item.color }}
@@ -63,7 +63,7 @@ export const CommissionBreakdown: React.FC<CommissionBreakdownProps> = ({ items 
                   {item.name}
                 </span>
               </div>
-              <span className="font-extrabold text-[#0F172A] text-[11px] whitespace-nowrap">
+              <span className="font-extrabold text-[#0F172A] text-[11px] whitespace-nowrap shrink-0">
                 {item.amount} <span className="text-[10px] text-slate-400 font-semibold">({item.percentage})</span>
               </span>
             </div>

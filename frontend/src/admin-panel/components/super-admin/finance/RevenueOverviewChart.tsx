@@ -25,7 +25,7 @@ export const RevenueOverviewChart: React.FC<RevenueOverviewChartProps> = ({
 
   const points = data.map((d, idx) => {
     const val = activeTab === 'Revenue' ? d.revenue : activeTab === 'GMV' ? d.gmv : d.profit;
-    const x = (idx / (data.length - 1)) * 100;
+    const x = (idx / Math.max(data.length - 1, 1)) * 100;
     const y = 100 - (val / maxValue) * 100;
     return { x, y, data: d, val };
   });
@@ -43,22 +43,22 @@ export const RevenueOverviewChart: React.FC<RevenueOverviewChartProps> = ({
 
   const areaPath = `${svgPath} L 100 100 L 0 100 Z`;
 
-  const hoveredPoint = hoveredIndex !== null ? points[hoveredIndex] : null;
+  const hoveredPoint = hoveredIndex !== null && hoveredIndex < points.length ? points[hoveredIndex] : null;
 
   return (
-    <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-4 select-none flex flex-col justify-between h-full">
+    <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-4 select-none flex flex-col justify-between h-full w-full min-w-0 overflow-hidden">
       {/* Header with Title + Segmented Tabs + Dropdown */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h3 className="text-sm font-black text-[#0F172A]">Revenue Overview</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0">
+        <h3 className="text-sm font-black text-[#0F172A] truncate">Revenue Overview</h3>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* Segmented Tabs */}
-          <div className="flex items-center p-1 bg-slate-100/80 rounded-xl text-[11px] font-extrabold">
+          <div className="flex items-center p-1 bg-slate-100/80 rounded-xl text-[11px] font-extrabold shrink-0">
             {(['Revenue', 'GMV', 'Profit'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all cursor-pointer ${
                   activeTab === tab
                     ? 'bg-white text-[#6356E5] shadow-xs'
                     : 'text-slate-500 hover:text-slate-800'
@@ -70,23 +70,23 @@ export const RevenueOverviewChart: React.FC<RevenueOverviewChartProps> = ({
           </div>
 
           {/* Timeframe Dropdown */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <select
               value={timeframe}
               onChange={(e) => onTimeframeChange(e.target.value as any)}
-              className="appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3 py-1 pr-7 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#6356E5] shadow-2xs cursor-pointer"
+              className="appearance-none bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 pr-6 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#6356E5] shadow-2xs cursor-pointer"
             >
               <option value="Daily">Daily</option>
               <option value="Weekly">Weekly</option>
               <option value="Monthly">Monthly</option>
             </select>
-            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
       </div>
 
       {/* Chart Canvas Area */}
-      <div className="relative h-48 sm:h-52 w-full pt-2">
+      <div className="relative h-48 sm:h-52 w-full pt-2 min-w-0">
         {/* Y Axis Grid Lines */}
         <div className="absolute inset-0 flex flex-col justify-between text-[10px] font-bold text-slate-300 pointer-events-none">
           <div className="border-b border-slate-100 flex justify-between pb-0.5">
@@ -158,12 +158,12 @@ export const RevenueOverviewChart: React.FC<RevenueOverviewChartProps> = ({
             animate={{ opacity: 1, y: 0 }}
             className="absolute z-20 pointer-events-none"
             style={{
-              left: `${Math.min(Math.max(hoveredPoint.x, 15), 75)}%`,
+              left: `${Math.min(Math.max(hoveredPoint.x, 15), 80)}%`,
               top: `${Math.max(hoveredPoint.y - 35, 10)}%`,
               transform: 'translate(-50%, -100%)',
             }}
           >
-            <div className="bg-[#0F172A] text-white rounded-xl px-3 py-1.5 shadow-xl border border-slate-700/80 text-[10px] font-bold space-y-0.5">
+            <div className="bg-[#0F172A] text-white rounded-xl px-3 py-1.5 shadow-xl border border-slate-700/80 text-[10px] font-bold space-y-0.5 whitespace-nowrap">
               <p className="text-slate-300 font-semibold">{hoveredPoint.data.date}, 2024</p>
               <div className="flex items-center gap-1.5 text-xs font-black text-white">
                 <span className="w-2 h-2 rounded-full bg-[#6356E5]" />
@@ -182,11 +182,11 @@ export const RevenueOverviewChart: React.FC<RevenueOverviewChartProps> = ({
       </div>
 
       {/* X Axis Labels */}
-      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 pt-1 border-t border-slate-100">
+      <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-bold text-slate-400 pt-1 border-t border-slate-100 min-w-0">
         {data.map((d, idx) => (
           <span
             key={idx}
-            className={`cursor-pointer transition-colors ${
+            className={`cursor-pointer transition-colors truncate px-0.5 ${
               hoveredIndex === idx ? 'text-[#6356E5] font-black' : 'hover:text-slate-700'
             }`}
             onMouseEnter={() => setHoveredIndex(idx)}

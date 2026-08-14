@@ -11,6 +11,7 @@ import { AdminDashboardPage } from '../pages/Dashboard/AdminDashboardPage';
 import { AdminAgenciesPage } from '../pages/Agencies/AdminAgenciesPage';
 import { AdminAgencyDetailsPage } from '../pages/AgencyDetails/AdminAgencyDetailsPage';
 import { AdminVerificationPendingPage } from '../pages/VerificationPending/AdminVerificationPendingPage';
+import { AdminUsersPage } from '../pages/Users/AdminUsersPage';
 import { AdminSettingsPage } from '../pages/Settings/AdminSettingsPage';
 import { AdminNotFoundPage } from '../pages/NotFound/AdminNotFoundPage';
 
@@ -35,6 +36,8 @@ export const AdminRoutes = () => (
         <Route path="/admin/agencies/:agencyId" element={<AdminAgencyDetailsPage />} />
         <Route path="/admin/verification-pending" element={<AdminVerificationPendingPage />} />
         <Route path="/super-admin/agency-requests" element={<AdminVerificationPendingPage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/super-admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
       </Route>
     </Route>

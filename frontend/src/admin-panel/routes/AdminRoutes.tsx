@@ -15,6 +15,7 @@ import { AdminUsersPage } from '../pages/Users/AdminUsersPage';
 import { AdminPackagesPage } from '../pages/Packages/AdminPackagesPage';
 import { AdminBookingsPage } from '../pages/Bookings/AdminBookingsPage';
 import { AdminPaymentsPage } from '../pages/Payments/AdminPaymentsPage';
+import { AdminFinancePage } from '../pages/Finance/AdminFinancePage';
 import { AdminSettingsPage } from '../pages/Settings/AdminSettingsPage';
 import { AdminNotFoundPage } from '../pages/NotFound/AdminNotFoundPage';
 
@@ -47,6 +48,8 @@ export const AdminRoutes = () => (
         <Route path="/super-admin/bookings" element={<AdminBookingsPage />} />
         <Route path="/admin/payments" element={<AdminPaymentsPage />} />
         <Route path="/super-admin/payments" element={<AdminPaymentsPage />} />
+        <Route path="/admin/finance" element={<AdminFinancePage />} />
+        <Route path="/super-admin/finance" element={<AdminFinancePage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
       </Route>
     </Route>

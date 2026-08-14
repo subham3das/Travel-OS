@@ -1,0 +1,1133 @@
+import {
+  AdminPaymentItem,
+  PaymentKPIStats,
+  PaymentFilters,
+  PaymentSortConfig,
+} from '../types/paymentManagement';
+
+const STORAGE_KEY_PAYMENTS = 'apnatrip_admin_payments_list';
+const STORAGE_KEY_PAYMENT_STATS = 'apnatrip_admin_payments_kpi_stats';
+
+export const initialPaymentKPIStats: PaymentKPIStats = {
+  totalTransactions: { count: 96524, growth: '16.8%', isPositive: true },
+  todayRevenue: { value: '₹1.68 Cr', growth: '12.4%', isPositive: true, comparison: 'from yesterday' },
+  pendingSettlements: { value: '₹3.74 Cr', growth: '8.7%', isPositive: true },
+  successfulPayments: { count: 88421, growth: '17.5%', isPositive: true },
+  failedPayments: { count: 1842, growth: '6.1%', isPositive: false },
+  completedRefunds: { count: 742, growth: '9.3%', isPositive: true },
+  platformCommission: { value: '₹7.68 Cr', growth: '15.6%', isPositive: true },
+};
+
+export const initialAdminPayments: AdminPaymentItem[] = [
+  {
+    id: 'TXN-1',
+    transactionId: 'TXN-984512',
+    bookingId: 'BK-10455',
+    paymentDate: 'Jun 12, 2024',
+    paymentTime: '10:30 AM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Pending',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Rahul Sharma',
+    travelerEmail: 'rahul.sharma@mail.com',
+    travelerPhone: '+91 98765 43210',
+    travelerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Wanderlust Holidays',
+    agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Wanderlust Holidays (•••• 4321)',
+    packageName: 'Meghalaya Adventure',
+    packageThumbnail: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Meghalaya',
+    durationText: '5D/4N',
+    travelDatesText: 'Jun 15 – Jun 20, 2024',
+    travelersCountText: '3 Travelers',
+    totalAmount: '₹28,999',
+    platformFee: '₹2,900',
+    gstAmount: '₹4,175',
+    couponDiscount: '- ₹2,000',
+    couponCode: 'EARLY10',
+    netAmount: '₹31,074',
+    agencyEarnings: '₹26,099',
+    currency: 'INR',
+    gateway: 'Razorpay',
+    paymentMethod: 'UPI (Google Pay)',
+    gatewayTransactionId: 'pay_PN8xZlYp7m9QxR',
+    paymentReference: '123456789012',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'AX12PL09',
+    paidAt: 'Jun 12, 2024 • 10:30 AM',
+    capturedAt: 'Jun 12, 2024 • 10:30 AM',
+    settlementId: 'SETT-59221',
+    scheduledSettlementDate: 'Jun 15, 2024',
+    settlementRemarks: '—',
+    timeline: [
+      { id: 'tl-1', title: 'Payment Initiated', subtitle: 'Traveler selected UPI Google Pay', timestamp: 'Jun 12, 2024 • 10:28 AM', status: 'completed' },
+      { id: 'tl-2', title: 'Authorized', subtitle: 'Razorpay approved transaction', timestamp: 'Jun 12, 2024 • 10:29 AM', status: 'completed' },
+      { id: 'tl-3', title: 'Captured', subtitle: 'Amount ₹28,999 captured', timestamp: 'Jun 12, 2024 • 10:30 AM', status: 'completed' },
+      { id: 'tl-4', title: 'Invoice Generated', subtitle: 'INV-10455 issued', timestamp: 'Jun 12, 2024 • 10:30 AM', status: 'completed' },
+      { id: 'tl-5', title: 'Settlement Pending', subtitle: 'Payout scheduled for Jun 15, 2024', timestamp: 'Scheduled', status: 'current' },
+      { id: 'tl-6', title: 'Settlement Completed', subtitle: 'Awaiting automatic disbursement', timestamp: '—', status: 'upcoming' },
+    ],
+    activities: [
+      { id: 'act-1', actor: 'Razorpay Gateway', role: 'Gateway', action: 'Captured Payment', details: 'Authorized pay_PN8xZlYp7m9QxR with auth code AX12PL09', timestamp: 'Jun 12, 2024 • 10:30 AM' },
+    ],
+  },
+  {
+    id: 'TXN-2',
+    transactionId: 'TXN-984513',
+    bookingId: 'BK-10456',
+    paymentDate: 'Jun 12, 2024',
+    paymentTime: '09:45 AM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Pending',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Priya Verma',
+    travelerEmail: 'priya.verma@mail.com',
+    travelerPhone: '+91 98111 22334',
+    travelerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Himalayan Treks',
+    agencyLogo: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Himalayan Treks (•••• 8912)',
+    packageName: 'Spiti Valley Escape',
+    packageThumbnail: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Spiti Valley',
+    durationText: '7D/6N',
+    travelDatesText: 'Jun 22 – Jun 29, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹36,499',
+    platformFee: '₹3,650',
+    gstAmount: '₹5,255',
+    couponDiscount: '₹0',
+    netAmount: '₹36,499',
+    agencyEarnings: '₹32,849',
+    currency: 'INR',
+    gateway: 'Razorpay',
+    paymentMethod: 'Card (Visa)',
+    gatewayTransactionId: 'pay_SP9928172615',
+    paymentReference: '987654321098',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'VIS88991',
+    paidAt: 'Jun 12, 2024 • 09:45 AM',
+    capturedAt: 'Jun 12, 2024 • 09:45 AM',
+    settlementId: 'SETT-59222',
+    scheduledSettlementDate: 'Jun 15, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-3',
+    transactionId: 'TXN-984514',
+    bookingId: 'BK-10457',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '08:12 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Amit Kumar',
+    travelerEmail: 'amit.kumar@mail.com',
+    travelerPhone: '+91 97777 66554',
+    travelerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Goa Getaways',
+    agencyLogo: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Goa Getaways (•••• 1122)',
+    packageName: 'Goa Beach Holiday',
+    packageThumbnail: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Goa',
+    durationText: '4D/3N',
+    travelDatesText: 'Jun 18 – Jun 21, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹17,999',
+    platformFee: '₹1,800',
+    gstAmount: '₹2,590',
+    couponDiscount: '₹0',
+    netAmount: '₹17,999',
+    agencyEarnings: '₹16,199',
+    currency: 'INR',
+    gateway: 'PhonePe',
+    paymentMethod: 'UPI (PhonePe)',
+    gatewayTransactionId: 'ppe_GOA77881122',
+    paymentReference: '665544332211',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'PPE99001',
+    paidAt: 'Jun 11, 2024 • 08:12 PM',
+    capturedAt: 'Jun 11, 2024 • 08:12 PM',
+    settlementId: 'SETT-59218',
+    scheduledSettlementDate: 'Jun 14, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-4',
+    transactionId: 'TXN-984515',
+    bookingId: 'BK-10458',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '07:05 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Neha Kapoor',
+    travelerEmail: 'neha.kapoor@mail.com',
+    travelerPhone: '+91 99887 76655',
+    travelerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Kerala Backwaters',
+    agencyLogo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Kerala Backwaters (•••• 9988)',
+    packageName: 'Kerala Bliss',
+    packageThumbnail: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Kerala',
+    durationText: '6D/5N',
+    travelDatesText: 'Jun 25 – Jun 30, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹32,999',
+    platformFee: '₹3,300',
+    gstAmount: '₹4,750',
+    couponDiscount: '₹0',
+    netAmount: '₹32,999',
+    agencyEarnings: '₹29,699',
+    currency: 'INR',
+    gateway: 'Razorpay',
+    paymentMethod: 'Netbanking (HDFC)',
+    gatewayTransactionId: 'pay_KER88992211',
+    paymentReference: '778899001122',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'HDFC6655',
+    paidAt: 'Jun 11, 2024 • 07:05 PM',
+    capturedAt: 'Jun 11, 2024 • 07:05 PM',
+    settlementId: 'SETT-59217',
+    scheduledSettlementDate: 'Jun 14, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-5',
+    transactionId: 'TXN-984516',
+    bookingId: 'BK-10459',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '06:40 PM',
+    paymentStatus: 'Failed',
+    settlementStatus: '—',
+    bookingStatus: 'Pending',
+    travelerName: 'Vikram Joshi',
+    travelerEmail: 'vikram.joshi@mail.com',
+    travelerPhone: '+91 96543 21987',
+    travelerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Adventure India',
+    agencyLogo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Adventure India (•••• 7766)',
+    packageName: 'Leh Ladakh Road Trip',
+    packageThumbnail: 'https://images.unsplash.com/photo-1566837945700-30057527ade0?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Leh Ladakh',
+    durationText: '6D/5N',
+    travelDatesText: 'Jun 28 – Jul 03, 2024',
+    travelersCountText: '3 Travelers',
+    totalAmount: '₹41,999',
+    platformFee: '₹4,200',
+    gstAmount: '₹6,045',
+    couponDiscount: '₹0',
+    netAmount: '₹41,999',
+    agencyEarnings: '₹37,799',
+    currency: 'INR',
+    gateway: 'PayU',
+    paymentMethod: 'Card (Mastercard)',
+    gatewayTransactionId: 'payu_FAIL998811',
+    paymentReference: '554433221100',
+    gatewayResponse: 'Card Declined - Insufficient Limit',
+    authorizationCode: '—',
+    paidAt: 'Failed Attempt',
+    capturedAt: '—',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-6',
+    transactionId: 'TXN-984517',
+    bookingId: 'BK-10460',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '05:32 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Pending',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Ananya Reddy',
+    travelerEmail: 'ananya.reddy@mail.com',
+    travelerPhone: '+91 94444 33322',
+    travelerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Cityscape Holidays',
+    agencyLogo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Cityscape Holidays (•••• 3344)',
+    packageName: 'Singapore Getaway',
+    packageThumbnail: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'Singapore',
+    destinationRegion: 'Singapore',
+    durationText: '5D/4N',
+    travelDatesText: 'Jul 01 – Jul 05, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹54,999',
+    platformFee: '₹5,500',
+    gstAmount: '₹7,920',
+    couponDiscount: '₹0',
+    netAmount: '₹54,999',
+    agencyEarnings: '₹49,499',
+    currency: 'INR',
+    gateway: 'Razorpay',
+    paymentMethod: 'Card (Visa)',
+    gatewayTransactionId: 'pay_SG99112233',
+    paymentReference: '443322119988',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'SG88990',
+    paidAt: 'Jun 11, 2024 • 05:32 PM',
+    capturedAt: 'Jun 11, 2024 • 05:32 PM',
+    settlementId: 'SETT-59216',
+    scheduledSettlementDate: 'Jun 15, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-7',
+    transactionId: 'TXN-984518',
+    bookingId: 'BK-10461',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '04:18 PM',
+    paymentStatus: 'Refunded',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Cancelled',
+    travelerName: 'Siddharth Rao',
+    travelerEmail: 'siddharth.rao@mail.com',
+    travelerPhone: '+91 93333 22211',
+    travelerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Desert Dunes Travels',
+    agencyLogo: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Desert Dunes Travels (•••• 5566)',
+    packageName: 'Rajasthan Royal Tour',
+    packageThumbnail: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Rajasthan',
+    durationText: '7D/6N',
+    travelDatesText: 'Jul 10 – Jul 17, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹26,499',
+    platformFee: '₹2,650',
+    gstAmount: '₹3,815',
+    couponDiscount: '₹0',
+    netAmount: '₹26,499',
+    agencyEarnings: '₹23,849',
+    currency: 'INR',
+    gateway: 'PhonePe',
+    paymentMethod: 'UPI (Paytm)',
+    gatewayTransactionId: 'ppe_REF99883344',
+    paymentReference: '332211009988',
+    gatewayResponse: 'Refund Credited',
+    authorizationCode: 'REF77665',
+    paidAt: 'Jun 11, 2024 • 04:18 PM',
+    capturedAt: 'Jun 11, 2024 • 04:18 PM',
+    settlementId: 'SETT-59215',
+    scheduledSettlementDate: 'Jun 14, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-8',
+    transactionId: 'TXN-984519',
+    bookingId: 'BK-10462',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '03:20 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Pending',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Meera Iyer',
+    travelerEmail: 'meera.iyer@mail.com',
+    travelerPhone: '+91 92222 11100',
+    travelerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Holiday Hub Agency',
+    agencyLogo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Holiday Hub Agency (•••• 8877)',
+    packageName: 'Bali Tropical Escape',
+    packageThumbnail: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'Indonesia',
+    destinationRegion: 'Bali',
+    durationText: '5D/4N',
+    travelDatesText: 'Jul 15 – Jul 20, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹62,999',
+    platformFee: '₹6,300',
+    gstAmount: '₹9,070',
+    couponDiscount: '₹0',
+    netAmount: '₹62,999',
+    agencyEarnings: '₹56,699',
+    currency: 'INR',
+    gateway: 'PayU',
+    paymentMethod: 'Card (Amex)',
+    gatewayTransactionId: 'payu_BALI776655',
+    paymentReference: '221100998877',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'AMX44556',
+    paidAt: 'Jun 11, 2024 • 03:20 PM',
+    capturedAt: 'Jun 11, 2024 • 03:20 PM',
+    settlementId: 'SETT-59214',
+    scheduledSettlementDate: 'Jun 15, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-9',
+    transactionId: 'TXN-984520',
+    bookingId: 'BK-10463',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '02:35 PM',
+    paymentStatus: 'Pending',
+    settlementStatus: '—',
+    bookingStatus: 'Pending',
+    travelerName: 'Rohan Mehta',
+    travelerEmail: 'rohan.mehta@mail.com',
+    travelerPhone: '+91 91111 00099',
+    travelerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'NorthEast Explorers',
+    agencyLogo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: false,
+    settlementAccount: 'NorthEast Explorers (•••• 6655)',
+    packageName: 'Assam & Meghalaya',
+    packageThumbnail: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Assam',
+    durationText: '6D/5N',
+    travelDatesText: 'Jul 20 – Jul 26, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹21,499',
+    platformFee: '₹2,150',
+    gstAmount: '₹3,095',
+    couponDiscount: '₹0',
+    netAmount: '₹21,499',
+    agencyEarnings: '₹19,349',
+    currency: 'INR',
+    gateway: 'Razorpay',
+    paymentMethod: 'UPI (BHIM)',
+    gatewayTransactionId: 'pay_PEND778899',
+    paymentReference: '110099887766',
+    gatewayResponse: 'Awaiting User Authorization',
+    authorizationCode: '—',
+    paidAt: 'Pending Authorization',
+    capturedAt: '—',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-10',
+    transactionId: 'TXN-984521',
+    bookingId: 'BK-10464',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '01:12 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Pooja Nair',
+    travelerEmail: 'pooja.nair@mail.com',
+    travelerPhone: '+91 90000 99988',
+    travelerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Maldives Escape',
+    agencyLogo: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Maldives Escape (•••• 4433)',
+    packageName: 'Maldives Paradise',
+    packageThumbnail: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'Maldives',
+    destinationRegion: 'Maldives',
+    durationText: '4D/3N',
+    travelDatesText: 'Aug 01 – Aug 04, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹89,999',
+    platformFee: '₹9,000',
+    gstAmount: '₹12,960',
+    couponDiscount: '₹0',
+    netAmount: '₹89,999',
+    agencyEarnings: '₹80,999',
+    currency: 'INR',
+    gateway: 'PhonePe',
+    paymentMethod: 'Card (Visa)',
+    gatewayTransactionId: 'ppe_MAL88776655',
+    paymentReference: '009988776655',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'MAL99001',
+    paidAt: 'Jun 11, 2024 • 01:12 PM',
+    capturedAt: 'Jun 11, 2024 • 01:12 PM',
+    settlementId: 'SETT-59213',
+    scheduledSettlementDate: 'Jun 14, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-11',
+    transactionId: 'TXN-984522',
+    bookingId: 'BK-10465',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '12:05 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Tarun Gupta',
+    travelerEmail: 'tarun.gupta@mail.com',
+    travelerPhone: '+91 98888 11223',
+    travelerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Sikkim Serenity',
+    agencyLogo: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Sikkim Serenity (•••• 2211)',
+    packageName: 'Gangtok & Darjeeling',
+    packageThumbnail: 'https://images.unsplash.com/photo-1566837945700-30057527ade0?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Sikkim',
+    durationText: '6D/5N',
+    travelDatesText: 'Aug 10 – Aug 16, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹24,999',
+    platformFee: '₹2,500',
+    gstAmount: '₹3,600',
+    couponDiscount: '₹0',
+    netAmount: '₹24,999',
+    agencyEarnings: '₹22,499',
+    currency: 'INR',
+    gateway: 'Razorpay',
+    paymentMethod: 'UPI (Google Pay)',
+    gatewayTransactionId: 'pay_SIK77665544',
+    paymentReference: '998877665544',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'SIK88776',
+    paidAt: 'Jun 11, 2024 • 12:05 PM',
+    capturedAt: 'Jun 11, 2024 • 12:05 PM',
+    settlementId: 'SETT-59212',
+    scheduledSettlementDate: 'Jun 14, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-12',
+    transactionId: 'TXN-984523',
+    bookingId: 'BK-10466',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '11:30 AM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Pending',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Shalini Sen',
+    travelerEmail: 'shalini.sen@mail.com',
+    travelerPhone: '+91 97777 22334',
+    travelerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Himalayan Treks',
+    agencyLogo: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Himalayan Treks (•••• 8912)',
+    packageName: 'Kasol & Kheerganga',
+    packageThumbnail: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Himachal Pradesh',
+    durationText: '4D/3N',
+    travelDatesText: 'Aug 15 – Aug 18, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹15,499',
+    platformFee: '₹1,550',
+    gstAmount: '₹2,230',
+    couponDiscount: '₹0',
+    netAmount: '₹15,499',
+    agencyEarnings: '₹13,949',
+    currency: 'INR',
+    gateway: 'Stripe',
+    paymentMethod: 'Card (Mastercard)',
+    gatewayTransactionId: 'ch_STRIP889900',
+    paymentReference: '887766554433',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'STR99881',
+    paidAt: 'Jun 11, 2024 • 11:30 AM',
+    capturedAt: 'Jun 11, 2024 • 11:30 AM',
+    settlementId: 'SETT-59211',
+    scheduledSettlementDate: 'Jun 15, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-13',
+    transactionId: 'TXN-984524',
+    bookingId: 'BK-10467',
+    paymentDate: 'Jun 11, 2024',
+    paymentTime: '10:15 AM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Deepak Chawla',
+    travelerEmail: 'deepak.c@mail.com',
+    travelerPhone: '+91 96666 33445',
+    travelerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Goa Getaways',
+    agencyLogo: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Goa Getaways (•••• 1122)',
+    packageName: 'North Goa Party Tour',
+    packageThumbnail: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Goa',
+    durationText: '4D/3N',
+    travelDatesText: 'Aug 20 – Aug 23, 2024',
+    travelersCountText: '3 Travelers',
+    totalAmount: '₹18,999',
+    platformFee: '₹1,900',
+    gstAmount: '₹2,735',
+    couponDiscount: '₹0',
+    netAmount: '₹18,999',
+    agencyEarnings: '₹17,099',
+    currency: 'INR',
+    gateway: 'PhonePe',
+    paymentMethod: 'UPI (PhonePe)',
+    gatewayTransactionId: 'ppe_GOA66554433',
+    paymentReference: '776655443322',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'PPE77665',
+    paidAt: 'Jun 11, 2024 • 10:15 AM',
+    capturedAt: 'Jun 11, 2024 • 10:15 AM',
+    settlementId: 'SETT-59210',
+    scheduledSettlementDate: 'Jun 14, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-14',
+    transactionId: 'TXN-984525',
+    bookingId: 'BK-10468',
+    paymentDate: 'Jun 10, 2024',
+    paymentTime: '09:20 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Sneha Pillai',
+    travelerEmail: 'sneha.p@mail.com',
+    travelerPhone: '+91 95555 44556',
+    travelerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Wanderlust Holidays',
+    agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Wanderlust Holidays (•••• 4321)',
+    packageName: 'Kashmir Paradise',
+    packageThumbnail: 'https://images.unsplash.com/photo-1566837945700-30057527ade0?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Kashmir',
+    durationText: '6D/5N',
+    travelDatesText: 'Sep 01 – Sep 06, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹45,000',
+    platformFee: '₹4,500',
+    gstAmount: '₹6,480',
+    couponDiscount: '₹0',
+    netAmount: '₹45,000',
+    agencyEarnings: '₹40,500',
+    currency: 'INR',
+    gateway: 'Razorpay',
+    paymentMethod: 'Netbanking (ICICI)',
+    gatewayTransactionId: 'pay_KASH998877',
+    paymentReference: '665544332211',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'ICI88991',
+    paidAt: 'Jun 10, 2024 • 09:20 PM',
+    capturedAt: 'Jun 10, 2024 • 09:20 PM',
+    settlementId: 'SETT-59209',
+    scheduledSettlementDate: 'Jun 13, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-15',
+    transactionId: 'TXN-984526',
+    bookingId: 'BK-10469',
+    paymentDate: 'Jun 10, 2024',
+    paymentTime: '08:45 PM',
+    paymentStatus: 'Failed',
+    settlementStatus: '—',
+    bookingStatus: 'Pending',
+    travelerName: 'Varun Malhotra',
+    travelerEmail: 'varun.m@mail.com',
+    travelerPhone: '+91 94444 55667',
+    travelerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Adventure India',
+    agencyLogo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Adventure India (•••• 7766)',
+    packageName: 'Rishikesh Rafting & Camp',
+    packageThumbnail: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Uttarakhand',
+    durationText: '3D/2N',
+    travelDatesText: 'Sep 10 – Sep 12, 2024',
+    travelersCountText: '4 Travelers',
+    totalAmount: '₹12,499',
+    platformFee: '₹1,250',
+    gstAmount: '₹1,800',
+    couponDiscount: '₹0',
+    netAmount: '₹12,499',
+    agencyEarnings: '₹11,249',
+    currency: 'INR',
+    gateway: 'PayU',
+    paymentMethod: 'UPI (Paytm)',
+    gatewayTransactionId: 'payu_FAIL887766',
+    paymentReference: '554433221100',
+    gatewayResponse: 'UPI Pin Timeout',
+    authorizationCode: '—',
+    paidAt: 'Failed Attempt',
+    capturedAt: '—',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-16',
+    transactionId: 'TXN-984527',
+    bookingId: 'BK-10470',
+    paymentDate: 'Jun 10, 2024',
+    paymentTime: '07:15 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Pending',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Kavita Krishnan',
+    travelerEmail: 'kavita.k@mail.com',
+    travelerPhone: '+91 93333 66778',
+    travelerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Kerala Backwaters',
+    agencyLogo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Kerala Backwaters (•••• 9988)',
+    packageName: 'Munnar Hills Tour',
+    packageThumbnail: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Kerala',
+    durationText: '4D/3N',
+    travelDatesText: 'Sep 15 – Sep 18, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹29,999',
+    platformFee: '₹3,000',
+    gstAmount: '₹4,320',
+    couponDiscount: '₹0',
+    netAmount: '₹29,999',
+    agencyEarnings: '₹26,999',
+    currency: 'INR',
+    gateway: 'Razorpay',
+    paymentMethod: 'Card (Visa)',
+    gatewayTransactionId: 'pay_MUN88776655',
+    paymentReference: '443322110099',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'VIS55667',
+    paidAt: 'Jun 10, 2024 • 07:15 PM',
+    capturedAt: 'Jun 10, 2024 • 07:15 PM',
+    settlementId: 'SETT-59208',
+    scheduledSettlementDate: 'Jun 14, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-17',
+    transactionId: 'TXN-984528',
+    bookingId: 'BK-10471',
+    paymentDate: 'Jun 10, 2024',
+    paymentTime: '06:10 PM',
+    paymentStatus: 'Refunded',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Cancelled',
+    travelerName: 'Manish Trivedi',
+    travelerEmail: 'manish.t@mail.com',
+    travelerPhone: '+91 92222 77889',
+    travelerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Desert Dunes Travels',
+    agencyLogo: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Desert Dunes Travels (•••• 5566)',
+    packageName: 'Jaisalmer Desert Camp',
+    packageThumbnail: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Rajasthan',
+    durationText: '3D/2N',
+    travelDatesText: 'Sep 20 – Sep 22, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹22,999',
+    platformFee: '₹2,300',
+    gstAmount: '₹3,310',
+    couponDiscount: '₹0',
+    netAmount: '₹22,999',
+    agencyEarnings: '₹20,699',
+    currency: 'INR',
+    gateway: 'PhonePe',
+    paymentMethod: 'UPI (Google Pay)',
+    gatewayTransactionId: 'ppe_REF77665544',
+    paymentReference: '332211009988',
+    gatewayResponse: 'Refund Processed',
+    authorizationCode: 'REF44332',
+    paidAt: 'Jun 10, 2024 • 06:10 PM',
+    capturedAt: 'Jun 10, 2024 • 06:10 PM',
+    settlementId: 'SETT-59207',
+    scheduledSettlementDate: 'Jun 13, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-18',
+    transactionId: 'TXN-984529',
+    bookingId: 'BK-10472',
+    paymentDate: 'Jun 10, 2024',
+    paymentTime: '05:05 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Ritu Agarwal',
+    travelerEmail: 'ritu.a@mail.com',
+    travelerPhone: '+91 91111 88990',
+    travelerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Cityscape Holidays',
+    agencyLogo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Cityscape Holidays (•••• 3344)',
+    packageName: 'Dubai City Tour',
+    packageThumbnail: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'UAE',
+    destinationRegion: 'Dubai',
+    durationText: '5D/4N',
+    travelDatesText: 'Oct 01 – Oct 05, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹68,999',
+    platformFee: '₹6,900',
+    gstAmount: '₹9,935',
+    couponDiscount: '₹0',
+    netAmount: '₹68,999',
+    agencyEarnings: '₹62,099',
+    currency: 'INR',
+    gateway: 'Stripe',
+    paymentMethod: 'Card (Visa)',
+    gatewayTransactionId: 'ch_DUB77889900',
+    paymentReference: '221100998877',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'DUB88990',
+    paidAt: 'Jun 10, 2024 • 05:05 PM',
+    capturedAt: 'Jun 10, 2024 • 05:05 PM',
+    settlementId: 'SETT-59206',
+    scheduledSettlementDate: 'Jun 13, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-19',
+    transactionId: 'TXN-984530',
+    bookingId: 'BK-10473',
+    paymentDate: 'Jun 10, 2024',
+    paymentTime: '04:30 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Pending',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Aditya Saxena',
+    travelerEmail: 'aditya.s@mail.com',
+    travelerPhone: '+91 90000 11223',
+    travelerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Holiday Hub Agency',
+    agencyLogo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Holiday Hub Agency (•••• 8877)',
+    packageName: 'Andaman Coral Islands',
+    packageThumbnail: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'India',
+    destinationRegion: 'Andaman',
+    durationText: '6D/5N',
+    travelDatesText: 'Oct 10 – Oct 15, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹52,999',
+    platformFee: '₹5,300',
+    gstAmount: '₹7,630',
+    couponDiscount: '₹0',
+    netAmount: '₹52,999',
+    agencyEarnings: '₹47,699',
+    currency: 'INR',
+    gateway: 'Razorpay',
+    paymentMethod: 'Netbanking (SBI)',
+    gatewayTransactionId: 'pay_AND99887766',
+    paymentReference: '110099887766',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'SBI88771',
+    paidAt: 'Jun 10, 2024 • 04:30 PM',
+    capturedAt: 'Jun 10, 2024 • 04:30 PM',
+    settlementId: 'SETT-59205',
+    scheduledSettlementDate: 'Jun 14, 2024',
+    timeline: [],
+    activities: [],
+  },
+  {
+    id: 'TXN-20',
+    transactionId: 'TXN-984531',
+    bookingId: 'BK-10474',
+    paymentDate: 'Jun 10, 2024',
+    paymentTime: '03:15 PM',
+    paymentStatus: 'Success',
+    settlementStatus: 'Settled',
+    bookingStatus: 'Confirmed',
+    travelerName: 'Divya Nambiar',
+    travelerEmail: 'divya.n@mail.com',
+    travelerPhone: '+91 98888 55443',
+    travelerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    agencyName: 'Wanderlust Holidays',
+    agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
+    isAgencyVerified: true,
+    settlementAccount: 'Wanderlust Holidays (•••• 4321)',
+    packageName: 'Swiss Alps Grand Tour',
+    packageThumbnail: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=400&auto=format&fit=crop',
+    destinationCountry: 'Switzerland',
+    destinationRegion: 'Interlaken',
+    durationText: '7D/6N',
+    travelDatesText: 'Oct 20 – Oct 27, 2024',
+    travelersCountText: '2 Travelers',
+    totalAmount: '₹1,15,000',
+    platformFee: '₹11,500',
+    gstAmount: '₹16,560',
+    couponDiscount: '₹0',
+    netAmount: '₹1,15,000',
+    agencyEarnings: '₹1,03,500',
+    currency: 'INR',
+    gateway: 'PayU',
+    paymentMethod: 'Card (Mastercard)',
+    gatewayTransactionId: 'payu_SWISS99881',
+    paymentReference: '009988776655',
+    gatewayResponse: 'Authorized',
+    authorizationCode: 'MC77889',
+    paidAt: 'Jun 10, 2024 • 03:15 PM',
+    capturedAt: 'Jun 10, 2024 • 03:15 PM',
+    settlementId: 'SETT-59204',
+    scheduledSettlementDate: 'Jun 13, 2024',
+    timeline: [],
+    activities: [],
+  },
+];
+
+class AdminPaymentManagementService {
+  private payments: AdminPaymentItem[];
+  private kpiStats: PaymentKPIStats;
+
+  constructor() {
+    this.payments = this.loadStorage(STORAGE_KEY_PAYMENTS, initialAdminPayments);
+    this.kpiStats = this.loadStorage(STORAGE_KEY_PAYMENT_STATS, initialPaymentKPIStats);
+  }
+
+  private loadStorage<T>(key: string, fallback: T): T {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return fallback;
+  }
+
+  private saveStorage(key: string, data: any) {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch {
+      // ignore
+    }
+  }
+
+  public async getKPIStats(): Promise<PaymentKPIStats> {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve({ ...this.kpiStats }), 100);
+    });
+  }
+
+  public async getPayments(
+    filters?: Partial<PaymentFilters>,
+    sort?: PaymentSortConfig
+  ): Promise<AdminPaymentItem[]> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        let result = [...this.payments];
+
+        if (filters?.search) {
+          const q = filters.search.toLowerCase().trim();
+          result = result.filter(
+            (p) =>
+              p.transactionId.toLowerCase().includes(q) ||
+              p.bookingId.toLowerCase().includes(q) ||
+              p.travelerName.toLowerCase().includes(q) ||
+              p.travelerEmail.toLowerCase().includes(q) ||
+              p.travelerPhone.includes(q) ||
+              p.agencyName.toLowerCase().includes(q) ||
+              p.packageName.toLowerCase().includes(q)
+          );
+        }
+
+        if (filters?.paymentStatus && filters.paymentStatus !== 'All Status') {
+          result = result.filter((p) => p.paymentStatus === filters.paymentStatus);
+        }
+
+        if (filters?.settlementStatus && filters.settlementStatus !== 'All Status') {
+          result = result.filter((p) => p.settlementStatus === filters.settlementStatus);
+        }
+
+        if (filters?.gateway && filters.gateway !== 'All Gateways') {
+          result = result.filter((p) => p.gateway === filters.gateway);
+        }
+
+        if (filters?.paymentMethod && filters.paymentMethod !== 'All Methods') {
+          result = result.filter((p) =>
+            p.paymentMethod.toLowerCase().includes(filters.paymentMethod?.toLowerCase() || '')
+          );
+        }
+
+        if (filters?.agency && filters.agency !== 'All Agencies') {
+          result = result.filter((p) => p.agencyName === filters.agency);
+        }
+
+        if (filters?.destination && filters.destination !== 'All Destinations') {
+          result = result.filter(
+            (p) =>
+              p.destinationCountry.toLowerCase() === filters.destination?.toLowerCase() ||
+              p.destinationRegion.toLowerCase().includes(filters.destination?.toLowerCase() || '')
+          );
+        }
+
+        if (sort) {
+          result.sort((a, b) => {
+            let valA: any = a.transactionId;
+            let valB: any = b.transactionId;
+
+            if (sort.key === 'transactionId') {
+              valA = a.transactionId;
+              valB = b.transactionId;
+            } else if (sort.key === 'amount') {
+              valA = parseInt(a.totalAmount.replace(/[^0-9]/g, '') || '0', 10);
+              valB = parseInt(b.totalAmount.replace(/[^0-9]/g, '') || '0', 10);
+            } else if (sort.key === 'date') {
+              valA = a.paymentDate;
+              valB = b.paymentDate;
+            } else if (sort.key === 'status') {
+              valA = a.paymentStatus;
+              valB = b.paymentStatus;
+            } else if (sort.key === 'settlement') {
+              valA = a.settlementStatus;
+              valB = b.settlementStatus;
+            } else if (sort.key === 'agency') {
+              valA = a.agencyName;
+              valB = b.agencyName;
+            }
+
+            if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+            return 0;
+          });
+        }
+
+        resolve(result);
+      }, 100);
+    });
+  }
+
+  public async getPaymentById(id: string): Promise<AdminPaymentItem | null> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const found = this.payments.find((p) => p.id === id || p.transactionId === id);
+        resolve(found || this.payments[0] || null);
+      }, 100);
+    });
+  }
+
+  public async approveSettlement(id: string): Promise<boolean> {
+    const idx = this.payments.findIndex((p) => p.id === id || p.transactionId === id);
+    if (idx === -1) return false;
+
+    this.payments[idx] = {
+      ...this.payments[idx],
+      settlementStatus: 'Settled',
+      activities: [
+        {
+          id: `act-${Date.now()}`,
+          actor: 'Super Admin',
+          role: 'Super Admin',
+          action: 'Settlement Approved',
+          details: `Manual approval for settlement to ${this.payments[idx].settlementAccount}`,
+          timestamp: 'Just now',
+        },
+        ...this.payments[idx].activities,
+      ],
+    };
+    this.saveStorage(STORAGE_KEY_PAYMENTS, this.payments);
+    return true;
+  }
+
+  public async rejectSettlement(id: string): Promise<boolean> {
+    const idx = this.payments.findIndex((p) => p.id === id || p.transactionId === id);
+    if (idx === -1) return false;
+
+    this.payments[idx] = {
+      ...this.payments[idx],
+      settlementStatus: 'Failed',
+      activities: [
+        {
+          id: `act-${Date.now()}`,
+          actor: 'Super Admin',
+          role: 'Super Admin',
+          action: 'Settlement Rejected',
+          details: 'Settlement put on hold pending compliance verification',
+          timestamp: 'Just now',
+        },
+        ...this.payments[idx].activities,
+      ],
+    };
+    this.saveStorage(STORAGE_KEY_PAYMENTS, this.payments);
+    return true;
+  }
+
+  public async processRefund(id: string): Promise<boolean> {
+    const idx = this.payments.findIndex((p) => p.id === id || p.transactionId === id);
+    if (idx === -1) return false;
+
+    this.payments[idx] = {
+      ...this.payments[idx],
+      paymentStatus: 'Refunded',
+      activities: [
+        {
+          id: `act-${Date.now()}`,
+          actor: 'Super Admin',
+          role: 'Super Admin',
+          action: 'Full Refund Processed',
+          details: `Refund of ${this.payments[idx].totalAmount} initiated via ${this.payments[idx].gateway}`,
+          timestamp: 'Just now',
+        },
+        ...this.payments[idx].activities,
+      ],
+    };
+    this.saveStorage(STORAGE_KEY_PAYMENTS, this.payments);
+    return true;
+  }
+
+  public async bulkApproveSettlement(ids: string[]): Promise<boolean> {
+    this.payments = this.payments.map((p) =>
+      ids.includes(p.id) ? { ...p, settlementStatus: 'Settled' as const } : p
+    );
+    this.saveStorage(STORAGE_KEY_PAYMENTS, this.payments);
+    return true;
+  }
+
+  public async bulkRejectSettlement(ids: string[]): Promise<boolean> {
+    this.payments = this.payments.map((p) =>
+      ids.includes(p.id) ? { ...p, settlementStatus: 'Failed' as const } : p
+    );
+    this.saveStorage(STORAGE_KEY_PAYMENTS, this.payments);
+    return true;
+  }
+
+  public async bulkRefund(ids: string[]): Promise<boolean> {
+    this.payments = this.payments.map((p) =>
+      ids.includes(p.id) ? { ...p, paymentStatus: 'Refunded' as const } : p
+    );
+    this.saveStorage(STORAGE_KEY_PAYMENTS, this.payments);
+    return true;
+  }
+}
+
+export const adminPaymentManagementService = new AdminPaymentManagementService();

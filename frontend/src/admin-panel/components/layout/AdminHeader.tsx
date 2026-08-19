@@ -23,6 +23,7 @@ import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { LogoutConfirmModal } from '../super-admin/profile/LogoutConfirmModal';
 import { AdminNotificationDropdown } from '../super-admin/notifications/AdminNotificationDropdown';
 import { adminHeaderNotificationsService } from '../../services/adminHeaderNotifications.service';
+import { GlobalSearchModal } from '../super-admin/search/GlobalSearchModal';
 
 interface AdminHeaderProps {
   onSearchChange?: (q: string) => void;
@@ -37,6 +38,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
   const [searchQuery, setSearchQuery] = useState('');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [selectedDateRange, setSelectedDateRange] = useState('May 21 – Jun 21, 2025');
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
@@ -66,6 +68,18 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
   const currentName = admin?.name || 'Super Admin';
   const currentRole = 'Platform Owner';
   const currentEmail = admin?.email || 'admin@travelos.com';
+
+  // Global Ctrl + K / Cmd + K Shortcut Listener
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchModalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   // Real-time unread notifications subscription
   useEffect(() => {
@@ -114,6 +128,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
     setIsProfileOpen(false);
     setIsNotificationsOpen(false);
     setIsDateDropdownOpen(false);
+    setIsSearchModalOpen(false);
   }, [location.pathname]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,16 +182,21 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
               </button>
             )}
 
-            <div className="relative w-full md:w-96">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {/* ── GLOBAL SEARCH COMMAND CENTER TRIGGER INPUT ── */}
+            <div
+              onClick={() => setIsSearchModalOpen(true)}
+              className="relative w-full md:w-96 cursor-pointer group"
+            >
+              <Search className="w-4 h-4 text-slate-400 group-hover:text-[#6356E5] transition-colors absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
+                readOnly
                 value={searchQuery}
-                onChange={handleSearch}
-                placeholder="Search agencies, users, bookings, packages..."
-                className="w-full pl-10 pr-20 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-[#0F172A] placeholder-slate-400 focus:outline-none focus:border-[#6356E5] focus:bg-white transition-all"
+                onClick={() => setIsSearchModalOpen(true)}
+                placeholder="Search anything in Travel OS..."
+                className="w-full pl-10 pr-20 py-2.5 rounded-2xl bg-slate-50 group-hover:bg-purple-50/40 border border-slate-200 group-hover:border-purple-200 text-xs font-semibold text-[#0F172A] placeholder-slate-400 focus:outline-none transition-all cursor-pointer shadow-2xs"
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-extrabold text-slate-400 bg-white border border-slate-200 rounded-lg shadow-2xs pointer-events-none">
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-extrabold text-[#6356E5] bg-white border border-slate-200 rounded-lg shadow-2xs pointer-events-none group-hover:border-purple-200">
                 Ctrl + K
               </kbd>
             </div>
@@ -528,6 +548,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
           </div>
         </div>
       </header>
+
+      {/* ── GLOBAL SEARCH COMMAND CENTER MODAL OVERLAY ── */}
+      <GlobalSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+      />
 
       {/* Logout Confirmation Modal */}
       <LogoutConfirmModal

@@ -15,6 +15,7 @@ import { TransactionCard } from '../../components/dashboard/TransactionCard';
 import { ApprovalCard } from '../../components/dashboard/ApprovalCard';
 import { SystemHealthCard } from '../../components/dashboard/SystemHealthCard';
 import { QuickActionsCard } from '../../components/dashboard/QuickActionsCard';
+import { LiveActivityCenter } from '../../components/dashboard/live-activity/LiveActivityCenter';
 
 // Import Admin Dashboard Service & Mock Data Types
 import { adminDashboardService } from '../../services/adminDashboard.service';
@@ -228,6 +229,9 @@ export const AdminDashboardPage: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* ── ROW 5: LIVE ACTIVITY CENTER ── */}
+      <LiveActivityCenter />
     </motion.main>
   );
 };

@@ -27,6 +27,7 @@ import { RoleExplorer } from '../../components/super-admin/roles/RoleExplorer';
 import { PermissionMatrix } from '../../components/super-admin/roles/PermissionMatrix';
 import { RoleDetailsSidebar } from '../../components/super-admin/roles/RoleDetailsSidebar';
 import { RolesBottomWidgets } from '../../components/super-admin/roles/RolesBottomWidgets';
+import { AdminAccessControlSection } from '../../components/super-admin/roles/access-control/AdminAccessControlSection';
 import { CreateRoleModal } from '../../components/super-admin/roles/CreateRoleModal';
 import { AssignUsersModal } from '../../components/super-admin/roles/AssignUsersModal';
 
@@ -289,6 +290,12 @@ export const AdminRolesPage: React.FC = () => {
         onViewAllActivity={() => showToast('Displaying real-time administrator activity stream', 'info')}
         onViewAllSessions={() => showToast('Opening active IP and session monitor', 'info')}
         onViewAllRequests={() => showToast('Displaying privilege requests queue', 'info')}
+      />
+
+      {/* ── 5. ENTERPRISE ADMIN ACCESS CONTROL SECTION ── */}
+      <AdminAccessControlSection
+        roles={roles}
+        onShowToast={showToast}
       />
 
       {/* ── 5. MODALS ── */}

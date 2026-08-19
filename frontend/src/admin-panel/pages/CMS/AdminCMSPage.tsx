@@ -1,49 +1,81 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CMSKPIStats,
-  CMSContentTreeItem,
-  CMSSectionItem,
-  CMSHeroBannerData,
-  CMSScheduledTimelineItem,
-  CMSContentActivityItem,
-  CMSVersionHistoryItem,
-  CMSMediaUsageItem,
+  CMSCategoryTab,
+  HeroBannerItem,
+  PlatformAnnouncementItem,
+  TrendingDestinationItem,
+  FeaturedAgencyItem,
+  FeaturedTripItem,
+  PromotionalCampaignItem,
+  PromoPopupItem,
+  HomepageSectionItem,
+  HomepageSEOData,
+  CMSKPIStats as CMSKPIStatsType,
+  CMSScheduledItem,
+  CMSRecentChangeItem,
 } from '../../types/cmsManagement';
 import { adminCMSManagementService } from '../../services/adminCMSManagement.service';
 import {
+  initialHeroBanners,
+  initialAnnouncements,
+  initialTrendingDestinations,
+  initialFeaturedAgencies,
+  initialFeaturedTrips,
+  initialPromotionalCampaigns,
+  initialPromoPopups,
+  initialHomepageSections,
+  initialSEOData,
   initialCMSKPIStats,
-  initialContentTree,
-  initialHeroBanner,
-  initialCMSSections,
-  initialScheduledTimeline,
-  initialContentActivity,
-  initialVersionHistory,
-  initialMediaUsage,
+  initialCMSScheduledItems,
+  initialCMSRecentChanges,
 } from '../../data/cmsData';
+
 import { AdminCMSHeader } from '../../components/super-admin/cms/AdminCMSHeader';
-import { CMSKPIStatsCards } from '../../components/super-admin/cms/CMSKPIStats';
-import { ContentExplorer } from '../../components/super-admin/cms/ContentExplorer';
-import { VisualContentBuilder } from '../../components/super-admin/cms/VisualContentBuilder';
-import { CMSLiveDevicePreview } from '../../components/super-admin/cms/CMSLiveDevicePreview';
-import { CMSBottomWidgets } from '../../components/super-admin/cms/CMSBottomWidgets';
-import { CreateContentModal } from '../../components/super-admin/cms/CreateContentModal';
+import { CMSKPIStats } from '../../components/super-admin/cms/CMSKPIStats';
+import { CMSCategorySidebar } from '../../components/super-admin/cms/CMSCategorySidebar';
+
+import { HeroBannerEditor } from '../../components/super-admin/cms/editors/HeroBannerEditor';
+import { AnnouncementManager } from '../../components/super-admin/cms/editors/AnnouncementManager';
+import { TrendingDestinationsEditor } from '../../components/super-admin/cms/editors/TrendingDestinationsEditor';
+import { FeaturedAgenciesEditor } from '../../components/super-admin/cms/editors/FeaturedAgenciesEditor';
+import { FeaturedTripsEditor } from '../../components/super-admin/cms/editors/FeaturedTripsEditor';
+import { PromotionalCampaignsEditor } from '../../components/super-admin/cms/editors/PromotionalCampaignsEditor';
+import { PopupManagerEditor } from '../../components/super-admin/cms/editors/PopupManagerEditor';
+import { HomepageSectionsEditor } from '../../components/super-admin/cms/editors/HomepageSectionsEditor';
+import { SEOEditor } from '../../components/super-admin/cms/editors/SEOEditor';
+
+import { CMSLiveStorefrontPreview } from '../../components/super-admin/cms/CMSLiveStorefrontPreview';
+import { CMSBottomDashboard } from '../../components/super-admin/cms/CMSBottomDashboard';
+
+import { NewBannerModal } from '../../components/super-admin/cms/modals/NewBannerModal';
+import { NewAnnouncementModal } from '../../components/super-admin/cms/modals/NewAnnouncementModal';
+import { NewCampaignModal } from '../../components/super-admin/cms/modals/NewCampaignModal';
+import { NewPopupModal } from '../../components/super-admin/cms/modals/NewPopupModal';
 
 export const AdminCMSPage: React.FC = () => {
   // ── 1. STATE MANAGEMENT ──
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItemId, setSelectedItemId] = useState('homepage');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<CMSCategoryTab>('banners');
 
-  // Data States
-  const [kpiStats, setKpiStats] = useState<CMSKPIStats>(initialCMSKPIStats);
-  const [contentTree, setContentTree] = useState<CMSContentTreeItem[]>(initialContentTree);
-  const [heroBanner, setHeroBanner] = useState<CMSHeroBannerData>(initialHeroBanner);
-  const [sections, setSections] = useState<CMSSectionItem[]>(initialCMSSections);
-  const [scheduledTimeline, setScheduledTimeline] = useState<CMSScheduledTimelineItem[]>(initialScheduledTimeline);
-  const [activity, setActivity] = useState<CMSContentActivityItem[]>(initialContentActivity);
-  const [versionHistory, setVersionHistory] = useState<CMSVersionHistoryItem[]>(initialVersionHistory);
-  const [mediaUsage, setMediaUsage] = useState<CMSMediaUsageItem[]>(initialMediaUsage);
+  // Modals
+  const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+  const [isPopupModalOpen, setIsPopupModalOpen] = useState(false);
+
+  // Content Data
+  const [kpiStats, setKpiStats] = useState<CMSKPIStatsType>(initialCMSKPIStats);
+  const [banners, setBanners] = useState<HeroBannerItem[]>(initialHeroBanners);
+  const [announcements, setAnnouncements] = useState<PlatformAnnouncementItem[]>(initialAnnouncements);
+  const [destinations, setDestinations] = useState<TrendingDestinationItem[]>(initialTrendingDestinations);
+  const [agencies, setAgencies] = useState<FeaturedAgencyItem[]>(initialFeaturedAgencies);
+  const [trips, setTrips] = useState<FeaturedTripItem[]>(initialFeaturedTrips);
+  const [campaigns, setCampaigns] = useState<PromotionalCampaignItem[]>(initialPromotionalCampaigns);
+  const [popups, setPopups] = useState<PromoPopupItem[]>(initialPromoPopups);
+  const [sections, setSections] = useState<HomepageSectionItem[]>(initialHomepageSections);
+  const [seo, setSeo] = useState<HomepageSEOData>(initialSEOData);
+  const [scheduledItems, setScheduledItems] = useState<CMSScheduledItem[]>(initialCMSScheduledItems);
+  const [recentChanges, setRecentChanges] = useState<CMSRecentChangeItem[]>(initialCMSRecentChanges);
 
   // Toast Notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -54,89 +86,173 @@ export const AdminCMSPage: React.FC = () => {
   };
 
   // ── 2. DATA FETCHING ──
-  const loadCMSData = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       const [
         stats,
-        tree,
-        banner,
+        bans,
+        anns,
+        dests,
+        ags,
+        trps,
+        camps,
+        pops,
         secs,
-        timeline,
-        acts,
-        versions,
-        media,
+        seoData,
+        sched,
+        changes,
       ] = await Promise.all([
         adminCMSManagementService.getKPIStats(),
-        adminCMSManagementService.getContentTree(searchQuery),
-        adminCMSManagementService.getHeroBanner(),
+        adminCMSManagementService.getBanners(),
+        adminCMSManagementService.getAnnouncements(),
+        adminCMSManagementService.getDestinations(),
+        adminCMSManagementService.getFeaturedAgencies(),
+        adminCMSManagementService.getFeaturedTrips(),
+        adminCMSManagementService.getCampaigns(),
+        adminCMSManagementService.getPopups(),
         adminCMSManagementService.getSections(),
-        adminCMSManagementService.getScheduledTimeline(),
-        adminCMSManagementService.getActivity(),
-        adminCMSManagementService.getVersionHistory(),
-        adminCMSManagementService.getMediaUsage(),
+        adminCMSManagementService.getSEO(),
+        adminCMSManagementService.getScheduledItems(),
+        adminCMSManagementService.getRecentChanges(),
       ]);
 
       setKpiStats(stats);
-      setContentTree(tree);
-      setHeroBanner(banner);
+      setBanners(bans);
+      setAnnouncements(anns);
+      setDestinations(dests);
+      setAgencies(ags);
+      setTrips(trps);
+      setCampaigns(camps);
+      setPopups(pops);
       setSections(secs);
-      setScheduledTimeline(timeline);
-      setActivity(acts);
-      setVersionHistory(versions);
-      setMediaUsage(media);
+      setSeo(seoData);
+      setScheduledItems(sched);
+      setRecentChanges(changes);
     } catch (err) {
       console.error(err);
-      showToast('Failed to load CMS management data', 'error');
+      showToast('Failed to load CMS content', 'error');
     }
-  }, [searchQuery]);
+  }, []);
 
   useEffect(() => {
-    loadCMSData();
-  }, [loadCMSData]);
+    loadData();
+  }, [loadData]);
 
-  // ── 3. VISUAL BUILDER ACTIONS ──
-  const handleHeroBannerChange = (updated: Partial<CMSHeroBannerData>) => {
-    setHeroBanner((prev) => ({
-      ...prev,
-      ...updated,
-    }));
+  // ── 3. HANDLERS ──
+  const handleSaveBanner = async (b: Partial<HeroBannerItem>) => {
+    await adminCMSManagementService.saveBanner(b);
+    showToast('Hero Banner saved and published to storefront', 'success');
+    loadData();
   };
 
-  const handleToggleSection = async (id: string) => {
-    const updated = await adminCMSManagementService.toggleSection(id);
+  const handleDeleteBanner = async (id: string) => {
+    await adminCMSManagementService.deleteBanner(id);
+    showToast('Hero Banner deleted', 'info');
+    loadData();
+  };
+
+  const handleSaveAnnouncement = async (ann: Partial<PlatformAnnouncementItem>) => {
+    await adminCMSManagementService.saveAnnouncement(ann);
+    showToast('Platform Announcement broadcasted successfully', 'success');
+    loadData();
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    await adminCMSManagementService.deleteAnnouncement(id);
+    showToast('Announcement removed', 'info');
+    loadData();
+  };
+
+  const handleSaveDestination = async (dest: Partial<TrendingDestinationItem>) => {
+    await adminCMSManagementService.saveDestination(dest);
+    showToast('Trending Destination updated', 'success');
+    loadData();
+  };
+
+  const handleDeleteDestination = async (id: string) => {
+    await adminCMSManagementService.deleteDestination(id);
+    showToast('Destination removed', 'info');
+    loadData();
+  };
+
+  const handleSaveAgency = async (agency: Partial<FeaturedAgencyItem>) => {
+    await adminCMSManagementService.saveFeaturedAgency(agency);
+    showToast('Featured Agency showcase updated', 'success');
+    loadData();
+  };
+
+  const handleDeleteAgency = async (id: string) => {
+    await adminCMSManagementService.deleteFeaturedAgency(id);
+    showToast('Agency removed from featured showcase', 'info');
+    loadData();
+  };
+
+  const handleSaveTrip = async (trip: Partial<FeaturedTripItem>) => {
+    await adminCMSManagementService.saveFeaturedTrip(trip);
+    showToast('Featured Trip package updated', 'success');
+    loadData();
+  };
+
+  const handleDeleteTrip = async (id: string) => {
+    await adminCMSManagementService.deleteFeaturedTrip(id);
+    showToast('Trip package removed', 'info');
+    loadData();
+  };
+
+  const handleSaveCampaign = async (camp: Partial<PromotionalCampaignItem>) => {
+    await adminCMSManagementService.saveCampaign(camp);
+    showToast('Promotional Campaign launched', 'success');
+    loadData();
+  };
+
+  const handleDeleteCampaign = async (id: string) => {
+    await adminCMSManagementService.deleteCampaign(id);
+    showToast('Campaign deleted', 'info');
+    loadData();
+  };
+
+  const handleSavePopup = async (pop: Partial<PromoPopupItem>) => {
+    await adminCMSManagementService.savePopup(pop);
+    showToast('Storefront Promo Popup saved', 'success');
+    loadData();
+  };
+
+  const handleDeletePopup = async (id: string) => {
+    await adminCMSManagementService.deletePopup(id);
+    showToast('Popup removed', 'info');
+    loadData();
+  };
+
+  const handleToggleSection = async (id: string, isEnabled: boolean) => {
+    const updated = await adminCMSManagementService.toggleSection(id, isEnabled);
     setSections(updated);
-    showToast('Updated section visibility', 'info');
+    showToast(`Homepage section ${isEnabled ? 'enabled' : 'hidden'}`, 'info');
   };
 
-  const handleSaveDraft = async () => {
-    await adminCMSManagementService.updateHeroBanner(heroBanner);
-    showToast('Draft version saved successfully', 'success');
+  const handleMoveSection = async (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sections.length) return;
+
+    const newSections = [...sections];
+    const [moved] = newSections.splice(index, 1);
+    newSections.splice(targetIndex, 0, moved);
+
+    const updated = await adminCMSManagementService.updateSectionOrder(newSections);
+    setSections(updated);
+    showToast('Homepage section order updated', 'success');
   };
 
-  const handlePublish = async () => {
-    await adminCMSManagementService.updateHeroBanner(heroBanner);
-    showToast('Changes published live to Travel OS platform!', 'success');
-  };
-
-  const handleChangeImageMock = () => {
-    const newImage =
-      heroBanner.imageUrl.includes('506744038136')
-        ? 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800&auto=format&fit=crop'
-        : 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=800&auto=format&fit=crop';
-
-    setHeroBanner((prev) => ({ ...prev, imageUrl: newImage }));
-    showToast('Hero banner image updated in live preview', 'success');
-  };
-
-  const handleCreateContent = (title: string, type: string) => {
-    showToast(`Created new ${type}: "${title}" in content explorer`, 'success');
+  const handleSaveSEO = async (seoData: HomepageSEOData) => {
+    await adminCMSManagementService.saveSEO(seoData);
+    setSeo(seoData);
+    showToast('SEO & Social Meta Tags saved successfully', 'success');
   };
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-5 select-none"
+      className="space-y-5 select-none pb-8"
     >
       {/* ── TOAST NOTIFICATIONS ── */}
       <AnimatePresence>
@@ -162,78 +278,158 @@ export const AdminCMSPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ── 1. PAGE HEADER ── */}
+      {/* ── 1. HEADER ── */}
       <AdminCMSHeader
-        onPreviewSite={() => showToast('Opening live website preview in staging environment', 'info')}
-        onContentHistory={() => showToast('Displaying global content revision audit log', 'info')}
-        onSEOAnalyzer={() => showToast('SEO Score: 94/100 (Optimal Keywords & Metadata)', 'success')}
-        onCreateContent={() => setIsCreateModalOpen(true)}
+        onNewBanner={() => setIsBannerModalOpen(true)}
+        onNewCampaign={() => setIsCampaignModalOpen(true)}
+        onNewAnnouncement={() => setIsAnnouncementModalOpen(true)}
+        onNewPopup={() => setIsPopupModalOpen(true)}
+        onOpenStorefront={() => showToast('Opening customer storefront in new tab', 'info')}
       />
 
-      {/* ── 2. 6 TOP KPI SUMMARY CARDS ── */}
-      <CMSKPIStatsCards
-        stats={kpiStats}
-        onCardClick={(id) => {
-          if (id === 'publishedPages') setSelectedItemId('homepage');
-          else if (id === 'totalMediaFiles') setSelectedItemId('media');
-          else setSelectedItemId('homepage');
-        }}
-      />
+      {/* ── 2. 6 KPI SUMMARY CARDS ── */}
+      <CMSKPIStats stats={kpiStats} />
 
-      {/* ── 3. MAIN 3-PANEL CMS WORKSPACE (EXPLORER | BUILDER | PREVIEW) ── */}
+      {/* ── 3. MAIN 3-COLUMN CONTENT & CAMPAIGN STUDIO ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* Left Panel: Content Explorer (≈22% / lg:col-span-3) */}
+        {/* Left Column (~22% / lg:col-span-3): Navigation */}
         <div className="lg:col-span-3">
-          <ContentExplorer
-            tree={contentTree}
-            selectedItemId={selectedItemId}
-            onSelectItem={(node) => {
-              setSelectedItemId(node.id);
-              showToast(`Loaded ${node.label} into visual editor`, 'info');
+          <CMSCategorySidebar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            counts={{
+              banners: banners.length,
+              announcements: announcements.length,
+              destinations: destinations.length,
+              agencies: agencies.length,
+              trips: trips.length,
+              campaigns: campaigns.length,
+              popups: popups.length,
+              sections: sections.length,
             }}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onCreateContent={() => setIsCreateModalOpen(true)}
           />
         </div>
 
-        {/* Center Panel: Visual Content Builder (≈53% / lg:col-span-6) */}
-        <div className="lg:col-span-6">
-          <VisualContentBuilder
-            heroBanner={heroBanner}
-            sections={sections}
-            onHeroBannerChange={handleHeroBannerChange}
-            onToggleSection={handleToggleSection}
-            onSaveDraft={handleSaveDraft}
-            onPublish={handlePublish}
-            onChangeImage={handleChangeImageMock}
-            onAddNewSection={() => setIsCreateModalOpen(true)}
-          />
+        {/* Center Column (~48% / lg:col-span-5): Content Editor */}
+        <div className="lg:col-span-5">
+          {activeTab === 'banners' && (
+            <HeroBannerEditor
+              banners={banners}
+              onSaveBanner={handleSaveBanner}
+              onDeleteBanner={handleDeleteBanner}
+              onOpenNewModal={() => setIsBannerModalOpen(true)}
+            />
+          )}
+
+          {activeTab === 'announcements' && (
+            <AnnouncementManager
+              announcements={announcements}
+              onSaveAnnouncement={handleSaveAnnouncement}
+              onDeleteAnnouncement={handleDeleteAnnouncement}
+              onOpenNewModal={() => setIsAnnouncementModalOpen(true)}
+            />
+          )}
+
+          {activeTab === 'destinations' && (
+            <TrendingDestinationsEditor
+              destinations={destinations}
+              onSaveDestination={handleSaveDestination}
+              onDeleteDestination={handleDeleteDestination}
+            />
+          )}
+
+          {activeTab === 'agencies' && (
+            <FeaturedAgenciesEditor
+              agencies={agencies}
+              onSaveAgency={handleSaveAgency}
+              onDeleteAgency={handleDeleteAgency}
+            />
+          )}
+
+          {activeTab === 'trips' && (
+            <FeaturedTripsEditor
+              trips={trips}
+              onSaveTrip={handleSaveTrip}
+              onDeleteTrip={handleDeleteTrip}
+            />
+          )}
+
+          {activeTab === 'campaigns' && (
+            <PromotionalCampaignsEditor
+              campaigns={campaigns}
+              onSaveCampaign={handleSaveCampaign}
+              onDeleteCampaign={handleDeleteCampaign}
+              onOpenNewModal={() => setIsCampaignModalOpen(true)}
+            />
+          )}
+
+          {activeTab === 'popups' && (
+            <PopupManagerEditor
+              popups={popups}
+              onSavePopup={handleSavePopup}
+              onDeletePopup={handleDeletePopup}
+              onOpenNewModal={() => setIsPopupModalOpen(true)}
+            />
+          )}
+
+          {activeTab === 'sections' && (
+            <HomepageSectionsEditor
+              sections={sections}
+              onToggleSection={handleToggleSection}
+              onMoveSection={handleMoveSection}
+            />
+          )}
+
+          {activeTab === 'seo' && (
+            <SEOEditor
+              seo={seo}
+              onSaveSEO={handleSaveSEO}
+            />
+          )}
         </div>
 
-        {/* Right Panel: Live Device Preview (≈25% / lg:col-span-3) */}
-        <div className="lg:col-span-3 sticky top-20">
-          <CMSLiveDevicePreview heroBanner={heroBanner} />
+        {/* Right Column (~30% / lg:col-span-4): Live Simulated Preview Panel */}
+        <div className="lg:col-span-4 sticky top-20">
+          <CMSLiveStorefrontPreview
+            banners={banners}
+            announcements={announcements}
+            destinations={destinations}
+            agencies={agencies}
+            campaigns={campaigns}
+          />
         </div>
       </div>
 
-      {/* ── 4. BOTTOM 4 WIDGETS (TIMELINE, ACTIVITY, VERSION HISTORY, MEDIA DONUT) ── */}
-      <CMSBottomWidgets
-        scheduledTimeline={scheduledTimeline}
-        recentActivity={activity}
-        versionHistory={versionHistory}
-        mediaUsage={mediaUsage}
-        onViewAllTimeline={() => showToast('Displaying scheduled publications calendar', 'info')}
-        onViewAllActivity={() => showToast('Opening collaborative real-time activity stream', 'info')}
-        onViewAllVersions={() => showToast('Displaying full revision rollback log', 'info')}
-        onViewAllMedia={() => showToast('Navigating to media asset manager', 'info')}
+      {/* ── 4. BOTTOM 3 OPERATIONAL WIDGETS ── */}
+      <CMSBottomDashboard
+        scheduledItems={scheduledItems}
+        campaigns={campaigns}
+        recentChanges={recentChanges}
       />
 
-      {/* ── 5. CREATE CONTENT MODAL ── */}
-      <CreateContentModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreate={handleCreateContent}
+      {/* ── 5. QUICK ACTION MODALS ── */}
+      <NewBannerModal
+        isOpen={isBannerModalOpen}
+        onClose={() => setIsBannerModalOpen(false)}
+        onCreate={handleSaveBanner}
+      />
+
+      <NewAnnouncementModal
+        isOpen={isAnnouncementModalOpen}
+        onClose={() => setIsAnnouncementModalOpen(false)}
+        onCreate={handleSaveAnnouncement}
+      />
+
+      <NewCampaignModal
+        isOpen={isCampaignModalOpen}
+        onClose={() => setIsCampaignModalOpen(false)}
+        onCreate={handleSaveCampaign}
+      />
+
+      <NewPopupModal
+        isOpen={isPopupModalOpen}
+        onClose={() => setIsPopupModalOpen(false)}
+        onCreate={handleSavePopup}
       />
     </motion.div>
   );

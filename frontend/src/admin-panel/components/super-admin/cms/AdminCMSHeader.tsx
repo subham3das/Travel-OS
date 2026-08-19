@@ -1,88 +1,93 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
-  Eye,
-  History,
-  Sparkles,
+  LayoutTemplate,
   Plus,
-  ChevronDown,
+  Megaphone,
+  Sparkles,
+  ExternalLink,
+  Layers,
+  MessageSquarePlus,
 } from 'lucide-react';
 
 interface AdminCMSHeaderProps {
-  onPreviewSite: () => void;
-  onContentHistory: () => void;
-  onSEOAnalyzer: () => void;
-  onCreateContent: () => void;
+  onNewBanner: () => void;
+  onNewCampaign: () => void;
+  onNewAnnouncement: () => void;
+  onNewPopup: () => void;
+  onOpenStorefront: () => void;
 }
 
 export const AdminCMSHeader: React.FC<AdminCMSHeaderProps> = ({
-  onPreviewSite,
-  onContentHistory,
-  onSEOAnalyzer,
-  onCreateContent,
+  onNewBanner,
+  onNewCampaign,
+  onNewAnnouncement,
+  onNewPopup,
+  onOpenStorefront,
 }) => {
-  const navigate = useNavigate();
-
   return (
-    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 select-none">
-      {/* Left: Back Button + Title + Subtitle */}
-      <div className="flex items-center gap-3.5">
-        <button
-          onClick={() => navigate('/admin')}
-          className="w-9 h-9 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-all cursor-pointer shadow-2xs shrink-0"
-          title="Back to Dashboard"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
-            CMS - Content Management System
-          </h1>
-          <p className="text-xs font-semibold text-slate-500 mt-0.5">
-            Manage and customize content across the Travel OS platform.
-          </p>
+    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs select-none">
+      {/* Title & Description */}
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#6356E5] flex items-center justify-center border border-purple-100 shadow-2xs">
+            <LayoutTemplate className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight">
+              Content & Campaign Management
+            </h1>
+            <p className="text-xs font-semibold text-slate-500 mt-0.5">
+              Control dynamic homepage banners, announcements, trending destinations, agencies, and promotions in real time.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Right Actions: Preview Site, Content History, SEO Analyzer, Create Content */}
-      <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-        {/* Preview Site */}
+      {/* Action Buttons */}
+      <div className="flex flex-wrap items-center gap-2">
         <button
-          onClick={onPreviewSite}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
+          type="button"
+          onClick={onOpenStorefront}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer shadow-2xs"
         >
-          <Eye className="w-3.5 h-3.5 text-slate-400" />
-          <span>Preview Site</span>
+          <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+          <span>Live Storefront</span>
         </button>
 
-        {/* Content History */}
         <button
-          onClick={onContentHistory}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
+          type="button"
+          onClick={onNewAnnouncement}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black transition-all cursor-pointer shadow-2xs"
         >
-          <History className="w-3.5 h-3.5 text-slate-400" />
-          <span>Content History</span>
+          <Megaphone className="w-3.5 h-3.5 text-amber-600" />
+          <span>+ Announcement</span>
         </button>
 
-        {/* SEO Analyzer */}
         <button
-          onClick={onSEOAnalyzer}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
+          type="button"
+          onClick={onNewPopup}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-purple-50 hover:bg-purple-100 text-[#6356E5] border border-purple-200 text-xs font-black transition-all cursor-pointer shadow-2xs"
         >
-          <Sparkles className="w-3.5 h-3.5 text-[#6356E5]" />
-          <span>SEO Analyzer</span>
+          <MessageSquarePlus className="w-3.5 h-3.5 text-[#6356E5]" />
+          <span>+ Popup</span>
         </button>
 
-        {/* Create Content (Primary Purple CTA) */}
         <button
-          onClick={onCreateContent}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#6356E5] hover:bg-[#5244e0] text-white text-xs font-extrabold shadow-md shadow-[#6356E5]/25 transition-all cursor-pointer shrink-0"
+          type="button"
+          onClick={onNewCampaign}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-black transition-all cursor-pointer shadow-2xs"
         >
-          <Plus className="w-4 h-4" />
-          <span>Create Content</span>
-          <ChevronDown className="w-3 h-3 opacity-80" />
+          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+          <span>+ Campaign</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onNewBanner}
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#6356E5] hover:bg-[#5244e0] text-white text-xs font-black shadow-md shadow-[#6356E5]/25 transition-all cursor-pointer"
+        >
+          <Plus className="w-4 h-4 stroke-[3]" />
+          <span>+ New Banner</span>
         </button>
       </div>
     </div>

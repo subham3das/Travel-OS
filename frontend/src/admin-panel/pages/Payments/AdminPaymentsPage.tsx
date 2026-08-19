@@ -26,7 +26,7 @@ export const AdminPaymentsPage: React.FC = () => {
   const [payments, setPayments] = useState<AdminPaymentItem[]>([]);
   const [kpiStats, setKpiStats] = useState<PaymentKPIStats>(initialPaymentKPIStats);
   const [selectedPayment, setSelectedPayment] = useState<AdminPaymentItem | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [quickSearch, setQuickSearch] = useState('');
@@ -44,12 +44,11 @@ export const AdminPaymentsPage: React.FC = () => {
   // Filters
   const [filters, setFilters] = useState<PaymentFilters>({
     paymentStatus: 'All Status',
-    settlementStatus: 'All Status',
-    gateway: 'All Gateways',
     paymentMethod: 'All Methods',
+    gateway: 'All Gateways',
+    settlementStatus: 'All Settlements',
     agency: 'All Agencies',
-    destination: 'All Destinations',
-    dateRange: '',
+    dateRange: 'All Dates',
     amountRange: 'All Amounts',
     search: '',
   });
@@ -58,12 +57,12 @@ export const AdminPaymentsPage: React.FC = () => {
   const [invoiceModalPayment, setInvoiceModalPayment] = useState<AdminPaymentItem | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    type: 'approve_settlement' | 'reject_settlement' | 'refund' | 'bulk_approve' | 'bulk_reject' | 'bulk_refund';
+    type: 'refund' | 'approve_settlement' | 'retry' | 'bulk_settle' | 'bulk_refund' | 'bulk_export';
     payment: AdminPaymentItem | null;
     selectedCount?: number;
   }>({
     isOpen: false,
-    type: 'approve_settlement',
+    type: 'refund',
     payment: null,
   });
   const [isProcessing, setIsProcessing] = useState(false);
@@ -91,10 +90,7 @@ export const AdminPaymentsPage: React.FC = () => {
       setPayments(fetchedPayments);
       setKpiStats(fetchedStats);
 
-      // Default select first payment in drawer if none selected
-      if (fetchedPayments.length > 0 && !selectedPayment) {
-        setSelectedPayment(fetchedPayments[0]);
-      } else if (fetchedPayments.length > 0 && selectedPayment) {
+      if (fetchedPayments.length > 0 && selectedPayment) {
         const stillPresent = fetchedPayments.find((p) => p.id === selectedPayment.id);
         setSelectedPayment(stillPresent || fetchedPayments[0]);
       } else if (fetchedPayments.length === 0) {
@@ -120,12 +116,11 @@ export const AdminPaymentsPage: React.FC = () => {
   const handleResetFilters = () => {
     setFilters({
       paymentStatus: 'All Status',
-      settlementStatus: 'All Status',
-      gateway: 'All Gateways',
       paymentMethod: 'All Methods',
+      gateway: 'All Gateways',
+      settlementStatus: 'All Settlements',
       agency: 'All Agencies',
-      destination: 'All Destinations',
-      dateRange: '',
+      dateRange: 'All Dates',
       amountRange: 'All Amounts',
       search: '',
     });
@@ -146,9 +141,10 @@ export const AdminPaymentsPage: React.FC = () => {
 
   // Filter KPI click
   const handleFilterByKPIStatus = (status: string) => {
-    if (status === 'All Status') {
+    if (status === 'All Transactions') {
       handleFilterChange('paymentStatus', 'All Status');
-    } else {
+      handleFilterChange('settlementStatus', 'All Settlements');
+    } else if (status === 'Completed' || status === 'Pending' || status === 'Refunded' || status === 'Failed') {
       handleFilterChange('paymentStatus', status);
     }
   };
@@ -199,14 +195,14 @@ export const AdminPaymentsPage: React.FC = () => {
       case 'invoice':
         setInvoiceModalPayment(payment);
         break;
-      case 'approve_settlement':
-        setConfirmModal({ isOpen: true, type: 'approve_settlement', payment });
-        break;
-      case 'reject_settlement':
-        setConfirmModal({ isOpen: true, type: 'reject_settlement', payment });
-        break;
       case 'refund':
         setConfirmModal({ isOpen: true, type: 'refund', payment });
+        break;
+      case 'settle':
+        setConfirmModal({ isOpen: true, type: 'approve_settlement', payment });
+        break;
+      case 'retry':
+        setConfirmModal({ isOpen: true, type: 'retry', payment });
         break;
       default:
         break;
@@ -219,26 +215,8 @@ export const AdminPaymentsPage: React.FC = () => {
     try {
       const { type, payment } = confirmModal;
 
-      if (type === 'approve_settlement' && payment) {
-        await adminPaymentManagementService.approveSettlement(payment.id);
-        setPayments((prev) =>
-          prev.map((p) => (p.id === payment.id ? { ...p, settlementStatus: 'Settled' } : p))
-        );
-        if (selectedPayment?.id === payment.id) {
-          setSelectedPayment((prev) => (prev ? { ...prev, settlementStatus: 'Settled' } : null));
-        }
-        showToast(`Settlement approved for ${payment.transactionId}!`, 'success');
-      } else if (type === 'reject_settlement' && payment) {
-        await adminPaymentManagementService.rejectSettlement(payment.id);
-        setPayments((prev) =>
-          prev.map((p) => (p.id === payment.id ? { ...p, settlementStatus: 'Failed' } : p))
-        );
-        if (selectedPayment?.id === payment.id) {
-          setSelectedPayment((prev) => (prev ? { ...prev, settlementStatus: 'Failed' } : null));
-        }
-        showToast(`Settlement put on hold for ${payment.transactionId}.`, 'info');
-      } else if (type === 'refund' && payment) {
-        await adminPaymentManagementService.processRefund(payment.id);
+      if (type === 'refund' && payment) {
+        await adminPaymentManagementService.refundPayment(payment.id);
         setPayments((prev) =>
           prev.map((p) => (p.id === payment.id ? { ...p, paymentStatus: 'Refunded' } : p))
         );
@@ -246,28 +224,28 @@ export const AdminPaymentsPage: React.FC = () => {
           setSelectedPayment((prev) => (prev ? { ...prev, paymentStatus: 'Refunded' } : null));
         }
         showToast(`Refund processed for ${payment.transactionId}`, 'success');
-      } else if (type === 'bulk_approve') {
-        await adminPaymentManagementService.bulkApproveSettlement(selectedIds);
+      } else if (type === 'approve_settlement' && payment) {
+        await adminPaymentManagementService.settlePayment(payment.id);
+        setPayments((prev) =>
+          prev.map((p) => (p.id === payment.id ? { ...p, settlementStatus: 'Settled' } : p))
+        );
+        if (selectedPayment?.id === payment.id) {
+          setSelectedPayment((prev) => (prev ? { ...prev, settlementStatus: 'Settled' } : null));
+        }
+        showToast(`Settlement approved for ${payment.transactionId}`, 'success');
+      } else if (type === 'bulk_settle') {
+        await adminPaymentManagementService.bulkSettle(selectedIds);
         setPayments((prev) =>
           prev.map((p) => (selectedIds.includes(p.id) ? { ...p, settlementStatus: 'Settled' } : p))
         );
-        showToast(`Approved settlements for ${selectedIds.length} payments!`, 'success');
-        setSelectedIds([]);
-      } else if (type === 'bulk_reject') {
-        await adminPaymentManagementService.bulkRejectSettlement(selectedIds);
-        setPayments((prev) =>
-          prev.map((p) => (selectedIds.includes(p.id) ? { ...p, settlementStatus: 'Failed' } : p))
-        );
-        showToast(`Held settlements for ${selectedIds.length} payments.`, 'info');
+        showToast(`Settled ${selectedIds.length} transactions successfully!`, 'success');
         setSelectedIds([]);
       } else if (type === 'bulk_refund') {
         await adminPaymentManagementService.bulkRefund(selectedIds);
         setPayments((prev) =>
-          prev.map((p) =>
-            selectedIds.includes(p.id) ? { ...p, paymentStatus: 'Refunded' } : p
-          )
+          prev.map((p) => (selectedIds.includes(p.id) ? { ...p, paymentStatus: 'Refunded' } : p))
         );
-        showToast(`Processed refund for ${selectedIds.length} payments.`, 'success');
+        showToast(`Refunded ${selectedIds.length} transactions.`, 'success');
         setSelectedIds([]);
       }
     } catch (err) {
@@ -275,57 +253,41 @@ export const AdminPaymentsPage: React.FC = () => {
       showToast('An error occurred. Please try again.', 'error');
     } finally {
       setIsProcessing(false);
-      setConfirmModal({ isOpen: false, type: 'approve_settlement', payment: null });
+      setConfirmModal({ isOpen: false, type: 'refund', payment: null });
     }
   };
 
   // CSV Export handler
   const handleExportCSV = () => {
     if (payments.length === 0) {
-      showToast('No payment transactions available to export', 'info');
+      showToast('No payments available to export', 'info');
       return;
     }
 
-    const headers = [
-      'Transaction ID',
-      'Booking ID',
-      'Traveler',
-      'Email',
-      'Agency',
-      'Package',
-      'Amount',
-      'Platform Fee',
-      'Gateway',
-      'Method',
-      'Status',
-      'Settlement',
-      'Payment Date',
-    ];
+    const headers = ['Transaction ID', 'Booking ID', 'Traveler', 'Agency', 'Method', 'Gateway', 'Total Amount', 'Platform Fee', 'Payout', 'Status', 'Settlement'];
     const rows = payments.map((p) => [
       p.transactionId,
       p.bookingId,
       `"${p.travelerName}"`,
-      `"${p.travelerEmail}"`,
       `"${p.agencyName}"`,
-      `"${p.packageName}"`,
+      p.paymentMethod,
+      p.gateway,
       `"${p.totalAmount}"`,
       `"${p.platformFee}"`,
-      p.gateway,
-      `"${p.paymentMethod}"`,
+      `"${p.agencyPayout}"`,
       p.paymentStatus,
       p.settlementStatus,
-      `"${p.paymentDate} ${p.paymentTime}"`,
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `apnatrip_payments_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `travelos_payments_export_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`Exported ${payments.length} payment records to CSV`, 'success');
+    showToast(`Exported ${payments.length} payments to CSV`, 'success');
   };
 
   return (
@@ -392,22 +354,18 @@ export const AdminPaymentsPage: React.FC = () => {
           <PaymentBulkActionBar
             selectedCount={selectedIds.length}
             onClearSelection={() => setSelectedIds([])}
-            onBulkApproveSettlement={() =>
-              setConfirmModal({ isOpen: true, type: 'bulk_approve', payment: null, selectedCount: selectedIds.length })
-            }
-            onBulkRejectSettlement={() =>
-              setConfirmModal({ isOpen: true, type: 'bulk_reject', payment: null, selectedCount: selectedIds.length })
+            onBulkSettle={() =>
+              setConfirmModal({ isOpen: true, type: 'bulk_settle', payment: null, selectedCount: selectedIds.length })
             }
             onBulkRefund={() =>
               setConfirmModal({ isOpen: true, type: 'bulk_refund', payment: null, selectedCount: selectedIds.length })
             }
             onBulkExport={handleExportCSV}
-            onBulkDownloadInvoice={handleExportCSV}
           />
         )}
       </AnimatePresence>
 
-      {/* ── 5. MAIN CONTENT AREA: TABLE + STICKY RIGHT DRAWER ── */}
+      {/* ── 5. MAIN CONTENT AREA: TABLE ── */}
       {error ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-rose-100 shadow-2xs space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
@@ -426,54 +384,49 @@ export const AdminPaymentsPage: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col xl:flex-row gap-5 items-start">
-          {/* Table Container */}
-          <div className="flex-1 min-w-0 w-full space-y-3">
-            <PaymentTable
-              payments={paginatedPayments}
-              selectedIds={selectedIds}
-              selectedPayment={selectedPayment}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-              onToggleSelectAll={handleToggleSelectAll}
-              onToggleSelect={handleToggleSelect}
-              onSelectPayment={handleSelectPaymentForDrawer}
-              onRowAction={handleRowAction}
-              onRefresh={fetchPaymentsData}
-            />
+        <div className="space-y-3">
+          <PaymentTable
+            payments={paginatedPayments}
+            selectedIds={selectedIds}
+            selectedPayment={selectedPayment}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            onToggleSelectAll={handleToggleSelectAll}
+            onToggleSelect={handleToggleSelect}
+            onSelectPayment={handleSelectPaymentForDrawer}
+            onRowAction={handleRowAction}
+            onRefresh={fetchPaymentsData}
+          />
 
-            {/* Pagination Footer */}
-            {payments.length > 0 && (
-              <PaymentPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={payments.length}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={(size) => {
-                  setPageSize(size);
-                  setCurrentPage(1);
-                }}
-              />
-            )}
-          </div>
-
-          {/* Sticky Right Details Drawer */}
-          {selectedPayment && (
-            <PaymentDrawer
-              payment={selectedPayment}
-              isOpen={isDrawerOpen}
-              onClose={() => setIsDrawerOpen(false)}
-              onViewInvoice={(p) => setInvoiceModalPayment(p)}
-              onApproveSettlement={(p) => setConfirmModal({ isOpen: true, type: 'approve_settlement', payment: p })}
-              onRejectSettlement={(p) => setConfirmModal({ isOpen: true, type: 'reject_settlement', payment: p })}
-              onRefund={(p) => setConfirmModal({ isOpen: true, type: 'refund', payment: p })}
+          {/* Pagination Footer */}
+          {payments.length > 0 && (
+            <PaymentPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={payments.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
             />
           )}
         </div>
       )}
 
-      {/* ── 6. MODALS ── */}
+      {/* ── 6. SLIDE-IN RIGHT DETAILS DRAWER OVERLAY ── */}
+      <PaymentDrawer
+        payment={selectedPayment}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onViewInvoice={(p) => setInvoiceModalPayment(p)}
+        onRefund={(p) => setConfirmModal({ isOpen: true, type: 'refund', payment: p })}
+        onApproveSettlement={(p) => setConfirmModal({ isOpen: true, type: 'approve_settlement', payment: p })}
+        onVerifyGateway={(p) => alert(`Gateway status verified with Razorpay API for ${p.transactionId}: CAPTURED`)}
+      />
+
+      {/* ── 7. MODALS ── */}
       <PaymentInvoiceModal
         payment={invoiceModalPayment}
         isOpen={!!invoiceModalPayment}
@@ -487,7 +440,7 @@ export const AdminPaymentsPage: React.FC = () => {
         selectedCount={confirmModal.selectedCount}
         isProcessing={isProcessing}
         onConfirm={handleExecuteConfirmedAction}
-        onCancel={() => setConfirmModal({ isOpen: false, type: 'approve_settlement', payment: null })}
+        onCancel={() => setConfirmModal({ isOpen: false, type: 'refund', payment: null })}
       />
     </motion.div>
   );

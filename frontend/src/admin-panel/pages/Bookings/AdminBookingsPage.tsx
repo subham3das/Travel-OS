@@ -27,7 +27,7 @@ export const AdminBookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<AdminBookingItem[]>([]);
   const [kpiStats, setKpiStats] = useState<BookingKPIStats>(initialBookingKPIStats);
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingItem | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [quickSearch, setQuickSearch] = useState('');
@@ -38,7 +38,7 @@ export const AdminBookingsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortConfig, setSortConfig] = useState<BookingSortConfig>({
-    key: 'bookingDate',
+    key: 'bookedAtDate',
     direction: 'desc',
   });
 
@@ -46,12 +46,9 @@ export const AdminBookingsPage: React.FC = () => {
   const [filters, setFilters] = useState<BookingFilters>({
     bookingStatus: 'All Status',
     paymentStatus: 'All Payment Status',
-    package: 'All Packages',
     agency: 'All Agencies',
     destination: 'All Destinations',
-    travelDate: '',
-    bookingDate: '',
-    user: '',
+    dateRange: 'All Dates',
     amountRange: 'All Amounts',
     search: '',
   });
@@ -94,10 +91,7 @@ export const AdminBookingsPage: React.FC = () => {
       setBookings(fetchedBookings);
       setKpiStats(fetchedStats);
 
-      // Default select first booking in drawer if none selected
-      if (fetchedBookings.length > 0 && !selectedBooking) {
-        setSelectedBooking(fetchedBookings[0]);
-      } else if (fetchedBookings.length > 0 && selectedBooking) {
+      if (fetchedBookings.length > 0 && selectedBooking) {
         const stillPresent = fetchedBookings.find((b) => b.id === selectedBooking.id);
         setSelectedBooking(stillPresent || fetchedBookings[0]);
       } else if (fetchedBookings.length === 0) {
@@ -124,12 +118,9 @@ export const AdminBookingsPage: React.FC = () => {
     setFilters({
       bookingStatus: 'All Status',
       paymentStatus: 'All Payment Status',
-      package: 'All Packages',
       agency: 'All Agencies',
       destination: 'All Destinations',
-      travelDate: '',
-      bookingDate: '',
-      user: '',
+      dateRange: 'All Dates',
       amountRange: 'All Amounts',
       search: '',
     });
@@ -150,9 +141,10 @@ export const AdminBookingsPage: React.FC = () => {
 
   // Filter KPI click
   const handleFilterByKPIStatus = (status: string) => {
-    if (status === 'All Status') {
+    if (status === 'All Bookings') {
       handleFilterChange('bookingStatus', 'All Status');
-    } else {
+      handleFilterChange('paymentStatus', 'All Payment Status');
+    } else if (status === 'Confirmed' || status === 'Pending' || status === 'Cancelled' || status === 'Refunded' || status === 'Completed') {
       handleFilterChange('bookingStatus', status);
     }
   };
@@ -200,11 +192,11 @@ export const AdminBookingsPage: React.FC = () => {
         setSelectedBooking(booking);
         setIsDrawerOpen(true);
         break;
-      case 'invoice':
-        setInvoiceModalBooking(booking);
-        break;
       case 'modify':
         setModifyModalBooking(booking);
+        break;
+      case 'invoice':
+        setInvoiceModalBooking(booking);
         break;
       case 'confirm':
         setConfirmModal({ isOpen: true, type: 'confirm', booking });
@@ -234,7 +226,7 @@ export const AdminBookingsPage: React.FC = () => {
         if (selectedBooking?.id === booking.id) {
           setSelectedBooking((prev) => (prev ? { ...prev, bookingStatus: 'Confirmed', paymentStatus: 'Paid' } : null));
         }
-        showToast(`Booking ${booking.bookingId} confirmed!`, 'success');
+        showToast(`Booking ${booking.bookingId} has been confirmed!`, 'success');
       } else if (type === 'cancel' && booking) {
         await adminBookingManagementService.cancelBooking(booking.id);
         setBookings((prev) =>
@@ -243,7 +235,7 @@ export const AdminBookingsPage: React.FC = () => {
         if (selectedBooking?.id === booking.id) {
           setSelectedBooking((prev) => (prev ? { ...prev, bookingStatus: 'Cancelled' } : null));
         }
-        showToast(`Booking ${booking.bookingId} cancelled.`, 'info');
+        showToast(`Booking ${booking.bookingId} has been cancelled.`, 'info');
       } else if (type === 'refund' && booking) {
         await adminBookingManagementService.refundBooking(booking.id);
         setBookings((prev) =>
@@ -252,7 +244,7 @@ export const AdminBookingsPage: React.FC = () => {
         if (selectedBooking?.id === booking.id) {
           setSelectedBooking((prev) => (prev ? { ...prev, bookingStatus: 'Refunded', paymentStatus: 'Refunded' } : null));
         }
-        showToast(`Refund of ${booking.totalAmount} processed for ${booking.bookingId}`, 'success');
+        showToast(`Refund processed for ${booking.bookingId}`, 'success');
       } else if (type === 'bulk_confirm') {
         await adminBookingManagementService.bulkConfirm(selectedIds);
         setBookings((prev) =>
@@ -270,13 +262,9 @@ export const AdminBookingsPage: React.FC = () => {
       } else if (type === 'bulk_refund') {
         await adminBookingManagementService.bulkRefund(selectedIds);
         setBookings((prev) =>
-          prev.map((b) =>
-            selectedIds.includes(b.id)
-              ? { ...b, bookingStatus: 'Refunded', paymentStatus: 'Refunded' }
-              : b
-          )
+          prev.map((b) => (selectedIds.includes(b.id) ? { ...b, bookingStatus: 'Refunded', paymentStatus: 'Refunded' } : b))
         );
-        showToast(`Processed refund for ${selectedIds.length} bookings.`, 'success');
+        showToast(`Refunded ${selectedIds.length} bookings.`, 'success');
         setSelectedIds([]);
       }
     } catch (err) {
@@ -290,11 +278,11 @@ export const AdminBookingsPage: React.FC = () => {
 
   // Update Booking handler
   const handleUpdateBooking = async (id: string, updates: Partial<AdminBookingItem>) => {
-    const updated = await adminBookingManagementService.modifyBooking(id, updates);
+    const updated = await adminBookingManagementService.updateBooking(id, updates);
     if (updated) {
       setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
       if (selectedBooking?.id === id) setSelectedBooking(updated);
-      showToast('Booking details updated successfully.', 'success');
+      showToast('Booking updated successfully.', 'success');
     }
   };
 
@@ -305,26 +293,25 @@ export const AdminBookingsPage: React.FC = () => {
       return;
     }
 
-    const headers = ['Booking ID', 'Traveler', 'Email', 'Package', 'Agency', 'Travel Dates', 'Travelers', 'Amount', 'Payment Status', 'Booking Status', 'Booking Date'];
+    const headers = ['Booking ID', 'Traveler', 'Email', 'Phone', 'Package', 'Agency', 'Travel Dates', 'Amount', 'Booking Status', 'Payment Status'];
     const rows = bookings.map((b) => [
       b.bookingId,
       `"${b.travelerName}"`,
       `"${b.travelerEmail}"`,
+      `"${b.travelerPhone}"`,
       `"${b.packageName}"`,
       `"${b.agencyName}"`,
       `"${b.travelDatesText}"`,
-      1 + b.additionalTravelersCount,
       `"${b.totalAmount}"`,
-      b.paymentStatus,
       b.bookingStatus,
-      `"${b.bookedAtDate} ${b.bookedAtTime}"`,
+      b.paymentStatus,
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `apnatrip_bookings_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `travelos_bookings_export_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -409,7 +396,7 @@ export const AdminBookingsPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ── 5. MAIN CONTENT AREA: TABLE + STICKY RIGHT DRAWER ── */}
+      {/* ── 5. MAIN CONTENT AREA: TABLE ── */}
       {error ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-rose-100 shadow-2xs space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
@@ -428,55 +415,50 @@ export const AdminBookingsPage: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col xl:flex-row gap-5 items-start">
-          {/* Table Container */}
-          <div className="flex-1 min-w-0 w-full space-y-3">
-            <BookingsTable
-              bookings={paginatedBookings}
-              selectedIds={selectedIds}
-              selectedBooking={selectedBooking}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-              onToggleSelectAll={handleToggleSelectAll}
-              onToggleSelect={handleToggleSelect}
-              onSelectBooking={handleSelectBookingForDrawer}
-              onRowAction={handleRowAction}
-              onRefresh={fetchBookingsData}
-            />
+        <div className="space-y-3">
+          <BookingsTable
+            bookings={paginatedBookings}
+            selectedIds={selectedIds}
+            selectedBooking={selectedBooking}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            onToggleSelectAll={handleToggleSelectAll}
+            onToggleSelect={handleToggleSelect}
+            onSelectBooking={handleSelectBookingForDrawer}
+            onRowAction={handleRowAction}
+            onRefresh={fetchBookingsData}
+          />
 
-            {/* Pagination Footer */}
-            {bookings.length > 0 && (
-              <BookingPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={bookings.length}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={(size) => {
-                  setPageSize(size);
-                  setCurrentPage(1);
-                }}
-              />
-            )}
-          </div>
-
-          {/* Sticky Right Details Drawer */}
-          {selectedBooking && (
-            <BookingDetailsDrawer
-              booking={selectedBooking}
-              isOpen={isDrawerOpen}
-              onClose={() => setIsDrawerOpen(false)}
-              onViewInvoice={(b) => setInvoiceModalBooking(b)}
-              onModify={(b) => setModifyModalBooking(b)}
-              onConfirm={(b) => setConfirmModal({ isOpen: true, type: 'confirm', booking: b })}
-              onCancel={(b) => setConfirmModal({ isOpen: true, type: 'cancel', booking: b })}
-              onRefund={(b) => setConfirmModal({ isOpen: true, type: 'refund', booking: b })}
+          {/* Pagination Footer */}
+          {bookings.length > 0 && (
+            <BookingPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={bookings.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
             />
           )}
         </div>
       )}
 
-      {/* ── 6. MODALS ── */}
+      {/* ── 6. SLIDE-IN RIGHT DETAILS DRAWER OVERLAY ── */}
+      <BookingDetailsDrawer
+        booking={selectedBooking}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onViewInvoice={(b) => setInvoiceModalBooking(b)}
+        onModify={(b) => setModifyModalBooking(b)}
+        onConfirm={(b) => setConfirmModal({ isOpen: true, type: 'confirm', booking: b })}
+        onCancel={(b) => setConfirmModal({ isOpen: true, type: 'cancel', booking: b })}
+        onRefund={(b) => setConfirmModal({ isOpen: true, type: 'refund', booking: b })}
+      />
+
+      {/* ── 7. MODALS ── */}
       <ModifyBookingModal
         booking={modifyModalBooking}
         isOpen={!!modifyModalBooking}

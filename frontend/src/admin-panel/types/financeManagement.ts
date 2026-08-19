@@ -69,63 +69,68 @@ export interface FinancialSummaryData {
 }
 
 export interface RefundAnalyticsData {
-  totalRequests: { value: number; growth: string; isPositive: boolean };
-  approvedRefunds: { value: number; growth: string; isPositive: boolean };
-  pendingRefunds: { value: number; growth: string; isPositive: boolean };
-  rejectedRefunds: { value: number; growth: string; isPositive: boolean };
-  trendPoints: { date: string; requests: number; approved: number }[];
+  totalRequests: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  trends: { month: string; requests: number; approved: number }[];
 }
 
-export interface AgencySettlementRow {
+export interface SettlementRecord {
   id: string;
-  settlementId: string; // e.g. SETT-89231
+  settlementId?: string;
+  agencyId: string;
   agencyName: string;
-  agencyLogo: string;
-  settlementAmount: string; // e.g. ₹28,45,760
-  commission: string; // e.g. ₹4,05,320
-  tax: string; // e.g. ₹2,31,100
-  netAmount: string; // e.g. ₹22,09,340
-  settlementDate: string; // e.g. Jun 12, 2024
+  agencyLogo?: string;
+  settlementAmount: string;
+  commission: string;
+  tax: string;
+  netAmount: string;
+  settlementDate: string;
   status: 'Pending' | 'Settled' | 'Failed';
+  invoiceNumber?: string;
+  bankAccount?: string;
+  ifsc?: string;
+  utrNumber?: string;
 }
 
-export interface FinancialTimelineItem {
+export type AgencySettlementRow = SettlementRecord;
+
+export interface FinancialTimelineEvent {
   id: string;
-  date: string;
   title: string;
-  type: 'revenue' | 'disbursement' | 'refund' | 'target' | 'record';
+  time: string;
+  description: string;
+  type: 'milestone' | 'payout' | 'refund_spike' | 'target_achieved' | 'peak_revenue';
+  amount?: string;
+  badge?: string;
 }
 
-export interface AgencySidebarData {
-  agencyId: string; // e.g. AGY-1001
+export type FinancialTimelineItem = FinancialTimelineEvent;
+
+export interface AgencySidebarProfileData {
+  agencyId: string;
   agencyName: string;
   agencyLogo: string;
-  isVerified: boolean;
+  verified: boolean;
   rating: number;
-  totalReviews: number;
-  totalRevenue: string;
-  revenueGrowth: string;
-  totalBookings: number;
-  bookingsGrowth: string;
-  avgBookingValue: string;
-  avgBookingGrowth: string;
-  totalCommission: string;
-  commissionGrowth: string;
+  revenueOverview: {
+    totalRevenue: string;
+    bookings: number;
+    avgBookingValue: string;
+    totalCommission: string;
+  };
   settlementHistory: {
+    id: string;
     date: string;
     amount: string;
     status: 'Pending' | 'Settled' | 'Failed';
   }[];
-  profitBreakdown: {
-    totalRevenue: string;
-    commission: string;
-    taxes: string;
-    gatewayCharges: string;
-    netProfit: string;
-  };
-  monthlyTrendPoints: {
+  monthlyTrends: {
     month: string;
     revenue: number;
     profit: number;
   }[];
 }
+
+export type AgencySidebarData = AgencySidebarProfileData;

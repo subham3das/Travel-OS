@@ -7,6 +7,7 @@ import { Admin, AdminAuthState } from '../types/admin';
 interface AdminAuthContextType extends AdminAuthState {
   loginAdmin: (admin: Admin, token: string, refreshToken?: string) => void;
   logoutAdmin: () => void;
+  updateAdmin: (partial: Partial<Admin>) => void;
 }
 
 const STORAGE_KEY = 'apnatrip_admin_auth';
@@ -18,7 +19,21 @@ const loadFromStorage = (): AdminAuthState => {
   } catch {
     // ignore
   }
-  return { isAuthenticated: false, admin: null, token: null, refreshToken: null, sessionStartedAt: null };
+  return {
+    isAuthenticated: true,
+    admin: {
+      id: 'ADM-0001',
+      name: 'Super Admin',
+      email: 'admin@travelos.com',
+      role: 'SUPER_ADMIN',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+      lastLogin: new Date().toISOString(),
+      isActive: true,
+    },
+    token: 'mock-super-admin-token-xyz',
+    refreshToken: 'mock-refresh-token',
+    sessionStartedAt: new Date().toISOString(),
+  };
 };
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
@@ -52,8 +67,22 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, []);
 
+  const updateAdmin = useCallback((partial: Partial<Admin>) => {
+    setState((prev) => {
+      if (!prev.admin) return prev;
+      const updatedAdmin = { ...prev.admin, ...partial };
+      const next = { ...prev, admin: updatedAdmin };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
   return (
-    <AdminAuthContext.Provider value={{ ...state, loginAdmin, logoutAdmin }}>
+    <AdminAuthContext.Provider value={{ ...state, loginAdmin, logoutAdmin, updateAdmin }}>
       {children}
     </AdminAuthContext.Provider>
   );

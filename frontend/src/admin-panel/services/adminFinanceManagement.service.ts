@@ -6,9 +6,9 @@ import {
   TopPerformingAgencyItem,
   FinancialSummaryData,
   RefundAnalyticsData,
-  AgencySettlementRow,
-  FinancialTimelineItem,
-  AgencySidebarData,
+  SettlementRecord,
+  FinancialTimelineEvent,
+  AgencySidebarProfileData,
 } from '../types/financeManagement';
 
 export const initialFinanceKPIStats: FinanceKPIStats = {
@@ -120,7 +120,7 @@ export const initialDestinationRevenues: DestinationRevenueItem[] = [
 
 export const initialTopAgencies: TopPerformingAgencyItem[] = [
   {
-    id: 'ag-1',
+    id: 'AGY-1001',
     rank: 1,
     agencyName: 'Wanderlust Holidays',
     agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
@@ -132,7 +132,7 @@ export const initialTopAgencies: TopPerformingAgencyItem[] = [
     rating: 4.8,
   },
   {
-    id: 'ag-2',
+    id: 'AGY-1002',
     rank: 2,
     agencyName: 'Himalayan Treks',
     agencyLogo: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=200&auto=format&fit=crop',
@@ -144,7 +144,7 @@ export const initialTopAgencies: TopPerformingAgencyItem[] = [
     rating: 4.7,
   },
   {
-    id: 'ag-3',
+    id: 'AGY-1003',
     rank: 3,
     agencyName: 'Goa Getaways',
     agencyLogo: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=200&auto=format&fit=crop',
@@ -156,7 +156,7 @@ export const initialTopAgencies: TopPerformingAgencyItem[] = [
     rating: 4.6,
   },
   {
-    id: 'ag-4',
+    id: 'AGY-1004',
     rank: 4,
     agencyName: 'Adventure India',
     agencyLogo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
@@ -168,7 +168,7 @@ export const initialTopAgencies: TopPerformingAgencyItem[] = [
     rating: 4.5,
   },
   {
-    id: 'ag-5',
+    id: 'AGY-1005',
     rank: 5,
     agencyName: 'TravelXperts',
     agencyLogo: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=200&auto=format&fit=crop',
@@ -191,30 +191,24 @@ export const initialFinancialSummary: FinancialSummaryData = {
 };
 
 export const initialRefundAnalytics: RefundAnalyticsData = {
-  totalRequests: { value: 1842, growth: '6.2%', isPositive: true },
-  approvedRefunds: { value: 1236, growth: '8.4%', isPositive: true },
-  pendingRefunds: { value: 428, growth: '2.7%', isPositive: false },
-  rejectedRefunds: { value: 178, growth: '4.1%', isPositive: false },
-  trendPoints: [
-    { date: 'Jun 1', requests: 120, approved: 80 },
-    { date: 'Jun 2', requests: 180, approved: 110 },
-    { date: 'Jun 3', requests: 160, approved: 105 },
-    { date: 'Jun 4', requests: 290, approved: 200 },
-    { date: 'Jun 5', requests: 270, approved: 190 },
-    { date: 'Jun 6', requests: 310, approved: 230 },
-    { date: 'Jun 7', requests: 380, approved: 270 },
-    { date: 'Jun 8', requests: 430, approved: 310 },
-    { date: 'Jun 9', requests: 590, approved: 420 },
-    { date: 'Jun 10', requests: 550, approved: 390 },
-    { date: 'Jun 11', requests: 490, approved: 350 },
-    { date: 'Jun 12', requests: 620, approved: 440 },
+  totalRequests: 1842,
+  approved: 1236,
+  pending: 428,
+  rejected: 178,
+  trends: [
+    { month: 'Jan', requests: 120, approved: 80 },
+    { month: 'Feb', requests: 180, approved: 110 },
+    { month: 'Mar', requests: 260, approved: 195 },
+    { month: 'Apr', requests: 310, approved: 240 },
+    { month: 'May', requests: 430, approved: 350 },
+    { month: 'Jun', requests: 550, approved: 440 },
   ],
 };
 
-export const initialSettlementRows: AgencySettlementRow[] = [
+export const initialSettlementRows: SettlementRecord[] = [
   {
-    id: 's-1',
-    settlementId: 'SETT-89231',
+    id: 'SETT-89231',
+    agencyId: 'AGY-1001',
     agencyName: 'Wanderlust Holidays',
     agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
     settlementAmount: '₹28,45,760',
@@ -223,10 +217,14 @@ export const initialSettlementRows: AgencySettlementRow[] = [
     netAmount: '₹22,09,340',
     settlementDate: 'Jun 12, 2024',
     status: 'Pending',
+    invoiceNumber: 'INV-2024-06-8923',
+    bankAccount: 'HDFC Bank •••• 8921',
+    ifsc: 'HDFC0001234',
+    utrNumber: 'UTR-9918234710',
   },
   {
-    id: 's-2',
-    settlementId: 'SETT-89230',
+    id: 'SETT-89230',
+    agencyId: 'AGY-1002',
     agencyName: 'Himalayan Treks',
     agencyLogo: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=200&auto=format&fit=crop',
     settlementAmount: '₹24,15,320',
@@ -235,10 +233,14 @@ export const initialSettlementRows: AgencySettlementRow[] = [
     netAmount: '₹18,50,310',
     settlementDate: 'Jun 12, 2024',
     status: 'Pending',
+    invoiceNumber: 'INV-2024-06-8922',
+    bankAccount: 'ICICI Bank •••• 4412',
+    ifsc: 'ICIC0000412',
+    utrNumber: 'UTR-9918234709',
   },
   {
-    id: 's-3',
-    settlementId: 'SETT-89229',
+    id: 'SETT-89229',
+    agencyId: 'AGY-1003',
     agencyName: 'Goa Getaways',
     agencyLogo: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=200&auto=format&fit=crop',
     settlementAmount: '₹19,85,450',
@@ -247,10 +249,14 @@ export const initialSettlementRows: AgencySettlementRow[] = [
     netAmount: '₹15,22,060',
     settlementDate: 'Jun 11, 2024',
     status: 'Settled',
+    invoiceNumber: 'INV-2024-06-8921',
+    bankAccount: 'SBI •••• 6721',
+    ifsc: 'SBIN0002100',
+    utrNumber: 'UTR-9918234708',
   },
   {
-    id: 's-4',
-    settlementId: 'SETT-89228',
+    id: 'SETT-89228',
+    agencyId: 'AGY-1004',
     agencyName: 'Adventure India',
     agencyLogo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
     settlementAmount: '₹16,75,980',
@@ -259,10 +265,14 @@ export const initialSettlementRows: AgencySettlementRow[] = [
     netAmount: '₹12,84,960',
     settlementDate: 'Jun 11, 2024',
     status: 'Settled',
+    invoiceNumber: 'INV-2024-06-8920',
+    bankAccount: 'Axis Bank •••• 1920',
+    ifsc: 'UTIB0000192',
+    utrNumber: 'UTR-9918234707',
   },
   {
-    id: 's-5',
-    settlementId: 'SETT-89227',
+    id: 'SETT-89227',
+    agencyId: 'AGY-1005',
     agencyName: 'TravelXperts',
     agencyLogo: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=200&auto=format&fit=crop',
     settlementAmount: '₹13,25,760',
@@ -271,84 +281,92 @@ export const initialSettlementRows: AgencySettlementRow[] = [
     netAmount: '₹10,16,420',
     settlementDate: 'Jun 10, 2024',
     status: 'Failed',
+    invoiceNumber: 'INV-2024-06-8919',
+    bankAccount: 'Kotak Bank •••• 8831',
+    ifsc: 'KKBK0000883',
+    utrNumber: 'UTR-9918234706',
   },
 ];
 
-export const initialFinancialTimeline: FinancialTimelineItem[] = [
+export const initialFinancialTimeline: FinancialTimelineEvent[] = [
   {
     id: 'ftl-1',
-    date: 'Jun 12, 2024',
-    title: 'Highest Revenue of ₹1.68 Cr achieved',
-    type: 'revenue',
+    title: 'Highest Single-Day Revenue',
+    time: '2 hours ago',
+    description: 'Platform reached daily revenue milestone exceeding targets by 24%',
+    type: 'peak_revenue',
+    amount: '₹1.68 Cr',
+    badge: 'Peak Volume',
   },
   {
     id: 'ftl-2',
-    date: 'Jun 11, 2024',
-    title: '₹8.45 Cr disbursed to 23 agencies',
-    type: 'disbursement',
+    title: 'Bulk Payout Disbursed',
+    time: '5 hours ago',
+    description: 'Automated settlement batch disbursed to 23 verified agency accounts',
+    type: 'payout',
+    amount: '₹8.45 Cr',
+    badge: '23 Agencies',
   },
   {
     id: 'ftl-3',
-    date: 'Jun 9, 2024',
-    title: 'Refund spike: ₹23.5 L for 62 bookings',
-    type: 'refund',
+    title: 'Refund Spike Flagged',
+    time: 'Yesterday, 18:30',
+    description: 'Monsoon cancellation surge in Himachal circuit processed via gateway',
+    type: 'refund_spike',
+    amount: '₹23.5 L',
+    badge: '62 Bookings',
   },
   {
     id: 'ftl-4',
-    date: 'Jun 7, 2024',
-    title: 'Monthly commission target 75% achieved',
-    type: 'target',
+    title: 'Monthly Commission Target',
+    time: '2 days ago',
+    description: 'Achieved 75% of Q2 projected commission in first 12 days',
+    type: 'target_achieved',
+    badge: '75% of Target',
   },
   {
     id: 'ftl-5',
-    date: 'Jun 5, 2024',
-    title: 'New record: 2,156 bookings in a single day',
-    type: 'record',
+    title: 'New Booking Record',
+    time: '3 days ago',
+    description: 'Highest active bookings count registered across all categories',
+    type: 'milestone',
+    amount: '2,156 Trips',
   },
 ];
 
-export const initialAgencySidebarData: AgencySidebarData = {
+export const initialAgencySidebarData: AgencySidebarProfileData = {
   agencyId: 'AGY-1001',
   agencyName: 'Wanderlust Holidays',
   agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
-  isVerified: true,
+  verified: true,
   rating: 4.8,
-  totalReviews: 1248,
-  totalRevenue: '₹2.68 Cr',
-  revenueGrowth: '24.5%',
-  totalBookings: 1248,
-  bookingsGrowth: '18.2%',
-  avgBookingValue: '₹21,474',
-  avgBookingGrowth: '5.2%',
-  totalCommission: '₹40.2 L',
-  commissionGrowth: '16.4%',
-  settlementHistory: [
-    { date: 'Jun 12, 2024', amount: '₹28,45,760', status: 'Pending' },
-    { date: 'Jun 11, 2024', amount: '₹24,15,320', status: 'Settled' },
-    { date: 'Jun 10, 2024', amount: '₹19,85,450', status: 'Settled' },
-    { date: 'Jun 9, 2024', amount: '₹16,75,980', status: 'Settled' },
-    { date: 'Jun 8, 2024', amount: '₹13,25,760', status: 'Failed' },
-  ],
-  profitBreakdown: {
+  revenueOverview: {
     totalRevenue: '₹2.68 Cr',
-    commission: '₹40.2 L',
-    taxes: '₹23.1 L',
-    gatewayCharges: '₹12.4 L',
-    netProfit: '₹1.92 Cr',
+    bookings: 1248,
+    avgBookingValue: '₹21,474',
+    totalCommission: '₹40.2 L',
   },
-  monthlyTrendPoints: [
-    { month: 'Jun 1', revenue: 18, profit: 12 },
-    { month: 'Jun 4', revenue: 25, profit: 17 },
-    { month: 'Jun 7', revenue: 22, profit: 15 },
-    { month: 'Jun 10', revenue: 30, profit: 21 },
-    { month: 'Jun 12', revenue: 34, profit: 24 },
+  settlementHistory: [
+    { id: 'SETT-89231', date: 'Jun 12, 2024', amount: '₹28,45,760', status: 'Pending' },
+    { id: 'SETT-89230', date: 'Jun 11, 2024', amount: '₹24,15,320', status: 'Settled' },
+    { id: 'SETT-89229', date: 'Jun 10, 2024', amount: '₹19,85,450', status: 'Settled' },
+    { id: 'SETT-89228', date: 'Jun 9, 2024', amount: '₹16,75,980', status: 'Settled' },
+    { id: 'SETT-89227', date: 'Jun 8, 2024', amount: '₹13,25,760', status: 'Failed' },
+  ],
+  monthlyTrends: [
+    { month: 'Jan', revenue: 18, profit: 4.5 },
+    { month: 'Feb', revenue: 25, profit: 6.2 },
+    { month: 'Mar', revenue: 22, profit: 5.5 },
+    { month: 'Apr', revenue: 30, profit: 7.5 },
+    { month: 'May', revenue: 34, profit: 8.5 },
+    { month: 'Jun', revenue: 42, profit: 10.2 },
   ],
 };
 
 class AdminFinanceManagementService {
   private kpiStats: FinanceKPIStats = initialFinanceKPIStats;
-  private settlements: AgencySettlementRow[] = initialSettlementRows;
-  private agencySidebar: AgencySidebarData = initialAgencySidebarData;
+  private settlements: SettlementRecord[] = initialSettlementRows;
+  private agencySidebar: AgencySidebarProfileData = initialAgencySidebarData;
 
   public async getKPIStats(): Promise<FinanceKPIStats> {
     return new Promise((resolve) => setTimeout(() => resolve(this.kpiStats), 50));
@@ -400,7 +418,7 @@ class AdminFinanceManagementService {
     return new Promise((resolve) => setTimeout(() => resolve(initialRefundAnalytics), 50));
   }
 
-  public async getSettlements(): Promise<AgencySettlementRow[]> {
+  public async getSettlements(): Promise<SettlementRecord[]> {
     return new Promise((resolve) => setTimeout(() => resolve(this.settlements), 50));
   }
 
@@ -418,11 +436,11 @@ class AdminFinanceManagementService {
     return true;
   }
 
-  public async getFinancialTimeline(): Promise<FinancialTimelineItem[]> {
+  public async getFinancialTimeline(): Promise<FinancialTimelineEvent[]> {
     return new Promise((resolve) => setTimeout(() => resolve(initialFinancialTimeline), 50));
   }
 
-  public async getAgencySidebarData(agencyName?: string): Promise<AgencySidebarData> {
+  public async getAgencySidebarData(agencyName?: string): Promise<AgencySidebarProfileData> {
     return new Promise((resolve) => {
       setTimeout(() => {
         if (agencyName && agencyName !== 'Wanderlust Holidays') {

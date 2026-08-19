@@ -27,7 +27,7 @@ export const AdminPackagesPage: React.FC = () => {
   const [packages, setPackages] = useState<AdminPackageItem[]>([]);
   const [kpiStats, setKpiStats] = useState<PackageKPIStats>(initialPackageKPIStats);
   const [selectedPackage, setSelectedPackage] = useState<AdminPackageItem | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [quickSearch, setQuickSearch] = useState('');
@@ -38,20 +38,19 @@ export const AdminPackagesPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortConfig, setSortConfig] = useState<PackageSortConfig>({
-    key: 'lastUpdated',
+    key: 'createdAt',
     direction: 'desc',
   });
 
   // Filters
   const [filters, setFilters] = useState<PackageFilters>({
-    status: 'All Status',
-    destination: 'All Destinations',
     agency: 'All Agencies',
-    category: 'All Categories',
-    duration: 'All Durations',
+    destinationRegion: 'All Regions',
+    destinationCountry: 'All Countries',
+    status: 'All Status',
+    approvalStatus: 'All Approvals',
     priceRange: 'All Prices',
-    departureMonth: 'All Months',
-    rating: 'All Ratings',
+    duration: 'All Durations',
     search: '',
   });
 
@@ -83,23 +82,20 @@ export const AdminPackagesPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [fetchedPackages, fetchedStats] = await Promise.all([
+      const [fetchedPkgs, fetchedStats] = await Promise.all([
         adminPackageManagementService.getPackages(
           { ...filters, search: quickSearch || filters.search },
           sortConfig
         ),
         adminPackageManagementService.getKPIStats(),
       ]);
-      setPackages(fetchedPackages);
+      setPackages(fetchedPkgs);
       setKpiStats(fetchedStats);
 
-      // Default select the first package in drawer if none selected
-      if (fetchedPackages.length > 0 && !selectedPackage) {
-        setSelectedPackage(fetchedPackages[0]);
-      } else if (fetchedPackages.length > 0 && selectedPackage) {
-        const stillPresent = fetchedPackages.find((p) => p.id === selectedPackage.id);
-        setSelectedPackage(stillPresent || fetchedPackages[0]);
-      } else if (fetchedPackages.length === 0) {
+      if (fetchedPkgs.length > 0 && selectedPackage) {
+        const stillPresent = fetchedPkgs.find((p) => p.id === selectedPackage.id);
+        setSelectedPackage(stillPresent || fetchedPkgs[0]);
+      } else if (fetchedPkgs.length === 0) {
         setSelectedPackage(null);
       }
     } catch (err: any) {
@@ -121,14 +117,13 @@ export const AdminPackagesPage: React.FC = () => {
 
   const handleResetFilters = () => {
     setFilters({
-      status: 'All Status',
-      destination: 'All Destinations',
       agency: 'All Agencies',
-      category: 'All Categories',
-      duration: 'All Durations',
+      destinationRegion: 'All Regions',
+      destinationCountry: 'All Countries',
+      status: 'All Status',
+      approvalStatus: 'All Approvals',
       priceRange: 'All Prices',
-      departureMonth: 'All Months',
-      rating: 'All Ratings',
+      duration: 'All Durations',
       search: '',
     });
     setQuickSearch('');
@@ -150,11 +145,14 @@ export const AdminPackagesPage: React.FC = () => {
   const handleFilterByKPIStatus = (status: string) => {
     if (status === 'All Status') {
       handleFilterChange('status', 'All Status');
-    } else if (status === 'Active' || status === 'Pending' || status === 'Draft' || status === 'Sold Out') {
+      handleFilterChange('approvalStatus', 'All Approvals');
+    } else if (status === 'Active' || status === 'Sold Out' || status === 'Draft') {
       handleFilterChange('status', status);
+    } else if (status === 'Pending') {
+      handleFilterChange('approvalStatus', 'Pending');
     } else if (status === 'Featured') {
-      setPackages((prev) => prev.filter((p) => p.isFeatured));
-      showToast('Filtering by Featured Packages', 'info');
+      handleFilterChange('status', 'All Status');
+      handleFilterChange('approvalStatus', 'Approved');
     }
   };
 
@@ -230,12 +228,12 @@ export const AdminPackagesPage: React.FC = () => {
       if (type === 'approve' && pkg) {
         await adminPackageManagementService.approvePackage(pkg.id);
         setPackages((prev) =>
-          prev.map((p) => (p.id === pkg.id ? { ...p, status: 'Active', approvalStatus: 'Approved' } : p))
+          prev.map((p) => (p.id === pkg.id ? { ...p, approvalStatus: 'Approved', status: 'Active' } : p))
         );
         if (selectedPackage?.id === pkg.id) {
-          setSelectedPackage((prev) => (prev ? { ...prev, status: 'Active', approvalStatus: 'Approved' } : null));
+          setSelectedPackage((prev) => (prev ? { ...prev, approvalStatus: 'Approved', status: 'Active' } : null));
         }
-        showToast(`Package "${pkg.title}" approved and active!`, 'success');
+        showToast(`"${pkg.title}" has been approved and published!`, 'success');
       } else if (type === 'feature' && pkg) {
         await adminPackageManagementService.featurePackage(pkg.id);
         setPackages((prev) =>
@@ -244,17 +242,16 @@ export const AdminPackagesPage: React.FC = () => {
         if (selectedPackage?.id === pkg.id) {
           setSelectedPackage((prev) => (prev ? { ...prev, isFeatured: !prev.isFeatured } : null));
         }
-        showToast(`Updated featured status for "${pkg.title}"`, 'success');
+        showToast(`Feature status updated for "${pkg.title}"`, 'success');
       } else if (type === 'hide' && pkg) {
-        const nextStatus = pkg.status === 'Hidden' ? 'Active' : 'Hidden';
-        await adminPackageManagementService.updatePackage(pkg.id, { status: nextStatus });
+        await adminPackageManagementService.hidePackage(pkg.id);
         setPackages((prev) =>
-          prev.map((p) => (p.id === pkg.id ? { ...p, status: nextStatus } : p))
+          prev.map((p) => (p.id === pkg.id ? { ...p, status: p.status === 'Draft' ? 'Active' : 'Draft' } : p))
         );
         if (selectedPackage?.id === pkg.id) {
-          setSelectedPackage((prev) => (prev ? { ...prev, status: nextStatus } : null));
+          setSelectedPackage((prev) => (prev ? { ...prev, status: prev.status === 'Draft' ? 'Active' : 'Draft' } : null));
         }
-        showToast(`Package "${pkg.title}" is now ${nextStatus.toLowerCase()}.`, 'info');
+        showToast(`Visibility updated for "${pkg.title}"`, 'info');
       } else if (type === 'delete' && pkg) {
         await adminPackageManagementService.deletePackage(pkg.id);
         const remaining = packages.filter((p) => p.id !== pkg.id);
@@ -263,11 +260,11 @@ export const AdminPackagesPage: React.FC = () => {
         if (selectedPackage?.id === pkg.id) {
           setSelectedPackage(remaining[0] || null);
         }
-        showToast(`Package "${pkg.title}" deleted.`, 'info');
+        showToast(`"${pkg.title}" deleted from platform.`, 'info');
       } else if (type === 'bulk_approve') {
         await adminPackageManagementService.bulkApprove(selectedIds);
         setPackages((prev) =>
-          prev.map((p) => (selectedIds.includes(p.id) ? { ...p, status: 'Active', approvalStatus: 'Approved' } : p))
+          prev.map((p) => (selectedIds.includes(p.id) ? { ...p, approvalStatus: 'Approved', status: 'Active' } : p))
         );
         showToast(`Approved ${selectedIds.length} packages successfully!`, 'success');
         setSelectedIds([]);
@@ -276,14 +273,14 @@ export const AdminPackagesPage: React.FC = () => {
         setPackages((prev) =>
           prev.map((p) => (selectedIds.includes(p.id) ? { ...p, isFeatured: true } : p))
         );
-        showToast(`Marked ${selectedIds.length} packages as featured.`, 'success');
+        showToast(`Featured ${selectedIds.length} packages!`, 'success');
         setSelectedIds([]);
       } else if (type === 'bulk_hide') {
         await adminPackageManagementService.bulkHide(selectedIds);
         setPackages((prev) =>
-          prev.map((p) => (selectedIds.includes(p.id) ? { ...p, status: 'Hidden' } : p))
+          prev.map((p) => (selectedIds.includes(p.id) ? { ...p, status: 'Draft' } : p))
         );
-        showToast(`Hidden ${selectedIds.length} packages.`, 'info');
+        showToast(`Moved ${selectedIds.length} packages to Draft.`, 'info');
         setSelectedIds([]);
       } else if (type === 'bulk_delete') {
         await adminPackageManagementService.bulkDelete(selectedIds);
@@ -306,11 +303,11 @@ export const AdminPackagesPage: React.FC = () => {
 
   // Add Package handler
   const handleAddNewPackage = async (packageData: Partial<AdminPackageItem>) => {
-    const created = await adminPackageManagementService.createPackage(packageData);
+    const created = await adminPackageManagementService.addPackage(packageData);
     setPackages((prev) => [created, ...prev]);
     setSelectedPackage(created);
     setIsDrawerOpen(true);
-    showToast(`New package "${created.title}" published!`, 'success');
+    showToast(`New package "${created.title}" created successfully!`, 'success');
   };
 
   // Update Package handler
@@ -319,7 +316,7 @@ export const AdminPackagesPage: React.FC = () => {
     if (updated) {
       setPackages((prev) => prev.map((p) => (p.id === id ? updated : p)));
       if (selectedPackage?.id === id) setSelectedPackage(updated);
-      showToast('Package details updated successfully.', 'success');
+      showToast('Package updated successfully.', 'success');
     }
   };
 
@@ -330,20 +327,19 @@ export const AdminPackagesPage: React.FC = () => {
       return;
     }
 
-    const headers = ['Package ID', 'Title', 'Agency', 'Destination', 'Duration', 'Price', 'Seats', 'Bookings', 'Rating', 'Status', 'Approval', 'Last Updated'];
+    const headers = ['Package ID', 'Title', 'Agency', 'Destination', 'Duration', 'Price', 'Status', 'Approval', 'Bookings', 'Revenue', 'Rating'];
     const rows = packages.map((p) => [
       p.packageId,
       `"${p.title}"`,
       `"${p.agencyName}"`,
-      `"${p.destinationCountry}, ${p.destinationRegion}"`,
-      p.durationText,
+      `"${p.destinationRegion}, ${p.destinationCountry}"`,
+      `"${p.durationText}"`,
       `"${p.currentPrice}"`,
-      `"${p.availableSeats}/${p.totalSeats}"`,
-      p.bookingsCount,
-      p.rating,
       p.status,
       p.approvalStatus,
-      `"${p.lastUpdated}"`,
+      p.bookingsCount,
+      `"${p.totalRevenue}"`,
+      p.rating,
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
@@ -438,7 +434,7 @@ export const AdminPackagesPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ── 5. MAIN CONTENT AREA: TABLE + STICKY RIGHT DRAWER ── */}
+      {/* ── 5. MAIN CONTENT AREA: TABLE ── */}
       {error ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-rose-100 shadow-2xs space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
@@ -457,55 +453,50 @@ export const AdminPackagesPage: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col xl:flex-row gap-5 items-start">
-          {/* Table Container */}
-          <div className="flex-1 min-w-0 w-full space-y-3">
-            <PackagesTable
-              packages={paginatedPackages}
-              selectedIds={selectedIds}
-              selectedPackage={selectedPackage}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-              onToggleSelectAll={handleToggleSelectAll}
-              onToggleSelect={handleToggleSelect}
-              onSelectPackage={handleSelectPackageForDrawer}
-              onRowAction={handleRowAction}
-              onRefresh={fetchPackagesData}
-            />
+        <div className="space-y-3">
+          <PackagesTable
+            packages={paginatedPackages}
+            selectedIds={selectedIds}
+            selectedPackage={selectedPackage}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            onToggleSelectAll={handleToggleSelectAll}
+            onToggleSelect={handleToggleSelect}
+            onSelectPackage={handleSelectPackageForDrawer}
+            onRowAction={handleRowAction}
+            onRefresh={fetchPackagesData}
+          />
 
-            {/* Pagination Footer */}
-            {packages.length > 0 && (
-              <PackagePagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={packages.length}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={(size) => {
-                  setPageSize(size);
-                  setCurrentPage(1);
-                }}
-              />
-            )}
-          </div>
-
-          {/* Sticky Right Details Drawer */}
-          {selectedPackage && (
-            <PackageDetailsDrawer
-              pkg={selectedPackage}
-              isOpen={isDrawerOpen}
-              onClose={() => setIsDrawerOpen(false)}
-              onEdit={(p) => setEditModalPackage(p)}
-              onApprove={(p) => setConfirmModal({ isOpen: true, type: 'approve', pkg: p })}
-              onFeature={(p) => setConfirmModal({ isOpen: true, type: 'feature', pkg: p })}
-              onHide={(p) => setConfirmModal({ isOpen: true, type: 'hide', pkg: p })}
-              onDelete={(p) => setConfirmModal({ isOpen: true, type: 'delete', pkg: p })}
+          {/* Pagination Footer */}
+          {packages.length > 0 && (
+            <PackagePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={packages.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
             />
           )}
         </div>
       )}
 
-      {/* ── 6. MODALS ── */}
+      {/* ── 6. SLIDE-IN RIGHT DETAILS DRAWER OVERLAY ── */}
+      <PackageDetailsDrawer
+        pkg={selectedPackage}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onEdit={(p) => setEditModalPackage(p)}
+        onApprove={(p) => setConfirmModal({ isOpen: true, type: 'approve', pkg: p })}
+        onFeature={(p) => setConfirmModal({ isOpen: true, type: 'feature', pkg: p })}
+        onHide={(p) => setConfirmModal({ isOpen: true, type: 'hide', pkg: p })}
+        onDelete={(p) => setConfirmModal({ isOpen: true, type: 'delete', pkg: p })}
+      />
+
+      {/* ── 7. MODALS ── */}
       <AddPackageModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

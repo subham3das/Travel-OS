@@ -1,147 +1,192 @@
-import React from 'react';
-import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { RotateCcw, CheckCircle2, Clock, XCircle, MoreVertical } from 'lucide-react';
 import { RefundAnalyticsData } from '../../../types/financeManagement';
 
 interface RefundAnalyticsProps {
-  data: RefundAnalyticsData;
+  refunds: RefundAnalyticsData;
 }
 
-export const RefundAnalytics: React.FC<RefundAnalyticsProps> = ({ data }) => {
-  const points = data.trendPoints;
-  const maxVal = 800;
+export const RefundAnalytics: React.FC<RefundAnalyticsProps> = ({ refunds }) => {
+  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
-  // Blue line: Requests
-  const reqSvgPath = points.reduce((acc, curr, idx, arr) => {
-    const x = (idx / (arr.length - 1)) * 100;
-    const y = 100 - (curr.requests / maxVal) * 100;
-    if (idx === 0) return `M ${x} ${y}`;
-    const prev = arr[idx - 1];
-    const px = ((idx - 1) / (arr.length - 1)) * 100;
-    const py = 100 - (prev.requests / maxVal) * 100;
-    const cpx = px + (x - px) / 2;
-    return `${acc} C ${cpx} ${py}, ${cpx} ${y}, ${x} ${y}`;
-  }, '');
+  const metricBoxes = [
+    {
+      label: 'Total Requests',
+      value: refunds.totalRequests.toLocaleString(),
+      change: '-4.2%',
+      color: 'text-slate-900',
+      bg: 'bg-slate-100 text-slate-700',
+      icon: RotateCcw,
+    },
+    {
+      label: 'Approved',
+      value: refunds.approved.toLocaleString(),
+      change: '+6.1%',
+      color: 'text-emerald-700',
+      bg: 'bg-emerald-50 text-emerald-600',
+      icon: CheckCircle2,
+    },
+    {
+      label: 'Pending Review',
+      value: refunds.pending.toLocaleString(),
+      change: '-2.4%',
+      color: 'text-amber-700',
+      bg: 'bg-amber-50 text-amber-600',
+      icon: Clock,
+    },
+    {
+      label: 'Rejected',
+      value: refunds.rejected.toLocaleString(),
+      change: '-8.5%',
+      color: 'text-rose-700',
+      bg: 'bg-rose-50 text-rose-600',
+      icon: XCircle,
+    },
+  ];
 
-  // Green line: Approved
-  const appSvgPath = points.reduce((acc, curr, idx, arr) => {
-    const x = (idx / (arr.length - 1)) * 100;
-    const y = 100 - (curr.approved / maxVal) * 100;
-    if (idx === 0) return `M ${x} ${y}`;
-    const prev = arr[idx - 1];
-    const px = ((idx - 1) / (arr.length - 1)) * 100;
-    const py = 100 - (prev.approved / maxVal) * 100;
-    const cpx = px + (x - px) / 2;
-    return `${acc} C ${cpx} ${py}, ${cpx} ${y}, ${x} ${y}`;
-  }, '');
+  // SVG dimensions for trend chart
+  const width = 380;
+  const height = 120;
+  const padding = 20;
+
+  const points = refunds.trends;
+  const maxReq = Math.max(...points.map((p) => p.requests), 400);
+
+  const getX = (index: number) => padding + (index * (width - padding * 2)) / (points.length - 1);
+  const getYReq = (val: number) => height - padding - (val / maxReq) * (height - padding * 2);
+  const getYApp = (val: number) => height - padding - (val / maxReq) * (height - padding * 2);
+
+  const reqPoints = points.map((p, i) => `${getX(i)},${getYReq(p.requests)}`);
+  const appPoints = points.map((p, i) => `${getX(i)},${getYApp(p.approved)}`);
+
+  const reqPath = `M ${reqPoints.join(' L ')}`;
+  const appPath = `M ${appPoints.join(' L ')}`;
 
   return (
-    <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-3.5 select-none flex flex-col justify-between h-full">
+    <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-2xs flex flex-col justify-between select-none">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-black text-[#0F172A]">Refund Analytics</h3>
-        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">
-          This Month
-        </span>
+      <div className="flex items-center justify-between pb-3 border-b border-slate-100/80">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-black text-[#0F172A]">Refund Analytics</h3>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-600 border border-rose-100">
+              Avg Resolution 4.2h
+            </span>
+          </div>
+          <p className="text-[11px] font-semibold text-slate-400">
+            Dispute resolution and processing volume
+          </p>
+        </div>
+
+        <button className="w-7 h-7 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+          <MoreVertical className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* 4 Stat Boxes */}
-      <div className="grid grid-cols-4 gap-2 text-center">
-        <div className="bg-purple-50/60 rounded-xl p-2 border border-purple-100/60">
-          <span className="text-[9px] font-bold text-[#6356E5] block truncate">Total Requests</span>
-          <span className="text-sm font-black text-[#0F172A] block mt-0.5">
-            {data.totalRequests.value.toLocaleString()}
-          </span>
-          <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-emerald-600">
-            <ArrowUpRight className="w-2.5 h-2.5" />
-            <span>{data.totalRequests.growth}</span>
-          </span>
-        </div>
-
-        <div className="bg-emerald-50/60 rounded-xl p-2 border border-emerald-100/60">
-          <span className="text-[9px] font-bold text-emerald-600 block truncate">Approved Refunds</span>
-          <span className="text-sm font-black text-[#0F172A] block mt-0.5">
-            {data.approvedRefunds.value.toLocaleString()}
-          </span>
-          <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-emerald-600">
-            <ArrowUpRight className="w-2.5 h-2.5" />
-            <span>{data.approvedRefunds.growth}</span>
-          </span>
-        </div>
-
-        <div className="bg-amber-50/60 rounded-xl p-2 border border-amber-100/60">
-          <span className="text-[9px] font-bold text-amber-600 block truncate">Pending Refunds</span>
-          <span className="text-sm font-black text-[#0F172A] block mt-0.5">
-            {data.pendingRefunds.value.toLocaleString()}
-          </span>
-          <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-rose-600">
-            <ArrowDownRight className="w-2.5 h-2.5" />
-            <span>{data.pendingRefunds.growth}</span>
-          </span>
-        </div>
-
-        <div className="bg-rose-50/60 rounded-xl p-2 border border-rose-100/60">
-          <span className="text-[9px] font-bold text-rose-600 block truncate">Rejected Refunds</span>
-          <span className="text-sm font-black text-[#0F172A] block mt-0.5">
-            {data.rejectedRefunds.value.toLocaleString()}
-          </span>
-          <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-rose-600">
-            <ArrowDownRight className="w-2.5 h-2.5" />
-            <span>{data.rejectedRefunds.growth}</span>
-          </span>
-        </div>
+      {/* 4 Metric Boxes */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 py-4">
+        {metricBoxes.map((box) => {
+          const Icon = box.icon;
+          return (
+            <div
+              key={box.label}
+              className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100/80"
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${box.bg}`}>
+                  <Icon className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-[9px] font-bold text-slate-500 font-mono">
+                  {box.change}
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider truncate">
+                {box.label}
+              </span>
+              <span className={`text-base font-black font-mono block ${box.color}`}>
+                {box.value}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Dual Line Chart Area */}
-      <div className="relative h-28 w-full pt-1">
-        {/* Y Axis Grid lines */}
-        <div className="absolute inset-0 flex flex-col justify-between text-[9px] font-bold text-slate-300 pointer-events-none">
-          <div className="border-b border-slate-100 flex justify-between">
-            <span>800</span>
-          </div>
-          <div className="border-b border-slate-100 flex justify-between">
-            <span>600</span>
-          </div>
-          <div className="border-b border-slate-100 flex justify-between">
-            <span>400</span>
-          </div>
-          <div className="border-b border-slate-100 flex justify-between">
-            <span>200</span>
-          </div>
-          <div className="border-b border-slate-100 flex justify-between">
-            <span>0</span>
+      {/* Trend Dual-Line Chart */}
+      <div className="pt-2">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            6-Month Request vs Approval Trend
+          </span>
+          <div className="flex items-center gap-3 text-[10px] font-bold">
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span className="text-slate-600">Requests</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-slate-600">Approved</span>
+            </div>
           </div>
         </div>
 
-        {/* SVG Curves */}
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full absolute inset-0 overflow-visible">
-          {/* Blue Line (Requests) */}
-          <path d={reqSvgPath} fill="none" stroke="#6356E5" strokeWidth="2.5" strokeLinecap="round" />
-          {/* Green Line (Approved) */}
-          <path d={appSvgPath} fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" />
+        <div className="relative">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24 overflow-visible">
+            {/* Grid horizontal lines */}
+            <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#F1F5F9" strokeDasharray="3 3" />
+            <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#F1F5F9" strokeDasharray="3 3" />
+            <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#F1F5F9" strokeDasharray="3 3" />
 
-          {/* Dots */}
-          {points.map((p, idx) => {
-            const x = (idx / (points.length - 1)) * 100;
-            const ry = 100 - (p.requests / maxVal) * 100;
-            const ay = 100 - (p.approved / maxVal) * 100;
-            return (
-              <g key={idx}>
-                <circle cx={x} cy={ry} r="2.5" fill="#6356E5" />
-                <circle cx={x} cy={ay} r="2.5" fill="#10B981" />
+            {/* Path: Total Requests (Rose) */}
+            <path
+              d={reqPath}
+              fill="none"
+              stroke="#F43F5E"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Path: Approved Requests (Emerald) */}
+            <path
+              d={appPath}
+              fill="none"
+              stroke="#10B981"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Nodes */}
+            {points.map((p, i) => (
+              <g key={p.month}>
+                <circle
+                  cx={getX(i)}
+                  cy={getYReq(p.requests)}
+                  r={hoveredPoint === i ? 4 : 2.5}
+                  className="fill-rose-500 stroke-white stroke-2 cursor-pointer transition-all"
+                  onMouseEnter={() => setHoveredPoint(i)}
+                  onMouseLeave={() => setHoveredPoint(null)}
+                />
+                <circle
+                  cx={getX(i)}
+                  cy={getYApp(p.approved)}
+                  r={hoveredPoint === i ? 4 : 2.5}
+                  className="fill-emerald-500 stroke-white stroke-2 cursor-pointer transition-all"
+                  onMouseEnter={() => setHoveredPoint(i)}
+                  onMouseLeave={() => setHoveredPoint(null)}
+                />
               </g>
-            );
-          })}
-        </svg>
-      </div>
+            ))}
+          </svg>
 
-      {/* X Axis Labels */}
-      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 pt-1 border-t border-slate-100">
-        <span>Jun 1</span>
-        <span>Jun 3</span>
-        <span>Jun 5</span>
-        <span>Jun 7</span>
-        <span>Jun 9</span>
-        <span>Jun 12</span>
+          {/* Month labels */}
+          <div className="flex justify-between px-3 text-[10px] font-bold text-slate-400 font-mono mt-1">
+            {points.map((p) => (
+              <span key={p.month}>{p.month}</span>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

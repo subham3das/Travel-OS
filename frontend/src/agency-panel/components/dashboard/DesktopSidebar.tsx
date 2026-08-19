@@ -39,7 +39,7 @@ export const DesktopSidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="hidden md:flex w-64 bg-white border-r border-slate-100 flex-col justify-between p-5 shrink-0 shadow-xs select-none">
+    <aside className="hidden md:flex sticky top-0 h-screen w-64 bg-white border-r border-slate-100 flex-col justify-between p-5 shrink-0 shadow-xs select-none z-30 overflow-y-auto scrollbar-none">
       <div className="space-y-6">
         {/* Brand Logo Header */}
         <div className="flex items-center gap-2.5 px-2">

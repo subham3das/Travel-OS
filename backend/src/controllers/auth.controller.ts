@@ -1,29 +1,79 @@
 import { Request, Response } from 'express';
+import { authService } from '../services/auth.service.js';
+import { ResponseUtil } from '../utils/response.util.js';
+import { HTTP_STATUS } from '../constants/http.constant.js';
+import { asyncHandler } from '../utils/asyncHandler.util.js';
+import { BadRequestError } from '../utils/errors.util.js';
 
-export const login = async (req: Request, res: Response): Promise<void> => {
-  const { emailOrPhone, password } = req.body;
-  if (!emailOrPhone || !password) {
-    res.status(400).json({ success: false, message: 'Email/Phone and password are required' });
-    return;
-  }
-  res.status(200).json({
-    success: true,
-    message: 'Login successful',
-    user: { id: 'usr_123', emailOrPhone, name: 'Traveler' },
-    token: 'jwt_mock_token_12345',
+export class AuthController {
+  public register = asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.register(req.body);
+    return ResponseUtil.success(
+      res,
+      result,
+      'Customer registered successfully. Please verify your email address.',
+      HTTP_STATUS.CREATED
+    );
   });
-};
 
-export const signup = async (req: Request, res: Response): Promise<void> => {
-  const { fullName, email, phone, password } = req.body;
-  if (!fullName || !email || !password) {
-    res.status(400).json({ success: false, message: 'All required fields must be provided' });
-    return;
-  }
-  res.status(201).json({
-    success: true,
-    message: 'User account created successfully',
-    user: { id: 'usr_' + Date.now(), fullName, email, phone },
-    token: 'jwt_mock_token_67890',
+  public login = asyncHandler(async (req: Request, res: Response) => {
+    const meta = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+    const result = await authService.login(req.body, meta);
+    return ResponseUtil.success(res, result, 'Login successful');
   });
-};
+
+  public refreshToken = asyncHandler(async (req: Request, res: Response) => {
+    const rawToken = req.body.refreshToken || req.cookies?.refreshToken;
+    if (!rawToken) {
+      throw new BadRequestError('Refresh token is required');
+    }
+    const meta = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+    const result = await authService.refreshToken(rawToken, meta);
+    return ResponseUtil.success(res, result, 'Token refreshed successfully');
+  });
+
+  public logout = asyncHandler(async (req: Request, res: Response) => {
+    const rawToken = req.body.refreshToken || req.cookies?.refreshToken;
+    await authService.logout(rawToken);
+    return ResponseUtil.success(res, { loggedOut: true }, 'Logged out successfully');
+  });
+
+  public forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.forgotPassword(req.body.email);
+    return ResponseUtil.success(res, result, result.message);
+  });
+
+  public resetPassword = asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.resetPassword(req.body.token, req.body.password);
+    return ResponseUtil.success(res, result, result.message);
+  });
+
+  public changePassword = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const result = await authService.changePassword(
+      userId,
+      req.body.currentPassword,
+      req.body.newPassword
+    );
+    return ResponseUtil.success(res, result, result.message);
+  });
+
+  public verifyEmail = asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.verifyEmail(req.body.token);
+    return ResponseUtil.success(res, result, result.message);
+  });
+
+  public getMe = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const user = await authService.getCurrentUser(userId);
+    return ResponseUtil.success(res, { user }, 'User profile fetched successfully');
+  });
+}
+
+export const authController = new AuthController();

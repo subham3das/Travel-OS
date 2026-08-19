@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import healthRoutes from './health.routes.js';
 import authRoutes from './auth.routes.js';
+import profileRoutes from './profile.routes.js';
+import travelerRoutes from './traveler.routes.js';
+import onboardingRoutes from './onboarding.routes.js';
 import userRoutes from './user.routes.js';
 import agencyRoutes from './agency.routes.js';
 import packageRoutes from './package.routes.js';
@@ -19,8 +22,13 @@ const router = Router();
 // Core System & Health Endpoints
 router.use('/health', healthRoutes);
 
-// Modular API Sub-Routers
+// Phase 2: Customer Identity, Profile & Onboarding
 router.use('/auth', authRoutes);
+router.use('/profile', profileRoutes);
+router.use('/travelers', travelerRoutes);
+router.use('/onboarding', onboardingRoutes);
+
+// Future Phase Modular API Sub-Routers
 router.use('/users', userRoutes);
 router.use('/agencies', agencyRoutes);
 router.use('/packages', packageRoutes);

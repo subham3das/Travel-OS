@@ -52,21 +52,21 @@ export class DatabaseConnection {
       return mongoose;
     }
 
-    const options: DatabaseConnectionOptions = {
+    const options: mongoose.ConnectOptions = {
       autoIndex: envConfig.NODE_ENV !== 'production',
       maxPoolSize: envConfig.MONGODB_MAX_POOL_SIZE,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
+      retryWrites: true,
     };
 
     try {
-      logger.info('⏳ Connecting to MongoDB at %s...', envConfig.MONGODB_URI);
-      const conn = await mongoose.connect(envConfig.MONGODB_URI, options as mongoose.ConnectOptions);
+      logger.info('⏳ Connecting to MongoDB at %s...', envConfig.MONGODB_URI.split('@')[1] || envConfig.MONGODB_URI);
+      const conn = await mongoose.connect(envConfig.MONGODB_URI, options);
       this.isConnected = true;
       return conn;
     } catch (error: any) {
       logger.error('❌ Failed to connect to MongoDB: %s', error.message);
-      // In development, if local MongoDB is temporarily down, log warning instead of crashing the entire build
       if (envConfig.NODE_ENV === 'production') {
         throw error;
       }

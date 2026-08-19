@@ -1,25 +1,53 @@
-import express from 'express';
-import cors from 'cors';
-import { config } from './config/index.js';
-import authRoutes from './routes/auth.routes.js';
-import { errorHandler } from './middleware/errorHandler.js';
+import { app } from './app.js';
+import { envConfig } from './config/env.config.js';
+import { dbConnection } from './config/db.config.js';
+import { logger } from './config/logger.config.js';
 
-const app = express();
+const startServer = async () => {
+  try {
+    // 1. Establish MongoDB Connection
+    await dbConnection.connect();
 
-app.use(cors({ origin: config.clientUrl }));
-app.use(express.json());
+    // 2. Start HTTP Server
+    const server = app.listen(envConfig.PORT, () => {
+      logger.info('═══════════════════════════════════════════════════════════════');
+      logger.info(`🚀 ${envConfig.APP_NAME} running on port ${envConfig.PORT} [${envConfig.NODE_ENV}]`);
+      logger.info(`🌐 Health Probe:  http://localhost:${envConfig.PORT}${envConfig.API_PREFIX}/health`);
+      logger.info(`📚 Swagger Docs:  http://localhost:${envConfig.PORT}${envConfig.API_PREFIX}/docs`);
+      logger.info('═══════════════════════════════════════════════════════════════');
+    });
 
-// API Routes
-app.use('/api/auth', authRoutes);
+    // 3. Graceful Shutdown Signals
+    const gracefulShutdown = async (signal: string) => {
+      logger.info(`Received ${signal}. Shutting down gracefully...`);
+      server.close(async () => {
+        logger.info('HTTP server closed.');
+        await dbConnection.disconnect();
+        process.exit(0);
+      });
 
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'ApnaTrip Backend API', timestamp: new Date() });
-});
+      // Force close after 10s
+      setTimeout(() => {
+        logger.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+      }, 10000);
+    };
 
-app.use(errorHandler);
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-app.listen(config.port, () => {
-  console.log(`🚀 ApnaTrip Server running on port ${config.port} [${config.nodeEnv}]`);
-});
+    process.on('uncaughtException', (err) => {
+      logger.error('💥 Uncaught Exception:', err);
+      process.exit(1);
+    });
 
-export default app;
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+    });
+  } catch (error: any) {
+    logger.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();

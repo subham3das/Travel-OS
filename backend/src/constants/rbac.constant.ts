@@ -1,0 +1,45 @@
+export const RBAC_ROLES = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  ADMIN: 'ADMIN',
+  FINANCE_MANAGER: 'FINANCE_MANAGER',
+  OPERATIONS_MANAGER: 'OPERATIONS_MANAGER',
+  SUPPORT_MANAGER: 'SUPPORT_MANAGER',
+  CONTENT_MANAGER: 'CONTENT_MANAGER',
+  AGENCY: 'AGENCY',
+  CUSTOMER: 'CUSTOMER',
+} as const;
+
+export const RBAC_MODULES = [
+  'Dashboard',
+  'Agencies',
+  'AgencyRequests',
+  'Users',
+  'Packages',
+  'Trips',
+  'Bookings',
+  'Payments',
+  'Finance',
+  'Reviews',
+  'Support',
+  'Community',
+  'Notifications',
+  'CMS',
+  'Media',
+  'Reports',
+  'Roles',
+  'AdminAccess',
+  'AuditLogs',
+  'Settings',
+  'SystemMonitoring',
+] as const;
+
+export const RBAC_ACTIONS = [
+  'view',
+  'create',
+  'edit',
+  'delete',
+  'approve',
+  'export',
+  'assign',
+  'fullAccess',
+] as const;

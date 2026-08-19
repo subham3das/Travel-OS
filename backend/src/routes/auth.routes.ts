@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { login, signup } from '../controllers/auth.controller.js';
 
 const router = Router();
 
-router.post('/login', login);
-router.post('/signup', signup);
+// Module placeholder ready for Phase 2: Identity & Access
+// Specific business logic endpoints will be wired in Phase 2
 
 export default router;

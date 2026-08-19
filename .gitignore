@@ -16,6 +16,9 @@ dist
 # Logs
 *.log
 npm-debug.log*
+logs
+/backend/logs
+/logs
 
 # IDE & System
 .vscode

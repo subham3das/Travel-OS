@@ -79,3 +79,12 @@ export const ChangePasswordSchema = z
 export const VerifyEmailSchema = z.object({
   token: z.string().min(1, 'Verification token is required'),
 });
+
+export const GoogleAuthSchema = z.object({
+  credential: z.string().optional(),
+  token: z.string().optional(),
+  email: z.string().email().optional(),
+  name: z.string().optional(),
+  googleId: z.string().optional(),
+  avatar: z.string().optional(),
+});

@@ -22,6 +22,11 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16, 'JWT_REFRESH_SECRET must be at least 16 characters').default('travelos_super_secure_refresh_secret_key_32_chars_min'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
+  // Google OAuth Configuration
+  GOOGLE_CLIENT_ID: z.string().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().default(''),
+  GOOGLE_CALLBACK_URL: z.string().default('http://localhost:5000/api/auth/google/callback'),
+
   // Cloudinary Configuration
   CLOUDINARY_CLOUD_NAME: z.string().default('travelos_cloud'),
   CLOUDINARY_API_KEY: z.string().default('123456789012345'),

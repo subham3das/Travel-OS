@@ -75,6 +75,34 @@ router.post(
 
 /**
  * @openapi
+ * /auth/google:
+ *   post:
+ *     summary: Google OAuth Customer Login or Sign-up
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               credential: { type: string, description: "Google ID Token / Credential" }
+ *               email: { type: string }
+ *               name: { type: string }
+ *               googleId: { type: string }
+ *               avatar: { type: string }
+ *     responses:
+ *       200:
+ *         description: Google authentication successful
+ */
+router.post(
+  '/google',
+  authRateLimiter,
+  authController.googleLogin
+);
+
+/**
+ * @openapi
  * /auth/refresh:
  *   post:
  *     summary: Refresh Access Token

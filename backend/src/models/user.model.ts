@@ -73,6 +73,8 @@ export interface IUser extends Document {
   notificationPreferences: INotificationPreferences;
   privacySettings: IPrivacySettings;
 
+  lastLogin?: Date;
+
   // Soft Delete & Timestamps
   isDeleted: boolean;
   deletedAt?: Date;
@@ -84,7 +86,7 @@ const UserSchema = new Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true, maxlength: 100 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
-    phone: { type: String, required: true, unique: true, trim: true, index: true },
+    phone: { type: String, sparse: true, trim: true, index: true },
     password: { type: String, select: false },
     avatar: { type: String, default: '' },
     username: { type: String, unique: true, sparse: true, trim: true, lowercase: true, maxlength: 30 },
@@ -120,6 +122,7 @@ const UserSchema = new Schema<IUser>(
     privacyCompleted: { type: Boolean, default: false },
     onboardingCompleted: { type: Boolean, default: false },
     onboardingCompletedAt: { type: Date },
+    lastLogin: { type: Date },
 
     travelPreferences: {
       travelInterests: { type: [String], default: [] },

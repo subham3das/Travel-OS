@@ -7,11 +7,14 @@ import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { SocialButton } from '../../components/common/SocialButton';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
+import { userAuthService } from '../../services/userAuth.service';
 import bgAuth from '../../../assets/bg loginsignup.jpg';
 
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const { setAuthenticatedUser } = useAuth();
+  const { showToast } = useToast();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -27,14 +30,14 @@ export const SignupPage: React.FC = () => {
     password?: string;
     confirmPassword?: string;
     terms?: string;
+    general?: string;
   }>({});
 
   // Password Strength Calculation
   const getPasswordStrength = (pass: string) => {
     if (!pass) return { score: 0, label: '', color: '' };
     let score = 0;
-    if (pass.length >= 6) score++;
-    if (pass.length >= 10) score++;
+    if (pass.length >= 8) score++;
     if (/[A-Z]/.test(pass) && /[0-9]/.test(pass)) score++;
     if (/[^A-Za-z0-9]/.test(pass)) score++;
 
@@ -45,7 +48,7 @@ export const SignupPage: React.FC = () => {
 
   const strength = getPasswordStrength(password);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: typeof errors = {};
 
@@ -53,7 +56,7 @@ export const SignupPage: React.FC = () => {
     if (!email.trim() || !email.includes('@')) newErrors.email = 'Valid email address is required';
     if (!phone.trim()) newErrors.phone = 'Phone number is required';
     if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
     
     if (password !== confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
@@ -71,17 +74,58 @@ export const SignupPage: React.FC = () => {
     setErrors({});
     setLoading(true);
 
-    setTimeout(() => {
-      setLoading(false);
-      signup({
-        name: fullName || 'New Traveler',
-        email: email,
-        phone: phone,
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop',
-        location: 'Dibrugarh, Assam',
+    try {
+      const data = await userAuthService.register({
+        fullName: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        password,
+        confirmPassword,
+        acceptTerms: agreeTerms,
       });
+
+      setAuthenticatedUser(data.user);
+      showToast('Account created successfully! Welcome to ApnaTrip.', 'success');
       navigate('/profile-setup');
-    }, 1000);
+    } catch (err: any) {
+      const errorMsg = err.message || 'Registration failed. Please try again.';
+      if (errorMsg.toLowerCase().includes('email')) {
+        setErrors({ email: errorMsg });
+      } else if (errorMsg.toLowerCase().includes('phone')) {
+        setErrors({ phone: errorMsg });
+      } else if (errorMsg.toLowerCase().includes('password')) {
+        setErrors({ password: errorMsg });
+      } else {
+        setErrors({ general: errorMsg });
+      }
+      showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    setLoading(true);
+    try {
+      if (!email.trim()) {
+        showToast('Please enter your email to proceed with Google sign-up or configure OAuth in .env', 'info');
+        setLoading(false);
+        return;
+      }
+
+      const data = await userAuthService.googleLogin({
+        email: email.trim().toLowerCase(),
+        name: fullName.trim() || 'Traveler',
+      });
+
+      setAuthenticatedUser(data.user);
+      showToast('Account created with Google successfully!', 'success');
+      navigate('/profile-setup');
+    } catch (err: any) {
+      showToast(err.message || 'Google authentication is currently unavailable.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -109,6 +153,12 @@ export const SignupPage: React.FC = () => {
             </p>
           </div>
 
+          {errors.general && (
+            <div className="p-3 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl">
+              {errors.general}
+            </div>
+          )}
+
           {/* Form */}
           <form onSubmit={handleSignup} className="space-y-3.5">
             <Input
@@ -118,6 +168,7 @@ export const SignupPage: React.FC = () => {
               onChange={(e) => setFullName(e.target.value)}
               leftIcon={<User className="w-4 h-4" />}
               error={errors.fullName}
+              required
             />
 
             <Input
@@ -127,25 +178,28 @@ export const SignupPage: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               leftIcon={<Mail className="w-4 h-4" />}
               error={errors.email}
+              required
             />
 
             <Input
               type="tel"
-              placeholder="Phone number"
+              placeholder="Phone number (+91...)"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               leftIcon={<Phone className="w-4 h-4" />}
               error={errors.phone}
+              required
             />
 
             <div className="space-y-1.5">
               <Input
                 isPassword
-                placeholder="Password"
+                placeholder="Password (min 8 chars, 1 uppercase, 1 number, 1 special)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 leftIcon={<Lock className="w-4 h-4" />}
                 error={errors.password}
+                required
               />
 
               {/* Password Strength Indicator */}
@@ -168,6 +222,7 @@ export const SignupPage: React.FC = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               leftIcon={<Lock className="w-4 h-4" />}
               error={errors.confirmPassword}
+              required
             />
 
             {/* Terms Checkbox */}
@@ -175,7 +230,7 @@ export const SignupPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setAgreeTerms(!agreeTerms)}
-                className="flex items-start gap-2 text-left focus:outline-none group"
+                className="flex items-start gap-2 text-left focus:outline-none group cursor-pointer"
               >
                 {agreeTerms ? (
                   <CheckCircle2 className="w-5 h-5 text-[#FF4D6D] fill-[#FF4D6D]/10 shrink-0 mt-0.5" />
@@ -210,9 +265,9 @@ export const SignupPage: React.FC = () => {
 
           {/* Social Icons */}
           <div className="flex items-center justify-center gap-4 pt-1">
-            <SocialButton provider="google" onClick={() => navigate('/profile-setup')} />
-            <SocialButton provider="apple" desktopOnly onClick={() => navigate('/profile-setup')} />
-            <SocialButton provider="facebook" onClick={() => navigate('/profile-setup')} />
+            <SocialButton provider="google" onClick={handleGoogleSignup} />
+            <SocialButton provider="apple" desktopOnly onClick={() => showToast('Apple Sign-In is coming soon.', 'info')} />
+            <SocialButton provider="facebook" onClick={() => showToast('Facebook Sign-In is coming soon.', 'info')} />
           </div>
 
           {/* Login Link */}

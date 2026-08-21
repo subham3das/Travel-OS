@@ -58,6 +58,7 @@ export class DatabaseConnection {
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
       retryWrites: true,
+      family: 4,
     };
 
     try {

@@ -5,16 +5,18 @@ import { logger } from './config/logger.config.js';
 
 const startServer = async () => {
   try {
-    // 1. Establish MongoDB Connection
-    await dbConnection.connect();
-
-    // 2. Start HTTP Server
+    // 1. Start HTTP Server
     const server = app.listen(envConfig.PORT, () => {
       logger.info('═══════════════════════════════════════════════════════════════');
       logger.info(`🚀 ${envConfig.APP_NAME} running on port ${envConfig.PORT} [${envConfig.NODE_ENV}]`);
       logger.info(`🌐 Health Probe:  http://localhost:${envConfig.PORT}${envConfig.API_PREFIX}/health`);
       logger.info(`📚 Swagger Docs:  http://localhost:${envConfig.PORT}${envConfig.API_PREFIX}/docs`);
       logger.info('═══════════════════════════════════════════════════════════════');
+    });
+
+    // 2. Establish MongoDB Connection
+    dbConnection.connect().catch((err) => {
+      logger.error('MongoDB initial connection attempt failed: %s', err.message);
     });
 
     // 3. Graceful Shutdown Signals

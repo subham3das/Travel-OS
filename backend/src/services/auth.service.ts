@@ -62,13 +62,13 @@ export class AuthService {
     // 1. Check duplicate email
     const existingEmail = await userRepository.findByEmail(payload.email);
     if (existingEmail) {
-      throw new ConflictError('An account with this email address already exists');
+      throw new ConflictError('An account with this email already exists.');
     }
 
     // 2. Check duplicate phone
     const existingPhone = await userRepository.findByPhone(payload.phone);
     if (existingPhone) {
-      throw new ConflictError('An account with this phone number already exists');
+      throw new ConflictError('This phone number is already registered.');
     }
 
     // 3. Hash password
@@ -127,7 +127,7 @@ export class AuthService {
         refreshToken,
         expiresIn: '15m',
       },
-      verificationToken, // Provided for easy development / verification flow
+      verificationToken,
     };
   }
 
@@ -140,21 +140,26 @@ export class AuthService {
   ) {
     const user = await userRepository.findByEmail(credentials.email, true);
     if (!user) {
-      throw new UnauthorizedError('Invalid email or password credentials');
+      throw new UnauthorizedError('No account found with this email. Please create an account first.');
     }
 
-    if (!user.password) {
-      throw new UnauthorizedError('This account was created with OAuth. Please log in with Google.');
+    if (!user.password && user.authProvider === 'google') {
+      throw new UnauthorizedError('This account was created with Google OAuth. Please log in with Google.');
     }
 
-    const isPasswordValid = await HashUtil.compare(credentials.password, user.password);
+    const isPasswordValid = await HashUtil.compare(credentials.password, user.password || '');
     if (!isPasswordValid) {
-      throw new UnauthorizedError('Invalid email or password credentials');
+      throw new UnauthorizedError('Incorrect password. Please try again.');
     }
 
     if (user.status !== 'Active') {
       throw new ForbiddenError(`Your account is currently ${user.status}. Please contact customer support.`);
     }
+
+    // Update lastLogin timestamp
+    await userRepository.updateById(user._id as mongoose.Types.ObjectId, {
+      lastLogin: new Date(),
+    });
 
     // Generate Tokens
     const tokenPayload: JwtTokenPayload = {
@@ -177,6 +182,109 @@ export class AuthService {
     });
 
     logger.info('🔑 Customer logged in: %s', user.email);
+
+    return {
+      user: this.formatUserDTO(user),
+      tokens: {
+        accessToken,
+        refreshToken,
+        expiresIn: '15m',
+      },
+    };
+  }
+
+  /**
+   * Google OAuth Login / Registration
+   */
+  public async googleLogin(
+    payload: {
+      credential?: string;
+      token?: string;
+      email?: string;
+      name?: string;
+      googleId?: string;
+      avatar?: string;
+    },
+    meta: { ipAddress?: string; userAgent?: string } = {}
+  ) {
+    let email = payload.email?.toLowerCase().trim();
+    let fullName = payload.name?.trim() || 'Traveler';
+    let googleId = payload.googleId;
+    let avatar = payload.avatar || '';
+
+    // If credential JWT token is passed from frontend Google Identity Services
+    if (payload.credential) {
+      try {
+        const parts = payload.credential.split('.');
+        if (parts.length === 3) {
+          const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+          email = decoded.email?.toLowerCase().trim() || email;
+          fullName = decoded.name || fullName;
+          googleId = decoded.sub || googleId;
+          avatar = decoded.picture || avatar;
+        }
+      } catch (err) {
+        logger.warn('Could not parse Google credential JWT payload:', err);
+      }
+    }
+
+    if (!email) {
+      throw new BadRequestError('Google authentication is currently unavailable or email was not provided.');
+    }
+
+    // 1. Check if user exists by email or googleId
+    let user = await userRepository.findByEmail(email);
+
+    if (user) {
+      // Link Google ID and update avatar/lastLogin
+      const updates: any = { lastLogin: new Date() };
+      if (!user.googleId && googleId) updates.googleId = googleId;
+      if (!user.avatar && avatar) updates.avatar = avatar;
+      if (!user.isEmailVerified) updates.isEmailVerified = true;
+
+      user = (await userRepository.updateById(user._id as mongoose.Types.ObjectId, updates)) || user;
+      logger.info('🔗 Existing user authenticated via Google OAuth: %s', email);
+    } else {
+      // 2. Create new user via Google
+      user = await userRepository.create({
+        fullName,
+        email,
+        avatar,
+        profileImage: avatar,
+        authProvider: 'google',
+        googleId,
+        status: 'Active',
+        isEmailVerified: true,
+        emailVerifiedAt: new Date(),
+        profileCompleted: false,
+        preferenceCompleted: false,
+        notificationsCompleted: false,
+        privacyCompleted: false,
+        onboardingCompleted: false,
+        lastLogin: new Date(),
+      });
+      logger.info('🎉 New customer registered via Google OAuth: %s', email);
+    }
+
+    // Generate Tokens
+    const tokenPayload: JwtTokenPayload = {
+      userId: (user._id as mongoose.Types.ObjectId).toString(),
+      email: user.email,
+      userType: 'CUSTOMER',
+    };
+
+    const accessToken = TokenUtil.signAccessToken(tokenPayload);
+    const refreshToken = TokenUtil.signRefreshToken(tokenPayload);
+    const refreshHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    await refreshTokenRepository.create({
+      userId: user._id as mongoose.Types.ObjectId,
+      tokenHash: refreshHash,
+      device: 'Google OAuth Client',
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+      expiresAt: DateUtil.addDays(new Date(), 7),
+    });
 
     return {
       user: this.formatUserDTO(user),

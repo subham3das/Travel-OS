@@ -25,6 +25,15 @@ export class AuthController {
     return ResponseUtil.success(res, result, 'Login successful');
   });
 
+  public googleLogin = asyncHandler(async (req: Request, res: Response) => {
+    const meta = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+    const result = await authService.googleLogin(req.body, meta);
+    return ResponseUtil.success(res, result, 'Google login successful');
+  });
+
   public refreshToken = asyncHandler(async (req: Request, res: Response) => {
     const rawToken = req.body.refreshToken || req.cookies?.refreshToken;
     if (!rawToken) {

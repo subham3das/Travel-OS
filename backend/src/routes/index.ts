@@ -39,6 +39,7 @@ router.use('/support', supportRoutes);
 router.use('/community', communityRoutes);
 router.use('/cms', cmsRoutes);
 router.use('/media', mediaRoutes);
+router.use('/upload', mediaRoutes);
 router.use('/reports', reportRoutes);
 router.use('/admin', adminRoutes);
 

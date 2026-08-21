@@ -5,6 +5,7 @@ import { ArrowLeft, Star, ThumbsUp, ThumbsDown, Smile, Sparkles, CheckCircle2, I
 import { getTripById } from '../../data/trips';
 import { addReputationPoints, getUserReputation } from '../../data/reputation';
 import { useToast } from '../../context/ToastContext';
+import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
 
 export const TripReviewPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
@@ -178,11 +179,17 @@ export const TripReviewPage: React.FC = () => {
               type="file"
               id="review-photo-picker"
               className="hidden"
-              accept="image/*"
-              onChange={(e) => {
+              accept="image/jpeg,image/png,image/webp,image/jpg"
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (file) {
-                  showToast(`Added photo: ${file.name} (+5 Reputation)`, 'success');
+                  try {
+                    showToast('Uploading photo to Cloudinary...', 'info');
+                    const uploadRes = await cloudinaryUploadService.uploadImage(file, 'travelos/reviews');
+                    showToast(`Photo uploaded to Cloudinary! (+5 Reputation)`, 'success');
+                  } catch (err: any) {
+                    showToast(err.message || 'Failed to upload review photo', 'error');
+                  }
                 }
               }}
             />

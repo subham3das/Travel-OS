@@ -1,5 +1,6 @@
-import React from 'react';
-import { ImagePlus, X } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { cloudinaryUploadService } from '../../../../services/cloudinaryUpload.service';
 
 interface MediaUploaderProps {
   images: string[];
@@ -12,16 +13,32 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   onChange,
   maxImages = 10,
 }) => {
-  const sampleDemoImages = [
-    'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop',
-  ];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleAddSampleImage = () => {
-    if (images.length >= maxImages) return;
-    const nextImg = sampleDemoImages[images.length % sampleDemoImages.length];
-    onChange([...images, nextImg]);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remainingSlots = maxImages - images.length;
+    const filesToUpload = files.slice(0, remainingSlots);
+
+    setIsUploading(true);
+    try {
+      const uploadResults = await cloudinaryUploadService.uploadMultipleImages(
+        filesToUpload,
+        'travelos/customers/gallery'
+      );
+      const newUrls = uploadResults.map((res) => res.secureUrl);
+      onChange([...images, ...newUrls]);
+    } catch (err: any) {
+      console.error('Failed to upload images to Cloudinary:', err);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleRemoveImage = (index: number) => {
@@ -30,6 +47,15 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
 
   return (
     <div className="space-y-2">
+      <input
+        type="file"
+        ref={fileInputRef}
+        multiple
+        accept="image/jpeg,image/png,image/webp,image/jpg"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       <div className="flex items-center justify-between">
         <label className="text-xs font-black text-[#0F172A] uppercase tracking-wider">
           Trip Photos ({images.length}/{maxImages})
@@ -62,11 +88,21 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
         {images.length < maxImages && (
           <button
             type="button"
-            onClick={handleAddSampleImage}
-            className="aspect-square rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/50 hover:bg-purple-50 text-[#6356E5] flex flex-col items-center justify-center p-3 gap-1 cursor-pointer transition-colors"
+            disabled={isUploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="aspect-square rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/50 hover:bg-purple-50 text-[#6356E5] flex flex-col items-center justify-center p-3 gap-1 cursor-pointer transition-colors disabled:opacity-50"
           >
-            <ImagePlus className="w-6 h-6" />
-            <span className="text-[11px] font-black">Add Photo</span>
+            {isUploading ? (
+              <>
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="text-[10px] font-bold">Uploading...</span>
+              </>
+            ) : (
+              <>
+                <ImagePlus className="w-6 h-6" />
+                <span className="text-[11px] font-black">Add Photo</span>
+              </>
+            )}
           </button>
         )}
       </div>

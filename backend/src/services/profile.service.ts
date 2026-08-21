@@ -1,6 +1,7 @@
 import { userRepository } from '../repositories/user.repository.js';
 import { NotFoundError, ConflictError } from '../utils/errors.util.js';
-import { cloudinary } from '../config/cloudinary.config.js';
+import { cloudinaryStorage } from '../storage/cloudinary.storage.js';
+import { CLOUDINARY_FOLDERS } from '../config/cloudinary.config.js';
 import { logger } from '../config/logger.config.js';
 
 export class ProfileService {
@@ -108,44 +109,37 @@ export class ProfileService {
   /**
    * Upload and Set Profile Avatar via Cloudinary
    */
-  public async uploadProfilePhoto(userId: string, fileBuffer: Buffer, mimeType: string) {
+  public async uploadProfilePhoto(userId: string, fileBuffer: Buffer, _mimeType: string) {
     const user = await userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User not found');
     }
 
-    // Upload to Cloudinary using base64 stream data URI
-    const base64Data = fileBuffer.toString('base64');
-    const dataUri = `data:${mimeType};base64,${base64Data}`;
+    // Direct buffer upload to Cloudinary with old asset replacement & face-centered WebP optimization
+    const uploadRes = await cloudinaryStorage.replaceImage(
+      fileBuffer,
+      user.profileImagePublicId,
+      {
+        folder: CLOUDINARY_FOLDERS.CUSTOMERS_PROFILE,
+        width: 400,
+        height: 400,
+        crop: 'fill',
+        gravity: 'face',
+      }
+    );
 
-    try {
-      const uploadRes = await cloudinary.uploader.upload(dataUri, {
-        folder: 'travelos/avatars',
-        public_id: `avatar_${userId}_${Date.now()}`,
-        transformation: [
-          { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-          { quality: 'auto', fetch_format: 'webp' },
-        ],
-      });
+    await userRepository.updateById(userId, {
+      avatar: uploadRes.secureUrl,
+      profileImage: uploadRes.secureUrl,
+      profileImagePublicId: uploadRes.publicId,
+    });
 
-      const photoUrl = uploadRes.secure_url;
-      await userRepository.updateById(userId, { avatar: photoUrl, profileImage: photoUrl });
-
-      logger.info('📸 Profile photo uploaded to Cloudinary for %s: %s', user.email, photoUrl);
-      return {
-        avatarUrl: photoUrl,
-        message: 'Profile photo updated successfully',
-      };
-    } catch (err: any) {
-      logger.warn('Cloudinary upload error (falling back to mock CDN URL): %s', err.message);
-      // Safe fallback for local offline testing
-      const fallbackUrl = `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80`;
-      await userRepository.updateById(userId, { avatar: fallbackUrl, profileImage: fallbackUrl });
-      return {
-        avatarUrl: fallbackUrl,
-        message: 'Profile photo updated successfully',
-      };
-    }
+    logger.info('📸 Profile photo uploaded to Cloudinary for %s: %s', user.email, uploadRes.secureUrl);
+    return {
+      avatarUrl: uploadRes.secureUrl,
+      publicId: uploadRes.publicId,
+      message: 'Profile photo updated successfully',
+    };
   }
 
   /**

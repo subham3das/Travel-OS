@@ -30,6 +30,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { OnboardingStepper } from '../../components/OnboardingStepper';
+import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
 
 const STORAGE_KEY = 'apnatrip_agency_onboarding_profile';
 const BUSINESS_STORAGE_KEY = 'apnatrip_agency_onboarding_business';
@@ -182,33 +183,33 @@ export const AgencyProfileOnboardingPage: React.FC = () => {
   }, [formData]);
 
   // Image Upload Handlers
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Logo image size must be under 2MB.');
+      if (file.size > 10 * 1024 * 1024) {
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, logoUrl: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        const result = await cloudinaryUploadService.uploadImage(file, 'travelos/agencies/logo');
+        setFormData((prev) => ({ ...prev, logoUrl: result.secureUrl }));
+      } catch (err: any) {
+        console.error('Logo upload error:', err);
+      }
     }
   };
 
-  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Cover image size must be under 5MB.');
+      if (file.size > 10 * 1024 * 1024) {
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, coverUrl: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        const result = await cloudinaryUploadService.uploadImage(file, 'travelos/agencies/banner');
+        setFormData((prev) => ({ ...prev, coverUrl: result.secureUrl }));
+      } catch (err: any) {
+        console.error('Cover upload error:', err);
+      }
     }
   };
 

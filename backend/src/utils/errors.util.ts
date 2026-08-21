@@ -69,3 +69,9 @@ export class TooManyRequestsError extends AppError {
     super(message, HTTP_STATUS.TOO_MANY_REQUESTS, ERROR_CODES.RATE_LIMIT_EXCEEDED);
   }
 }
+
+export class InternalServerError extends AppError {
+  constructor(message = 'Internal Server Error') {
+    super(message, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_SERVER_ERROR);
+  }
+}

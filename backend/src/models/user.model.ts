@@ -57,6 +57,9 @@ export interface IUser extends Document {
   authProvider: 'local' | 'google';
   googleId?: string;
   profileImage?: string;
+  profileImagePublicId?: string;
+  coverImage?: string;
+  coverImagePublicId?: string;
 
   // Onboarding Step Flags
   profileCompleted: boolean;
@@ -113,6 +116,9 @@ const UserSchema = new Schema<IUser>(
     authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
     googleId: { type: String, sparse: true },
     profileImage: { type: String },
+    profileImagePublicId: { type: String },
+    coverImage: { type: String },
+    coverImagePublicId: { type: String },
 
     profileCompleted: { type: Boolean, default: false },
     profileCompletedAt: { type: Date },

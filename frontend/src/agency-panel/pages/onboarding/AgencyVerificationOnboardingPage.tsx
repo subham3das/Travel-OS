@@ -19,6 +19,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { OnboardingStepper } from '../../components/OnboardingStepper';
+import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
 
 const STORAGE_KEY = 'apnatrip_agency_onboarding_verification';
 
@@ -126,38 +127,32 @@ export const AgencyVerificationOnboardingPage: React.FC = () => {
       return;
     }
 
-    // Simulate progress animation
+    // Upload via Cloudinary
     setUploadingField(fieldKey as string);
-    setUploadProgress(20);
+    setUploadProgress(30);
 
-    const timer1 = setTimeout(() => setUploadProgress(60), 150);
-    const timer2 = setTimeout(() => setUploadProgress(100), 300);
+    try {
+      setUploadProgress(60);
+      const uploadRes = await cloudinaryUploadService.uploadImage(file, 'travelos/agencies/documents');
+      setUploadProgress(100);
 
-    const timer3 = setTimeout(() => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const item: DocumentUploadItem = {
-          id: `${fieldKey}-${Date.now()}`,
-          name: file.name,
-          size: file.size,
-          sizeFormatted: formatFileSize(file.size),
-          type: file.type || ext || 'file',
-          dataUrl: reader.result as string,
-          uploadedAt: new Date().toISOString(),
-        };
-
-        setFormData((prev) => ({ ...prev, [fieldKey]: item }));
-        setUploadingField(null);
-        setUploadProgress(0);
+      const item: DocumentUploadItem = {
+        id: `${fieldKey}-${Date.now()}`,
+        name: file.name,
+        size: file.size,
+        sizeFormatted: formatFileSize(file.size),
+        type: file.type || ext || 'file',
+        dataUrl: uploadRes.secureUrl,
+        uploadedAt: new Date().toISOString(),
       };
-      reader.readAsDataURL(file);
-    }, 450);
 
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-    };
+      setFormData((prev) => ({ ...prev, [fieldKey]: item }));
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to upload document to Cloudinary');
+    } finally {
+      setUploadingField(null);
+      setUploadProgress(0);
+    }
   };
 
   const handleFileChange = (

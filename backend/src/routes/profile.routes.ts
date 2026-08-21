@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { profileController } from '../controllers/profile.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
 import { validateRequest } from '../middlewares/validate.middleware.js';
-import { uploadMiddleware } from '../middlewares/upload.middleware.js';
+import { uploadSingleImage } from '../middlewares/upload.middleware.js';
 import {
   UpdateProfileSchema,
   CheckUsernameParamsSchema,
@@ -54,7 +54,7 @@ router.patch(
 router.post(
   '/photo',
   authenticate,
-  uploadMiddleware.single('photo'),
+  uploadSingleImage('photo'),
   profileController.uploadPhoto
 );
 

@@ -15,6 +15,7 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import { getChatById, sendMessage, markChatRead, ChatConversation, ChatMessage } from '../../data/chats';
+import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
 
 export const ChatRoomPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -253,10 +254,16 @@ export const ChatRoomPage: React.FC = () => {
               type="file"
               id="chat-file-attachment"
               className="hidden"
-              onChange={(e) => {
+              accept="image/jpeg,image/png,image/webp,image/jpg"
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (file) {
-                  handleSend(`📎 Attached File: ${file.name} (${Math.round(file.size / 1024)} KB)`);
+                  try {
+                    const uploadRes = await cloudinaryUploadService.uploadImage(file, 'travelos/chat');
+                    handleSend(`📷 [Image] ${uploadRes.secureUrl}`);
+                  } catch (err: any) {
+                    console.error('Chat attachment upload failed:', err);
+                  }
                 }
               }}
             />

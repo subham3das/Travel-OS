@@ -9,15 +9,8 @@ import { SocialButton } from '../../components/common/SocialButton';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { userAuthService } from '../../services/userAuth.service';
+import { triggerGoogleOAuth } from '../../../utils/googleAuth.util';
 import bgAuth from '../../../assets/bg loginsignup.jpg';
-
-const GOOGLE_CLIENT_ID = '834655621185-i6933kmn8cssb9mib6sgtbuh5u1c852t.apps.googleusercontent.com';
-
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,13 +23,12 @@ export const LoginPage: React.FC = () => {
 
   const validateForm = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
-    const trimmedEmail = email.trim();
 
-    if (!trimmedEmail) {
-      newErrors.email = 'Email is required.';
+    if (!email.trim()) {
+      newErrors.email = 'Email address is required.';
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(trimmedEmail)) {
+      if (!emailRegex.test(email.trim())) {
         newErrors.email = 'Please enter a valid email address.';
       }
     }
@@ -103,9 +95,9 @@ export const LoginPage: React.FC = () => {
         // Wrong Password: Clear only password field, keep entered email
         setPassword('');
         setErrors({
-          password: 'Incorrect password. Please try again.',
+          password: 'Incorrect password.',
         });
-        showToast('Incorrect password. Please try again.', 'error');
+        showToast('Incorrect password.', 'error');
       } else {
         setErrors({ general: errorMsg });
         showToast(errorMsg, 'error');
@@ -115,73 +107,30 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setLoading(true);
+    setErrors({});
 
-    if (window.google?.accounts?.oauth2) {
-      // 1. Official Google OAuth2 Token Client Popup
-      const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: 'email profile openid',
-        callback: async (tokenResponse: any) => {
-          if (tokenResponse.error) {
-            setLoading(false);
-            showToast('Google Sign-In failed. Please try again.', 'error');
-            return;
-          }
-
-          try {
-            const data = await userAuthService.googleLogin({
-              accessToken: tokenResponse.access_token,
-            });
-            setAuthenticatedUser(data.user);
-            showToast('Logged in with Google successfully!', 'success');
-            if (data.user.onboardingCompleted) {
-              navigate('/home');
-            } else if (!data.user.profileCompleted) {
-              navigate('/profile-setup');
-            } else {
-              navigate('/travel-preferences');
-            }
-          } catch (err: any) {
-            showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
-          } finally {
-            setLoading(false);
-          }
-        },
+    try {
+      const { accessToken } = await triggerGoogleOAuth();
+      const data = await userAuthService.googleLogin({
+        accessToken,
       });
-
-      client.requestAccessToken();
-    } else if (window.google?.accounts?.id) {
-      // 2. Google Identity Services ID Token
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: async (response: { credential: string }) => {
-          try {
-            const data = await userAuthService.googleLogin({
-              credential: response.credential,
-            });
-            setAuthenticatedUser(data.user);
-            showToast('Logged in with Google successfully!', 'success');
-            if (data.user.onboardingCompleted) {
-              navigate('/home');
-            } else if (!data.user.profileCompleted) {
-              navigate('/profile-setup');
-            } else {
-              navigate('/travel-preferences');
-            }
-          } catch (err: any) {
-            showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
-          } finally {
-            setLoading(false);
-          }
-        },
-      });
-
-      window.google.accounts.id.prompt();
-    } else {
+      setAuthenticatedUser(data.user);
+      showToast('Logged in with Google successfully!', 'success');
+      if (data.user.onboardingCompleted) {
+        navigate('/home');
+      } else if (!data.user.profileCompleted) {
+        navigate('/profile-setup');
+      } else if (!data.user.preferenceCompleted) {
+        navigate('/travel-preferences');
+      } else {
+        navigate('/welcome');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
+    } finally {
       setLoading(false);
-      showToast('Google Sign-In failed. Please check your internet connection and try again.', 'error');
     }
   };
 

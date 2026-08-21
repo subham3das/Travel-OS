@@ -105,8 +105,8 @@ export const AgencyVerificationOnboardingPage: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  // Generic File Upload Processor with simulated upload progress
-  const processFileUpload = (
+  // Generic File Upload Processor with Cloudinary upload
+  const processFileUpload = async (
     fieldKey: keyof VerificationFormData,
     file: File,
     allowedTypes: string[],
@@ -155,7 +155,7 @@ export const AgencyVerificationOnboardingPage: React.FC = () => {
     }
   };
 
-  const handleFileChange = (
+  const handleFileChange = async (
     fieldKey: keyof VerificationFormData,
     e: React.ChangeEvent<HTMLInputElement>,
     allowedTypes: string[],
@@ -163,7 +163,7 @@ export const AgencyVerificationOnboardingPage: React.FC = () => {
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      processFileUpload(fieldKey, file, allowedTypes, maxSizeMB);
+      await processFileUpload(fieldKey, file, allowedTypes, maxSizeMB);
     }
   };
 

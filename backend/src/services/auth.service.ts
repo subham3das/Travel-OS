@@ -149,7 +149,7 @@ export class AuthService {
 
     const isPasswordValid = await HashUtil.compare(credentials.password, user.password || '');
     if (!isPasswordValid) {
-      throw new UnauthorizedError('Incorrect password. Please try again.');
+      throw new UnauthorizedError('Incorrect password.');
     }
 
     if (user.status !== 'Active') {

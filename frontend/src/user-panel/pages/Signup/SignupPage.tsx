@@ -9,15 +9,8 @@ import { SocialButton } from '../../components/common/SocialButton';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { userAuthService } from '../../services/userAuth.service';
+import { triggerGoogleOAuth } from '../../../utils/googleAuth.util';
 import bgAuth from '../../../assets/bg loginsignup.jpg';
-
-const GOOGLE_CLIENT_ID = '834655621185-i6933kmn8cssb9mib6sgtbuh5u1c852t.apps.googleusercontent.com';
-
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
 
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -112,59 +105,28 @@ export const SignupPage: React.FC = () => {
     }
   };
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
     setLoading(true);
+    setErrors({});
 
-    if (window.google?.accounts?.oauth2) {
-      const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: 'email profile openid',
-        callback: async (tokenResponse: any) => {
-          if (tokenResponse.error) {
-            setLoading(false);
-            showToast('Google Sign-In failed. Please try again.', 'error');
-            return;
-          }
-
-          try {
-            const data = await userAuthService.googleLogin({
-              accessToken: tokenResponse.access_token,
-            });
-            setAuthenticatedUser(data.user);
-            showToast('Account created with Google successfully!', 'success');
-            navigate('/profile-setup');
-          } catch (err: any) {
-            showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
-          } finally {
-            setLoading(false);
-          }
-        },
+    try {
+      const { accessToken } = await triggerGoogleOAuth();
+      const data = await userAuthService.googleLogin({
+        accessToken,
       });
-
-      client.requestAccessToken();
-    } else if (window.google?.accounts?.id) {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: async (response: { credential: string }) => {
-          try {
-            const data = await userAuthService.googleLogin({
-              credential: response.credential,
-            });
-            setAuthenticatedUser(data.user);
-            showToast('Account created with Google successfully!', 'success');
-            navigate('/profile-setup');
-          } catch (err: any) {
-            showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
-          } finally {
-            setLoading(false);
-          }
-        },
-      });
-
-      window.google.accounts.id.prompt();
-    } else {
+      setAuthenticatedUser(data.user);
+      showToast('Account created with Google successfully!', 'success');
+      if (data.user.onboardingCompleted) {
+        navigate('/home');
+      } else if (!data.user.profileCompleted) {
+        navigate('/profile-setup');
+      } else {
+        navigate('/travel-preferences');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
+    } finally {
       setLoading(false);
-      showToast('Google Sign-In failed. Please check your internet connection and try again.', 'error');
     }
   };
 

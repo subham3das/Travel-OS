@@ -235,6 +235,24 @@ class UserAuthService {
     );
     return res.data;
   }
+
+  // 8. Forgot Password
+  public async forgotPassword(email: string) {
+    const res = await this.request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return res.data;
+  }
+
+  // 9. Reset Password
+  public async resetPassword(token: string, password: string) {
+    const res = await this.request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+    return res.data;
+  }
 }
 
 export const userAuthService = new UserAuthService();

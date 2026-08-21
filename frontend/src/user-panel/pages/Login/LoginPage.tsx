@@ -23,24 +23,36 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { setAuthenticatedUser } = useAuth();
   const { showToast } = useToast();
-  const [emailOrPhone, setEmailOrPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ emailOrPhone?: string; password?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
   const [loading, setLoading] = useState(false);
+
+  const validateForm = (): boolean => {
+    const newErrors: { email?: string; password?: string } = {};
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
+      newErrors.email = 'Email is required.';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        newErrors.email = 'Please enter a valid email address.';
+      }
+    }
+
+    if (!password.trim()) {
+      newErrors.password = 'Password is required.';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newErrors: { emailOrPhone?: string; password?: string } = {};
 
-    if (!emailOrPhone.trim()) {
-      newErrors.emailOrPhone = 'Email address is required';
-    }
-    if (!password.trim()) {
-      newErrors.password = 'Password is required';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (!validateForm()) {
       return;
     }
 
@@ -49,33 +61,58 @@ export const LoginPage: React.FC = () => {
 
     try {
       const data = await userAuthService.login({
-        email: emailOrPhone.trim(),
+        email: email.trim().toLowerCase(),
         password,
       });
 
+      // Update AuthContext with authenticated user data
       setAuthenticatedUser(data.user);
       showToast('Welcome back to ApnaTrip!', 'success');
 
-      // Navigate dynamically based on onboarding status
-      if (data.user.onboardingCompleted) {
-        navigate('/home');
-      } else if (!data.user.profileCompleted) {
-        navigate('/profile-setup');
-      } else if (!data.user.preferenceCompleted) {
-        navigate('/travel-preferences');
-      } else {
-        navigate('/welcome');
+      // Fetch dynamic onboarding status to resume at the exact step
+      try {
+        const onboardingStatus = await userAuthService.getOnboardingStatus();
+        if (onboardingStatus?.onboardingComplete) {
+          navigate('/home');
+        } else if (onboardingStatus?.currentStep === 'profile_setup' || !data.user.profileCompleted) {
+          navigate('/profile-setup');
+        } else if (onboardingStatus?.currentStep === 'travel_preferences' || !data.user.preferenceCompleted) {
+          navigate('/travel-preferences');
+        } else {
+          navigate('/welcome');
+        }
+      } catch {
+        // Fallback navigation based on user object flags
+        if (data.user.onboardingCompleted) {
+          navigate('/home');
+        } else if (!data.user.profileCompleted) {
+          navigate('/profile-setup');
+        } else if (!data.user.preferenceCompleted) {
+          navigate('/travel-preferences');
+        } else {
+          navigate('/welcome');
+        }
       }
     } catch (err: any) {
       const errorMsg = err.message || 'Login failed. Please check your credentials.';
-      if (errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('account')) {
-        setErrors({ emailOrPhone: errorMsg });
-      } else if (errorMsg.toLowerCase().includes('password')) {
-        setErrors({ password: errorMsg });
+      const lowerMsg = errorMsg.toLowerCase();
+
+      if (lowerMsg.includes('no account') || lowerMsg.includes('create an account')) {
+        setErrors({
+          email: 'No account found with this email. Please create an account first.',
+        });
+        showToast('No account found with this email. Please create an account first.', 'error');
+      } else if (lowerMsg.includes('incorrect password') || lowerMsg.includes('password')) {
+        // Wrong Password: Clear only password field, keep entered email
+        setPassword('');
+        setErrors({
+          password: 'Incorrect password. Please try again.',
+        });
+        showToast('Incorrect password. Please try again.', 'error');
       } else {
         setErrors({ general: errorMsg });
+        showToast(errorMsg, 'error');
       }
-      showToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -94,9 +131,15 @@ export const LoginPage: React.FC = () => {
               });
               setAuthenticatedUser(data.user);
               showToast('Logged in with Google successfully!', 'success');
-              navigate('/home');
+              if (data.user.onboardingCompleted) {
+                navigate('/home');
+              } else if (!data.user.profileCompleted) {
+                navigate('/profile-setup');
+              } else {
+                navigate('/travel-preferences');
+              }
             } catch (err: any) {
-              showToast(err.message || 'Google authentication failed.', 'error');
+              showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
             } finally {
               setLoading(false);
             }
@@ -112,35 +155,35 @@ export const LoginPage: React.FC = () => {
         await fallbackGoogleLogin();
       }
     } catch (err: any) {
-      showToast(err.message || 'Google authentication is currently unavailable.', 'error');
+      showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
       setLoading(false);
     }
   };
 
   const fallbackGoogleLogin = async () => {
     try {
-      const googleEmail = emailOrPhone.includes('@') ? emailOrPhone.trim() : prompt('Enter your Google email address:');
+      const googleEmail = email.includes('@') ? email.trim() : prompt('Enter your Google email address:');
       if (!googleEmail) {
         setLoading(false);
         return;
       }
 
       const data = await userAuthService.googleLogin({
-        email: googleEmail,
+        email: googleEmail.toLowerCase(),
         name: 'Google Explorer',
       });
       setAuthenticatedUser(data.user);
       showToast('Logged in with Google successfully!', 'success');
       navigate('/home');
     } catch (err: any) {
-      showToast(err.message || 'Google authentication failed.', 'error');
+      showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleFacebookLogin = () => {
-    showToast('Facebook login is coming soon!', 'info');
+    showToast('Facebook Login is coming soon.', 'info');
   };
 
   return (
@@ -186,11 +229,14 @@ export const LoginPage: React.FC = () => {
             <Input
               type="email"
               placeholder="Email address"
-              value={emailOrPhone}
-              onChange={(e) => setEmailOrPhone(e.target.value)}
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+              }}
               leftIcon={<Mail className="w-4 h-4" />}
-              error={errors.emailOrPhone}
-              required
+              error={errors.email}
+              autoComplete="email"
             />
 
             <div className="space-y-1.5">
@@ -198,15 +244,18 @@ export const LoginPage: React.FC = () => {
                 isPassword
                 placeholder="Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+                }}
                 leftIcon={<Lock className="w-4 h-4" />}
                 error={errors.password}
-                required
+                autoComplete="current-password"
               />
               <div className="flex justify-end pr-1">
                 <button
                   type="button"
-                  onClick={() => showToast('Password reset link will be sent to your email.', 'info')}
+                  onClick={() => navigate('/forgot-password')}
                   className="text-xs font-bold text-[#FF4D6D] hover:underline focus:outline-none cursor-pointer"
                 >
                   Forgot Password?
@@ -214,7 +263,13 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            <Button type="submit" loading={loading} showArrow className="mt-2">
+            <Button
+              type="submit"
+              loading={loading}
+              disabled={loading}
+              showArrow
+              className="mt-2"
+            >
               Login
             </Button>
           </form>

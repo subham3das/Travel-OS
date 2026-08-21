@@ -7,6 +7,7 @@ import { SplashPage } from '../pages/Splash/SplashPage';
 import { OnboardingPage } from '../pages/Onboarding/OnboardingPage';
 import { LoginPage } from '../pages/Login/LoginPage';
 import { SignupPage } from '../pages/Signup/SignupPage';
+import { ForgotPasswordPage } from '../pages/ForgotPassword/ForgotPasswordPage';
 import { ProfileSetupPage } from '../pages/ProfileSetup/ProfileSetupPage';
 import { TravelPreferencesPage } from '../pages/Preferences/TravelPreferencesPage';
 import { WelcomePage } from '../pages/Welcome/WelcomePage';
@@ -53,6 +54,7 @@ export const UserRoutes = () => (
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
 
       {/* Setup / Onboarding Steps (LoggedIn required) */}

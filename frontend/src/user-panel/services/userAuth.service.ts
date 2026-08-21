@@ -159,11 +159,8 @@ class UserAuthService {
   // 3. Google OAuth Login
   public async googleLogin(payload: {
     credential?: string;
-    token?: string;
-    email?: string;
-    name?: string;
-    googleId?: string;
-    avatar?: string;
+    idToken?: string;
+    accessToken?: string;
   }) {
     const res = await this.request<{
       user: UserAuthResponse;

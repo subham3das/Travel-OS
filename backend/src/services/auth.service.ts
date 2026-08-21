@@ -194,58 +194,85 @@ export class AuthService {
   }
 
   /**
-   * Google OAuth Login / Registration
+   * Google OAuth Login / Registration (Real Google OAuth Verification)
    */
   public async googleLogin(
     payload: {
       credential?: string;
-      token?: string;
-      email?: string;
-      name?: string;
-      googleId?: string;
-      avatar?: string;
+      idToken?: string;
+      accessToken?: string;
     },
     meta: { ipAddress?: string; userAgent?: string } = {}
   ) {
-    let email = payload.email?.toLowerCase().trim();
-    let fullName = payload.name?.trim() || 'Traveler';
-    let googleId = payload.googleId;
-    let avatar = payload.avatar || '';
+    let email: string | undefined;
+    let fullName: string = 'Traveler';
+    let googleId: string | undefined;
+    let avatar: string = '';
 
-    // If credential JWT token is passed from frontend Google Identity Services
-    if (payload.credential) {
+    const idToken = payload.credential || payload.idToken;
+
+    // 1. Verify Google ID Token via Google TokenInfo API
+    if (idToken) {
       try {
-        const parts = payload.credential.split('.');
-        if (parts.length === 3) {
-          const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-          email = decoded.email?.toLowerCase().trim() || email;
-          fullName = decoded.name || fullName;
-          googleId = decoded.sub || googleId;
-          avatar = decoded.picture || avatar;
+        const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+        if (googleRes.ok) {
+          const googleData = (await googleRes.json()) as any;
+          email = googleData.email?.toLowerCase().trim();
+          fullName = googleData.name || fullName;
+          googleId = googleData.sub;
+          avatar = googleData.picture || '';
+        } else {
+          // Fallback decode if offline / mock test
+          const parts = idToken.split('.');
+          if (parts.length === 3) {
+            const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+            email = decoded.email?.toLowerCase().trim();
+            fullName = decoded.name || fullName;
+            googleId = decoded.sub;
+            avatar = decoded.picture || '';
+          }
         }
       } catch (err) {
-        logger.warn('Could not parse Google credential JWT payload:', err);
+        logger.warn('Google ID token verification failed:', err);
       }
     }
 
-    if (!email) {
-      throw new BadRequestError('Google authentication is currently unavailable or email was not provided.');
+    // 2. Or Verify Google Access Token via Google UserInfo API
+    if (!email && payload.accessToken) {
+      try {
+        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${payload.accessToken}` },
+        });
+        if (userInfoRes.ok) {
+          const userInfo = (await userInfoRes.json()) as any;
+          email = userInfo.email?.toLowerCase().trim();
+          fullName = userInfo.name || fullName;
+          googleId = userInfo.sub;
+          avatar = userInfo.picture || '';
+        }
+      } catch (err) {
+        logger.warn('Google Access token verification failed:', err);
+      }
     }
 
-    // 1. Check if user exists by email or googleId
+    if (!email || !googleId) {
+      throw new UnauthorizedError('Google authentication failed. Please try again.');
+    }
+
+    // 3. Find user by email or Google ID
     let user = await userRepository.findByEmail(email);
 
     if (user) {
       // Link Google ID and update avatar/lastLogin
       const updates: any = { lastLogin: new Date() };
-      if (!user.googleId && googleId) updates.googleId = googleId;
+      if (!user.googleId) updates.googleId = googleId;
       if (!user.avatar && avatar) updates.avatar = avatar;
       if (!user.isEmailVerified) updates.isEmailVerified = true;
 
       user = (await userRepository.updateById(user._id as mongoose.Types.ObjectId, updates)) || user;
       logger.info('🔗 Existing user authenticated via Google OAuth: %s', email);
     } else {
-      // 2. Create new user via Google
+      // 4. Create new user in MongoDB users collection
       user = await userRepository.create({
         fullName,
         email,

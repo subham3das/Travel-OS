@@ -82,6 +82,8 @@ export const VerifyEmailSchema = z.object({
 
 export const GoogleAuthSchema = z.object({
   credential: z.string().optional(),
+  idToken: z.string().optional(),
+  accessToken: z.string().optional(),
   token: z.string().optional(),
   email: z.string().email().optional(),
   name: z.string().optional(),

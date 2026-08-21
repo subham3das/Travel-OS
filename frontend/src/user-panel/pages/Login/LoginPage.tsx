@@ -65,11 +65,9 @@ export const LoginPage: React.FC = () => {
         password,
       });
 
-      // Update AuthContext with authenticated user data
       setAuthenticatedUser(data.user);
       showToast('Welcome back to ApnaTrip!', 'success');
 
-      // Fetch dynamic onboarding status to resume at the exact step
       try {
         const onboardingStatus = await userAuthService.getOnboardingStatus();
         if (onboardingStatus?.onboardingComplete) {
@@ -82,7 +80,6 @@ export const LoginPage: React.FC = () => {
           navigate('/welcome');
         }
       } catch {
-        // Fallback navigation based on user object flags
         if (data.user.onboardingCompleted) {
           navigate('/home');
         } else if (!data.user.profileCompleted) {
@@ -118,67 +115,73 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setLoading(true);
-    try {
-      if (window.google?.accounts?.id) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: async (response: { credential: string }) => {
-            try {
-              const data = await userAuthService.googleLogin({
-                credential: response.credential,
-              });
-              setAuthenticatedUser(data.user);
-              showToast('Logged in with Google successfully!', 'success');
-              if (data.user.onboardingCompleted) {
-                navigate('/home');
-              } else if (!data.user.profileCompleted) {
-                navigate('/profile-setup');
-              } else {
-                navigate('/travel-preferences');
-              }
-            } catch (err: any) {
-              showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
-            } finally {
-              setLoading(false);
-            }
-          },
-        });
 
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            fallbackGoogleLogin();
+    if (window.google?.accounts?.oauth2) {
+      // 1. Official Google OAuth2 Token Client Popup
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'email profile openid',
+        callback: async (tokenResponse: any) => {
+          if (tokenResponse.error) {
+            setLoading(false);
+            showToast('Google Sign-In failed. Please try again.', 'error');
+            return;
           }
-        });
-      } else {
-        await fallbackGoogleLogin();
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
-      setLoading(false);
-    }
-  };
 
-  const fallbackGoogleLogin = async () => {
-    try {
-      const googleEmail = email.includes('@') ? email.trim() : prompt('Enter your Google email address:');
-      if (!googleEmail) {
-        setLoading(false);
-        return;
-      }
-
-      const data = await userAuthService.googleLogin({
-        email: googleEmail.toLowerCase(),
-        name: 'Google Explorer',
+          try {
+            const data = await userAuthService.googleLogin({
+              accessToken: tokenResponse.access_token,
+            });
+            setAuthenticatedUser(data.user);
+            showToast('Logged in with Google successfully!', 'success');
+            if (data.user.onboardingCompleted) {
+              navigate('/home');
+            } else if (!data.user.profileCompleted) {
+              navigate('/profile-setup');
+            } else {
+              navigate('/travel-preferences');
+            }
+          } catch (err: any) {
+            showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
+          } finally {
+            setLoading(false);
+          }
+        },
       });
-      setAuthenticatedUser(data.user);
-      showToast('Logged in with Google successfully!', 'success');
-      navigate('/home');
-    } catch (err: any) {
-      showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
-    } finally {
+
+      client.requestAccessToken();
+    } else if (window.google?.accounts?.id) {
+      // 2. Google Identity Services ID Token
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response: { credential: string }) => {
+          try {
+            const data = await userAuthService.googleLogin({
+              credential: response.credential,
+            });
+            setAuthenticatedUser(data.user);
+            showToast('Logged in with Google successfully!', 'success');
+            if (data.user.onboardingCompleted) {
+              navigate('/home');
+            } else if (!data.user.profileCompleted) {
+              navigate('/profile-setup');
+            } else {
+              navigate('/travel-preferences');
+            }
+          } catch (err: any) {
+            showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
+          } finally {
+            setLoading(false);
+          }
+        },
+      });
+
+      window.google.accounts.id.prompt();
+    } else {
       setLoading(false);
+      showToast('Google Sign-In failed. Please check your internet connection and try again.', 'error');
     }
   };
 

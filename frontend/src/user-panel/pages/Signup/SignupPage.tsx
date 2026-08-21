@@ -112,66 +112,64 @@ export const SignupPage: React.FC = () => {
     }
   };
 
-  const handleGoogleSignup = async () => {
+  const handleGoogleSignup = () => {
     setLoading(true);
-    try {
-      if (window.google?.accounts?.id) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: async (response: { credential: string }) => {
-            try {
-              const data = await userAuthService.googleLogin({
-                credential: response.credential,
-              });
-              setAuthenticatedUser(data.user);
-              showToast('Account created with Google successfully!', 'success');
-              navigate('/profile-setup');
-            } catch (err: any) {
-              showToast(err.message || 'Google authentication failed.', 'error');
-            } finally {
-              setLoading(false);
-            }
-          },
-        });
 
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            fallbackGoogleSignup();
+    if (window.google?.accounts?.oauth2) {
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'email profile openid',
+        callback: async (tokenResponse: any) => {
+          if (tokenResponse.error) {
+            setLoading(false);
+            showToast('Google Sign-In failed. Please try again.', 'error');
+            return;
           }
-        });
-      } else {
-        await fallbackGoogleSignup();
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Google authentication is currently unavailable.', 'error');
-      setLoading(false);
-    }
-  };
 
-  const fallbackGoogleSignup = async () => {
-    try {
-      const googleEmail = email.includes('@') ? email.trim() : prompt('Enter your Google email address:');
-      if (!googleEmail) {
-        setLoading(false);
-        return;
-      }
-
-      const data = await userAuthService.googleLogin({
-        email: googleEmail.toLowerCase(),
-        name: fullName.trim() || 'Traveler',
+          try {
+            const data = await userAuthService.googleLogin({
+              accessToken: tokenResponse.access_token,
+            });
+            setAuthenticatedUser(data.user);
+            showToast('Account created with Google successfully!', 'success');
+            navigate('/profile-setup');
+          } catch (err: any) {
+            showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
+          } finally {
+            setLoading(false);
+          }
+        },
       });
-      setAuthenticatedUser(data.user);
-      showToast('Account created with Google successfully!', 'success');
-      navigate('/profile-setup');
-    } catch (err: any) {
-      showToast(err.message || 'Google authentication failed.', 'error');
-    } finally {
+
+      client.requestAccessToken();
+    } else if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response: { credential: string }) => {
+          try {
+            const data = await userAuthService.googleLogin({
+              credential: response.credential,
+            });
+            setAuthenticatedUser(data.user);
+            showToast('Account created with Google successfully!', 'success');
+            navigate('/profile-setup');
+          } catch (err: any) {
+            showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');
+          } finally {
+            setLoading(false);
+          }
+        },
+      });
+
+      window.google.accounts.id.prompt();
+    } else {
       setLoading(false);
+      showToast('Google Sign-In failed. Please check your internet connection and try again.', 'error');
     }
   };
 
   const handleFacebookSignup = () => {
-    showToast('Facebook login is coming soon!', 'info');
+    showToast('Facebook Login is coming soon.', 'info');
   };
 
   return (

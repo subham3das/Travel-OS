@@ -60,26 +60,23 @@ export const LoginPage: React.FC = () => {
       setAuthenticatedUser(data.user);
       showToast('Welcome back to ApnaTrip!', 'success');
 
-      try {
-        const onboardingStatus = await userAuthService.getOnboardingStatus();
-        if (onboardingStatus?.onboardingComplete) {
+      // Existing user logging in -> transfer directly to /home
+      if (data.user.onboardingCompleted || data.user.profileCompleted) {
+        navigate('/home');
+      } else {
+        try {
+          const onboardingStatus = await userAuthService.getOnboardingStatus();
+          if (onboardingStatus?.onboardingComplete) {
+            navigate('/home');
+          } else if (!data.user.profileCompleted) {
+            navigate('/profile-setup');
+          } else if (!data.user.preferenceCompleted) {
+            navigate('/travel-preferences');
+          } else {
+            navigate('/home');
+          }
+        } catch {
           navigate('/home');
-        } else if (onboardingStatus?.currentStep === 'profile_setup' || !data.user.profileCompleted) {
-          navigate('/profile-setup');
-        } else if (onboardingStatus?.currentStep === 'travel_preferences' || !data.user.preferenceCompleted) {
-          navigate('/travel-preferences');
-        } else {
-          navigate('/welcome');
-        }
-      } catch {
-        if (data.user.onboardingCompleted) {
-          navigate('/home');
-        } else if (!data.user.profileCompleted) {
-          navigate('/profile-setup');
-        } else if (!data.user.preferenceCompleted) {
-          navigate('/travel-preferences');
-        } else {
-          navigate('/welcome');
         }
       }
     } catch (err: any) {
@@ -117,15 +114,13 @@ export const LoginPage: React.FC = () => {
         accessToken,
       });
       setAuthenticatedUser(data.user);
-      showToast('Logged in with Google successfully!', 'success');
-      if (data.user.onboardingCompleted) {
-        navigate('/home');
-      } else if (!data.user.profileCompleted) {
+
+      if (data.isNewUser) {
+        showToast('Account created with Google! Complete your profile to get started.', 'success');
         navigate('/profile-setup');
-      } else if (!data.user.preferenceCompleted) {
-        navigate('/travel-preferences');
       } else {
-        navigate('/welcome');
+        showToast('Welcome back to ApnaTrip!', 'success');
+        navigate('/home');
       }
     } catch (err: any) {
       showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');

@@ -116,12 +116,12 @@ export const SignupPage: React.FC = () => {
       });
       setAuthenticatedUser(data.user);
       showToast('Account created with Google successfully!', 'success');
-      if (data.user.onboardingCompleted) {
-        navigate('/home');
-      } else if (!data.user.profileCompleted) {
+      if (data.isNewUser) {
+        showToast('Account created with Google! Complete your profile to get started.', 'success');
         navigate('/profile-setup');
       } else {
-        navigate('/travel-preferences');
+        showToast('Welcome back to ApnaTrip!', 'success');
+        navigate('/home');
       }
     } catch (err: any) {
       showToast(err.message || 'Google Sign-In failed. Please try again.', 'error');

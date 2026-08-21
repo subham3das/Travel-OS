@@ -25,9 +25,11 @@ export class AuthService {
     return {
       id: user._id,
       fullName: user.fullName,
+      name: user.fullName,
       email: user.email,
       phone: user.phone,
       avatar: user.avatar || user.profileImage || '',
+      profileImage: user.avatar || user.profileImage || '',
       username: user.username || '',
       bio: user.bio || '',
       homeCity: user.homeCity || '',
@@ -38,12 +40,17 @@ export class AuthService {
       status: user.status,
       isEmailVerified: user.isEmailVerified,
       authProvider: user.authProvider,
+      profileCompleted: user.profileCompleted ?? false,
+      preferenceCompleted: user.preferenceCompleted ?? false,
+      notificationsCompleted: user.notificationsCompleted ?? false,
+      privacyCompleted: user.privacyCompleted ?? false,
+      onboardingCompleted: user.onboardingCompleted ?? false,
       onboarding: {
-        profileCompleted: user.profileCompleted,
-        preferenceCompleted: user.preferenceCompleted,
-        notificationsCompleted: user.notificationsCompleted,
-        privacyCompleted: user.privacyCompleted,
-        onboardingCompleted: user.onboardingCompleted,
+        profileCompleted: user.profileCompleted ?? false,
+        preferenceCompleted: user.preferenceCompleted ?? false,
+        notificationsCompleted: user.notificationsCompleted ?? false,
+        privacyCompleted: user.privacyCompleted ?? false,
+        onboardingCompleted: user.onboardingCompleted ?? false,
       },
       createdAt: user.createdAt,
     };
@@ -260,7 +267,9 @@ export class AuthService {
     }
 
     // 3. Find user by email or Google ID
-    let user = await userRepository.findByEmail(email);
+    const existingUser = await userRepository.findByEmail(email);
+    const isNewUser = !existingUser;
+    let user = existingUser;
 
     if (user) {
       // Link Google ID and update avatar/lastLogin
@@ -315,6 +324,7 @@ export class AuthService {
 
     return {
       user: this.formatUserDTO(user),
+      isNewUser,
       tokens: {
         accessToken,
         refreshToken,

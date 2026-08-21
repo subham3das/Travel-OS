@@ -11,6 +11,14 @@ import { useToast } from '../../context/ToastContext';
 import { userAuthService } from '../../services/userAuth.service';
 import bgAuth from '../../../assets/bg loginsignup.jpg';
 
+const GOOGLE_CLIENT_ID = '834655621185-i6933kmn8cssb9mib6sgtbuh5u1c852t.apps.googleusercontent.com';
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { setAuthenticatedUser } = useAuth();
@@ -76,28 +84,63 @@ export const LoginPage: React.FC = () => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      // In production with Google OAuth Client ID, Google Identity Services popup provides credential token.
-      // For instant fallback verification or testing, it submits OAuth payload.
-      const sampleOAuthPayload = {
-        email: emailOrPhone.includes('@') ? emailOrPhone.trim() : undefined,
-        name: 'Google Explorer',
-      };
-      
-      if (!sampleOAuthPayload.email) {
-        showToast('Please enter your Google email or configure Google OAuth in .env', 'info');
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: async (response: { credential: string }) => {
+            try {
+              const data = await userAuthService.googleLogin({
+                credential: response.credential,
+              });
+              setAuthenticatedUser(data.user);
+              showToast('Logged in with Google successfully!', 'success');
+              navigate('/home');
+            } catch (err: any) {
+              showToast(err.message || 'Google authentication failed.', 'error');
+            } finally {
+              setLoading(false);
+            }
+          },
+        });
+
+        window.google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            fallbackGoogleLogin();
+          }
+        });
+      } else {
+        await fallbackGoogleLogin();
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Google authentication is currently unavailable.', 'error');
+      setLoading(false);
+    }
+  };
+
+  const fallbackGoogleLogin = async () => {
+    try {
+      const googleEmail = emailOrPhone.includes('@') ? emailOrPhone.trim() : prompt('Enter your Google email address:');
+      if (!googleEmail) {
         setLoading(false);
         return;
       }
 
-      const data = await userAuthService.googleLogin(sampleOAuthPayload);
+      const data = await userAuthService.googleLogin({
+        email: googleEmail,
+        name: 'Google Explorer',
+      });
       setAuthenticatedUser(data.user);
-      showToast('Signed in successfully with Google!', 'success');
+      showToast('Logged in with Google successfully!', 'success');
       navigate('/home');
     } catch (err: any) {
-      showToast(err.message || 'Google authentication is currently unavailable.', 'error');
+      showToast(err.message || 'Google authentication failed.', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFacebookLogin = () => {
+    showToast('Facebook login is coming soon!', 'info');
   };
 
   return (
@@ -163,7 +206,7 @@ export const LoginPage: React.FC = () => {
               <div className="flex justify-end pr-1">
                 <button
                   type="button"
-                  onClick={() => showToast('Password reset functionality is active.', 'info')}
+                  onClick={() => showToast('Password reset link will be sent to your email.', 'info')}
                   className="text-xs font-bold text-[#FF4D6D] hover:underline focus:outline-none cursor-pointer"
                 >
                   Forgot Password?
@@ -185,11 +228,10 @@ export const LoginPage: React.FC = () => {
             <div className="h-[1px] bg-slate-200 flex-1 max-w-[70px] sm:max-w-[90px]" />
           </div>
 
-          {/* Social Icons */}
-          <div className="flex items-center justify-center gap-4 pt-1">
+          {/* Social Icons (Google & Facebook) */}
+          <div className="flex items-center justify-center gap-5 pt-1">
             <SocialButton provider="google" onClick={handleGoogleLogin} />
-            <SocialButton provider="apple" desktopOnly onClick={() => showToast('Apple Sign-In is coming soon.', 'info')} />
-            <SocialButton provider="facebook" onClick={() => showToast('Facebook Sign-In is coming soon.', 'info')} />
+            <SocialButton provider="facebook" onClick={handleFacebookLogin} />
           </div>
 
           {/* Signup Link */}

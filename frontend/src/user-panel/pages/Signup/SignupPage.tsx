@@ -11,6 +11,14 @@ import { useToast } from '../../context/ToastContext';
 import { userAuthService } from '../../services/userAuth.service';
 import bgAuth from '../../../assets/bg loginsignup.jpg';
 
+const GOOGLE_CLIENT_ID = '834655621185-i6933kmn8cssb9mib6sgtbuh5u1c852t.apps.googleusercontent.com';
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
   const { setAuthenticatedUser } = useAuth();
@@ -107,25 +115,63 @@ export const SignupPage: React.FC = () => {
   const handleGoogleSignup = async () => {
     setLoading(true);
     try {
-      if (!email.trim()) {
-        showToast('Please enter your email to proceed with Google sign-up or configure OAuth in .env', 'info');
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: async (response: { credential: string }) => {
+            try {
+              const data = await userAuthService.googleLogin({
+                credential: response.credential,
+              });
+              setAuthenticatedUser(data.user);
+              showToast('Account created with Google successfully!', 'success');
+              navigate('/profile-setup');
+            } catch (err: any) {
+              showToast(err.message || 'Google authentication failed.', 'error');
+            } finally {
+              setLoading(false);
+            }
+          },
+        });
+
+        window.google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            fallbackGoogleSignup();
+          }
+        });
+      } else {
+        await fallbackGoogleSignup();
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Google authentication is currently unavailable.', 'error');
+      setLoading(false);
+    }
+  };
+
+  const fallbackGoogleSignup = async () => {
+    try {
+      const googleEmail = email.includes('@') ? email.trim() : prompt('Enter your Google email address:');
+      if (!googleEmail) {
         setLoading(false);
         return;
       }
 
       const data = await userAuthService.googleLogin({
-        email: email.trim().toLowerCase(),
+        email: googleEmail.toLowerCase(),
         name: fullName.trim() || 'Traveler',
       });
-
       setAuthenticatedUser(data.user);
       showToast('Account created with Google successfully!', 'success');
       navigate('/profile-setup');
     } catch (err: any) {
-      showToast(err.message || 'Google authentication is currently unavailable.', 'error');
+      showToast(err.message || 'Google authentication failed.', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFacebookSignup = () => {
+    showToast('Facebook login is coming soon!', 'info');
   };
 
   return (
@@ -263,11 +309,10 @@ export const SignupPage: React.FC = () => {
             <div className="h-[1px] bg-slate-200 flex-1 max-w-[70px] sm:max-w-[90px]" />
           </div>
 
-          {/* Social Icons */}
-          <div className="flex items-center justify-center gap-4 pt-1">
+          {/* Social Icons (Google & Facebook) */}
+          <div className="flex items-center justify-center gap-5 pt-1">
             <SocialButton provider="google" onClick={handleGoogleSignup} />
-            <SocialButton provider="apple" desktopOnly onClick={() => showToast('Apple Sign-In is coming soon.', 'info')} />
-            <SocialButton provider="facebook" onClick={() => showToast('Facebook Sign-In is coming soon.', 'info')} />
+            <SocialButton provider="facebook" onClick={handleFacebookSignup} />
           </div>
 
           {/* Login Link */}

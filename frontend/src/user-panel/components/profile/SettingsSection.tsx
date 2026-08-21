@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import {
   Luggage,
   Heart,
@@ -92,6 +93,7 @@ export const QuickAccessList: React.FC = () => {
 
 export const AccountSettingsList: React.FC = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const settingsItems = [
     { id: 'security', label: 'Privacy & Security', path: '/settings', icon: <ShieldCheck className="w-5 h-5 text-emerald-600" /> },
@@ -107,7 +109,7 @@ export const AccountSettingsList: React.FC = () => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('apnatrip_user');
+    logout();
     navigate('/login');
   };
 

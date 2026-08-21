@@ -60,6 +60,14 @@ export const globalErrorHandler = (
     errors = [{ field: err.path, message: `Invalid identifier: ${err.value}` }];
   }
 
+  // Handle Mongoose Buffering Timeout / Database Unreachable Error
+  if (err.name === 'MongooseError' && err.message?.includes('buffering timed out')) {
+    statusCode = HTTP_STATUS.SERVICE_UNAVAILABLE;
+    errorCode = ERROR_CODES.SERVICE_UNAVAILABLE;
+    message = 'Database service is currently connecting or unreachable. Please ensure your IP address is whitelisted in MongoDB Atlas Network Access.';
+    errors = [{ field: 'database', message }];
+  }
+
   // Log error details
   if (statusCode >= 500) {
     logger.error('💥 Unhandled Exception [%s %s]: %s\nStack: %s', req.method, req.originalUrl, err.message, err.stack);

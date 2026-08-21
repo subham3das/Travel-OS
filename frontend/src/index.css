@@ -42,3 +42,10 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Hide browser native password reveal / clear buttons to avoid double eye icons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+}
+

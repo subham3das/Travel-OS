@@ -71,6 +71,15 @@ export class DatabaseConnection {
       if (envConfig.NODE_ENV === 'production') {
         throw error;
       }
+      
+      // Auto-retry connection in background every 5 seconds in development
+      setTimeout(() => {
+        if (!this.isConnected) {
+          logger.info('🔄 Retrying MongoDB connection...');
+          this.connect().catch(() => {});
+        }
+      }, 5000);
+
       return mongoose;
     }
   }

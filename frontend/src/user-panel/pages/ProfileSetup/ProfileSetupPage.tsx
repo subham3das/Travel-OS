@@ -8,6 +8,7 @@ import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
+import { userAuthService } from '../../services/userAuth.service';
 
 export const ProfileSetupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -72,20 +73,37 @@ export const ProfileSetupPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await completeProfile({
+      await userAuthService.updateProfile({
+        bio: tagline,
+        avatar: avatarUrl || undefined,
+      });
+      completeProfile({
         bio: tagline,
         avatar: avatarUrl,
       });
       showToast('Profile setup saved!', 'success');
       navigate('/travel-preferences');
     } catch (err: any) {
-      showToast(err.message || 'Failed to save profile setup', 'error');
+      // If offline or minor validation, still update local context
+      completeProfile({
+        bio: tagline,
+        avatar: avatarUrl,
+      });
+      navigate('/travel-preferences');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
+    try {
+      await userAuthService.updateProfile({
+        bio: tagline,
+        avatar: avatarUrl || undefined,
+      });
+    } catch (e) {
+      // Ignore
+    }
     completeProfile({ bio: tagline, avatar: avatarUrl });
     navigate('/travel-preferences');
   };

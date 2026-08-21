@@ -5,6 +5,8 @@ import { Search, ArrowRight } from 'lucide-react';
 import { PreferenceStyleCard, StyleOption } from '../../components/preferences/PreferenceStyleCard';
 import { PreferenceToggleCard } from '../../components/preferences/PreferenceToggleCard';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
+import { userAuthService } from '../../services/userAuth.service';
 
 const travelStyles: StyleOption[] = [
   { id: 'backpacking', label: 'Backpacking', icon: '🎒' },
@@ -103,20 +105,49 @@ export const TravelPreferencesPage: React.FC = () => {
     );
   };
 
-  const handleContinue = () => {
-    const preferencesData = {
-      selectedStyles,
-      selectedCompanion,
-      budget,
-      selectedDestinations,
-      selectedActivities,
-      dreamDestination,
-      notifications,
-      privacy,
-    };
-    localStorage.setItem('apnatrip_preferences', JSON.stringify(preferencesData));
-    completePreferences();
-    navigate('/welcome');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
+
+  const handleContinue = async () => {
+    setIsSubmitting(true);
+    const budgetCategory = budget <= 20000 ? 'Budget' : budget <= 60000 ? 'Mid Range' : 'Luxury';
+
+    try {
+      await userAuthService.updateTravelPreferences({
+        travelInterests: [...selectedDestinations, ...selectedActivities],
+        travelStyle: selectedStyles,
+        budgetPreference: budgetCategory,
+        preferredTripDuration: ['3-5 Days', '1-2 Weeks'],
+        preferredTransportation: ['Flight', 'Train', 'Road Trip'],
+        foodPreference: selectedActivities.includes('Food') ? 'Local Street Food & Cafes' : 'All Cuisines',
+      });
+
+      await userAuthService.updateNotificationPreferences({
+        pushNotifications: notifications.deals,
+        emailNotifications: notifications.festivals,
+        bookingUpdates: true,
+        tripReminders: true,
+        travelRecommendations: notifications.nearby,
+        offersAndDiscounts: notifications.priceDrops,
+        communityActivity: notifications.community,
+        marketingEmails: notifications.agencyOffers,
+      });
+
+      await userAuthService.updatePrivacyPreferences({
+        publicProfile: privacy.showProfile,
+        allowFollowers: privacy.allowFollow,
+        allowMessages: privacy.receiveInvites,
+      });
+
+      showToast('Travel preferences saved!', 'success');
+      completePreferences();
+      navigate('/welcome');
+    } catch (err: any) {
+      completePreferences();
+      navigate('/welcome');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSkip = () => {
@@ -429,15 +460,16 @@ export const TravelPreferencesPage: React.FC = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
             onClick={handleContinue}
-            className="w-full py-4 rounded-2xl bg-[#FF4D6D] hover:bg-[#e03d5c] text-white font-extrabold text-base shadow-lg shadow-[#FF4D6D]/20 transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
+            disabled={isSubmitting}
+            className="w-full py-4 rounded-2xl bg-[#FF4D6D] hover:bg-[#e03d5c] text-white font-extrabold text-base shadow-lg shadow-[#FF4D6D]/20 transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
           >
-            <span>Continue</span>
+            <span>{isSubmitting ? 'Saving Preferences...' : 'Continue'}</span>
             <ArrowRight className="w-5 h-5" />
           </motion.button>
 
           <button
-            onClick={() => navigate('/welcome')}
-            className="text-xs font-semibold text-slate-400 hover:text-slate-600 focus:outline-none"
+            onClick={handleSkip}
+            className="text-xs font-semibold text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
           >
             Skip for now
           </button>

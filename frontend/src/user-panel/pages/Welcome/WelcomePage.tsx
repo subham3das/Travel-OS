@@ -1,32 +1,30 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Compass, Users, Map, Heart, ChevronRight, Plane } from 'lucide-react';
+import { Compass, Users, Map, Heart, ChevronRight, Plane, Loader2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { userAuthService } from '../../services/userAuth.service';
 
 export const WelcomePage: React.FC = () => {
   const navigate = useNavigate();
   const { completeWelcome, user: authUser } = useAuth();
+  const [isFinishing, setIsFinishing] = useState(false);
 
-  // 2-second automatic timer to navigate to /home
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  const handleContinue = async (destinationPath: string = '/home') => {
+    setIsFinishing(true);
+    try {
+      await userAuthService.completeOnboarding();
+    } catch (e) {
+      // Ignore if offline
+    } finally {
       completeWelcome();
-      navigate('/home');
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [completeWelcome, navigate]);
-
-  const handleContinue = () => {
-    completeWelcome();
-    navigate('/home');
+      navigate(destinationPath);
+    }
   };
 
-  const storedUser = localStorage.getItem('apnatrip_user');
-  const user = authUser || (storedUser
-    ? JSON.parse(storedUser)
-    : { name: 'Subham Das', location: 'Dibrugarh, Assam', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop' });
+  const displayName = authUser?.name || 'Traveler';
+  const displayAvatar = authUser?.avatar || '';
+  const displayLocation = authUser?.location || 'Global Explorer';
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col justify-between items-center relative overflow-hidden font-sans selection:bg-[#FF4D6D]/20 selection:text-[#FF4D6D]">
@@ -57,13 +55,16 @@ export const WelcomePage: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="space-y-2"
         >
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold mb-1">
+            <span>Account Created Successfully</span>
+          </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
-            Welcome to ApnaTrip! 👋
+            Welcome to ApnaTrip, {displayName}! 👋
           </h1>
           <p className="text-xs sm:text-sm font-semibold text-slate-500 max-w-sm mx-auto leading-relaxed">
-            Hey there! We’re excited to have you on board.
+            Your travel passport and preferences are set up.
             <br />
-            Your travel journey starts here. ❤️
+            Let’s embark on your next unforgettable journey! ❤️
           </p>
         </motion.div>
 
@@ -75,18 +76,24 @@ export const WelcomePage: React.FC = () => {
           className="flex flex-col items-center space-y-2"
         >
           <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-slate-100">
-            <img
-              src={user.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop'}
-              alt={user.name}
-              className="w-full h-full object-cover"
-            />
+            {displayAvatar ? (
+              <img
+                src={displayAvatar}
+                alt={displayName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-tr from-rose-400 to-amber-300 flex items-center justify-center text-white font-extrabold text-3xl">
+                {displayName.slice(0, 2).toUpperCase()}
+              </div>
+            )}
             <div className="absolute bottom-1 right-2 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white shadow-2xs" />
           </div>
 
           <div className="space-y-0.5">
-            <h3 className="text-xl font-black text-[#0F172A] tracking-tight">{user.name}</h3>
+            <h3 className="text-xl font-black text-[#0F172A] tracking-tight">{displayName}</h3>
             <p className="text-xs font-semibold text-slate-400">
-              📍 {user.location || 'Dibrugarh, Assam'}
+              📍 {displayLocation}
             </p>
           </div>
         </motion.div>
@@ -106,7 +113,7 @@ export const WelcomePage: React.FC = () => {
               Thanks for being a part of our community.
             </h4>
             <p className="text-xs font-medium text-slate-500">
-              Let’s explore the world together!
+              Personalized trips and exclusive deals are ready for you.
             </p>
           </div>
         </motion.div>
@@ -129,7 +136,7 @@ export const WelcomePage: React.FC = () => {
         >
           {/* Tile 1: Discover */}
           <div
-            onClick={() => navigate('/explore')}
+            onClick={() => handleContinue('/explore')}
             className="w-full bg-white border border-slate-100 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-2xs hover:shadow-md transition-all cursor-pointer group text-left"
           >
             <div className="flex items-center gap-3">
@@ -150,7 +157,7 @@ export const WelcomePage: React.FC = () => {
 
           {/* Tile 2: Connect */}
           <div
-            onClick={() => navigate('/community')}
+            onClick={() => handleContinue('/community')}
             className="w-full bg-white border border-slate-100 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-2xs hover:shadow-md transition-all cursor-pointer group text-left"
           >
             <div className="flex items-center gap-3">
@@ -171,7 +178,7 @@ export const WelcomePage: React.FC = () => {
 
           {/* Tile 3: Plan */}
           <div
-            onClick={() => navigate('/my-trips')}
+            onClick={() => handleContinue('/my-trips')}
             className="w-full bg-white border border-slate-100 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-2xs hover:shadow-md transition-all cursor-pointer group text-left"
           >
             <div className="flex items-center gap-3">
@@ -201,11 +208,21 @@ export const WelcomePage: React.FC = () => {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
-            onClick={handleContinue}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#FF4D6D] to-[#FF3355] text-white text-base font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-[#FF4D6D]/25 hover:shadow-xl transition-all focus:outline-none cursor-pointer"
+            onClick={() => handleContinue('/home')}
+            disabled={isFinishing}
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#FF4D6D] to-[#FF3355] text-white text-base font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-[#FF4D6D]/25 hover:shadow-xl transition-all focus:outline-none cursor-pointer disabled:opacity-60"
           >
-            <span>Let’s Explore</span>
-            <Plane className="w-5 h-5 rotate-45" />
+            {isFinishing ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Launching Dashboard...</span>
+              </>
+            ) : (
+              <>
+                <span>Let’s Explore</span>
+                <Plane className="w-5 h-5 rotate-45" />
+              </>
+            )}
           </motion.button>
         </motion.div>
       </main>

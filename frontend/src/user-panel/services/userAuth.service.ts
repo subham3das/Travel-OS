@@ -221,7 +221,76 @@ class UserAuthService {
     return res.data?.onboarding;
   }
 
-  // 7. Complete Onboarding
+  // 7. Update Profile
+  public async updateProfile(payload: {
+    fullName?: string;
+    phone?: string;
+    username?: string;
+    bio?: string;
+    homeCity?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    avatar?: string;
+  }) {
+    const res = await this.request<{ profile: UserAuthResponse }>(
+      '/profile',
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      },
+      true
+    );
+    return res.data?.profile;
+  }
+
+  // 8. Update Travel Preferences
+  public async updateTravelPreferences(payload: {
+    travelInterests?: string[];
+    travelStyle?: string[];
+    budgetPreference?: string;
+    preferredTripDuration?: string[];
+    preferredTransportation?: string[];
+    foodPreference?: string;
+    accessibilityRequirements?: string;
+  }) {
+    const res = await this.request<any>(
+      '/profile/travel-preferences',
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      },
+      true
+    );
+    return res.data;
+  }
+
+  // 9. Update Notification Preferences
+  public async updateNotificationPreferences(payload: any) {
+    const res = await this.request<any>(
+      '/profile/notification-preferences',
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      },
+      true
+    );
+    return res.data;
+  }
+
+  // 10. Update Privacy Preferences
+  public async updatePrivacyPreferences(payload: any) {
+    const res = await this.request<any>(
+      '/profile/privacy-preferences',
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      },
+      true
+    );
+    return res.data;
+  }
+
+  // 11. Complete Onboarding
   public async completeOnboarding() {
     const res = await this.request<any>(
       '/onboarding/complete',

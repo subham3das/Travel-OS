@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin } from 'lucide-react';
@@ -11,10 +11,11 @@ import { TripsSearchBar } from '../../components/trips/TripsSearchBar';
 import { TripCard } from '../../components/trips/TripCard';
 import { TripsStats } from '../../components/trips/TripsStats';
 import {
-  MOCK_AGENCY_TRIPS,
-  MOCK_TRIPS_STATS,
   TripStatusCategory,
+  AgencyTrip,
+  TripsQuickStatsData,
 } from '../../data/trips';
+import { agencyTripsService } from '../../services/agencyTrips.service';
 
 /**
  * Agency Trip Operations Dashboard Page
@@ -24,33 +25,42 @@ export const AgencyTripsPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TripStatusCategory>('Pending Setup');
   const [searchTerm, setSearchTerm] = useState('');
+  const [trips, setTrips] = useState<AgencyTrip[]>([]);
+  const [tabCounts, setTabCounts] = useState<Record<TripStatusCategory, number>>({
+    'Pending Setup': 0,
+    Upcoming: 0,
+    Ongoing: 0,
+    Completed: 0,
+    Cancelled: 0,
+  });
+  const [stats, setStats] = useState<TripsQuickStatsData>({
+    upcomingCount: 0,
+    totalTravelers: 0,
+    assignedGuides: 0,
+    vehiclesAssigned: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Tab badge counts
-  const tabCounts = useMemo(() => {
-    return MOCK_AGENCY_TRIPS.reduce(
-      (acc, trip) => {
-        acc[trip.statusCategory] = (acc[trip.statusCategory] || 0) + 1;
-        return acc;
-      },
-      { 'Pending Setup': 0, Upcoming: 0, Ongoing: 0, Completed: 0, Cancelled: 0 } as Record<TripStatusCategory, number>
-    );
-  }, []);
-
-  // Filtered trips list based on active tab and search query
-  const filteredTrips = useMemo(() => {
-    return MOCK_AGENCY_TRIPS.filter((trip) => {
-      const matchesTab = trip.statusCategory === activeTab;
-      const query = searchTerm.toLowerCase().trim();
-      const matchesSearch =
-        !query ||
-        trip.packageName.toLowerCase().includes(query) ||
-        trip.tripId.toLowerCase().includes(query) ||
-        trip.destinationRoute.toLowerCase().includes(query) ||
-        trip.guideName.toLowerCase().includes(query);
-
-      return matchesTab && matchesSearch;
-    });
+  const fetchTrips = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await agencyTripsService.getTrips({
+        statusCategory: activeTab,
+        search: searchTerm,
+      });
+      setTrips(data.trips);
+      setTabCounts(data.tabCounts);
+      setStats(data.stats);
+    } catch (error) {
+      console.error('Failed to load agency trips:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [activeTab, searchTerm]);
+
+  useEffect(() => {
+    fetchTrips();
+  }, [fetchTrips]);
 
   const handleSelectTrip = (tripId: string) => {
     navigate(`/agency/trips/${tripId}`);
@@ -84,7 +94,25 @@ export const AgencyTripsPage: React.FC = () => {
           {/* Trip Cards List */}
           <div className="space-y-3 min-h-[300px]">
             <AnimatePresence mode="wait">
-              {filteredTrips.length > 0 ? (
+              {isLoading ? (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-3"
+                >
+                  {[1, 2, 3].map((n) => (
+                    <div
+                      key={n}
+                      className="p-5 rounded-3xl bg-white border border-slate-100 shadow-2xs animate-pulse space-y-3"
+                    >
+                      <div className="h-5 bg-slate-100 rounded-lg w-1/3" />
+                      <div className="h-4 bg-slate-100 rounded-lg w-2/3" />
+                    </div>
+                  ))}
+                </motion.div>
+              ) : trips.length > 0 ? (
                 <motion.div
                   key={activeTab}
                   initial={{ opacity: 0 }}
@@ -93,9 +121,9 @@ export const AgencyTripsPage: React.FC = () => {
                   transition={{ duration: 0.2 }}
                   className="space-y-3"
                 >
-                  {filteredTrips.map((trip) => (
+                  {trips.map((trip) => (
                     <TripCard
-                      key={trip.id}
+                      key={trip.id || trip.tripId}
                       trip={trip}
                       onClick={() => handleSelectTrip(trip.tripId)}
                     />
@@ -133,7 +161,7 @@ export const AgencyTripsPage: React.FC = () => {
           </div>
 
           {/* Quick Stats Bar */}
-          <TripsStats stats={MOCK_TRIPS_STATS} />
+          <TripsStats stats={stats} />
         </main>
       </div>
 

@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  MOCK_AGENCY_NOTIFICATIONS,
   AgencyNotification,
   NotificationCategory,
 } from '../data/notifications';
+import { agencyNotificationsService } from '../services/agencyNotifications.service';
 
 export type NotificationTab =
   | 'All'
@@ -23,9 +23,7 @@ export interface NotificationFiltersState {
 }
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState<AgencyNotification[]>(
-    MOCK_AGENCY_NOTIFICATIONS
-  );
+  const [notifications, setNotifications] = useState<AgencyNotification[]>([]);
   const [activeTab, setActiveTab] = useState<NotificationTab>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNotification, setSelectedNotification] =
@@ -38,8 +36,31 @@ export function useNotifications() {
     sortBy: 'newest',
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    setIsLoading(true);
+    setIsError(false);
+    try {
+      const data = await agencyNotificationsService.getNotifications({
+        category: filters.category !== 'ALL' ? filters.category : undefined,
+        readStatus: filters.readStatus !== 'ALL' ? filters.readStatus : undefined,
+        search: searchTerm || undefined,
+        sortBy: filters.sortBy,
+      });
+      setNotifications(data.notifications || []);
+    } catch (err) {
+      console.error('Failed to fetch agency notifications:', err);
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters, searchTerm]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   // Unread Count
   const unreadCount = useMemo(() => {
@@ -133,7 +154,7 @@ export function useNotifications() {
       if (g) {
         g.items.push(item);
       } else {
-        groups.push({ dateGroup: item.dateGroup, items: [item] });
+        groups.push({ dateGroup: item.dateGroup || 'Today', items: [item] });
       }
     });
 
@@ -141,56 +162,82 @@ export function useNotifications() {
   }, [filteredNotifications]);
 
   // Actions
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isUnread: false, status: 'READ' } : n))
     );
     if (selectedNotification && selectedNotification.id === id) {
       setSelectedNotification((prev) => (prev ? { ...prev, isUnread: false, status: 'READ' } : null));
     }
+    try {
+      await agencyNotificationsService.markAsRead(id, false);
+    } catch (e) {
+      console.error('Failed to sync markAsRead to server:', e);
+    }
   };
 
-  const markAsUnread = (id: string) => {
+  const markAsUnread = async (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isUnread: true, status: 'UNREAD' } : n))
     );
     if (selectedNotification && selectedNotification.id === id) {
       setSelectedNotification((prev) => (prev ? { ...prev, isUnread: true, status: 'UNREAD' } : null));
     }
+    try {
+      await agencyNotificationsService.markAsRead(id, true);
+    } catch (e) {
+      console.error('Failed to sync markAsUnread to server:', e);
+    }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     setNotifications((prev) =>
       prev.map((n) => ({ ...n, isUnread: false, status: 'READ' }))
     );
+    try {
+      await agencyNotificationsService.markAllAsRead();
+    } catch (e) {
+      console.error('Failed to sync markAllAsRead to server:', e);
+    }
   };
 
-  const clearAllRead = () => {
+  const clearAllRead = async () => {
     setNotifications((prev) => prev.filter((n) => n.isUnread));
+    try {
+      await agencyNotificationsService.clearAllRead();
+    } catch (e) {
+      console.error('Failed to sync clearAllRead to server:', e);
+    }
   };
 
-  const deleteNotification = (id: string) => {
+  const deleteNotification = async (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     if (selectedNotification && selectedNotification.id === id) {
       setSelectedNotification(null);
     }
+    try {
+      await agencyNotificationsService.deleteNotification(id);
+    } catch (e) {
+      console.error('Failed to sync deleteNotification to server:', e);
+    }
   };
 
-  const archiveNotification = (id: string) => {
+  const archiveNotification = async (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, status: 'ARCHIVED' } : n))
     );
     if (selectedNotification && selectedNotification.id === id) {
       setSelectedNotification(null);
     }
+    try {
+      await agencyNotificationsService.archiveNotification(id);
+    } catch (e) {
+      console.error('Failed to sync archiveNotification to server:', e);
+    }
   };
 
   const refreshNotifications = () => {
-    setIsLoading(true);
-    setIsError(false);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
+    fetchNotifications();
   };
 
   return {

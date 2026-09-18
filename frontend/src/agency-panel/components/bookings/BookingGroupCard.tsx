@@ -53,7 +53,7 @@ export const BookingGroupCard: React.FC<BookingGroupCardProps> = ({
   const isTripCreationDisabled = group.pendingPaymentTravelerCount > 0;
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-100/90 shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden transition-all select-none space-y-0">
+    <div className="bg-white rounded-3xl border border-slate-100/90 shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all select-none space-y-0">
       {/* Group Card Header */}
       <div className="p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
@@ -230,7 +230,7 @@ export const BookingGroupCard: React.FC<BookingGroupCardProps> = ({
       </div>
 
       {/* Expandable Individual Bookings Sub-list */}
-      <div className="border-t border-slate-100 bg-slate-50/40">
+      <div className="border-t border-slate-100 bg-slate-50/40 rounded-b-3xl">
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}

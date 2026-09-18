@@ -27,7 +27,7 @@ export const FinanceHeader: React.FC<FinanceHeaderProps> = ({
   ];
 
   return (
-    <div className="bg-white border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4 space-y-3 sticky top-[3.5rem] z-20 select-none">
+    <div className="bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4 space-y-3 sticky top-[57px] sm:top-[65px] z-20 select-none">
       {/* Top Header Row */}
       <div className="flex items-center justify-between">
         <button
@@ -64,25 +64,31 @@ export const FinanceHeader: React.FC<FinanceHeaderProps> = ({
         </button>
 
         {showPresetDropdown && (
-          <div className="absolute top-10 z-30 bg-white rounded-2xl border border-slate-100 shadow-xl py-2 w-56 animate-in fade-in slide-in-from-top-2 duration-150">
-            {presets.map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => {
-                  onDateRangeChange(preset);
-                  setShowPresetDropdown(false);
-                }}
-                className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors cursor-pointer ${
-                  dateRange === preset
-                    ? 'bg-purple-50 text-[#583BE8] font-black'
-                    : 'text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                {preset}
-              </button>
-            ))}
-          </div>
+          <>
+            <div
+              className="fixed inset-0 z-20 bg-transparent"
+              onClick={() => setShowPresetDropdown(false)}
+            />
+            <div className="absolute top-10 z-30 bg-white rounded-2xl border border-slate-100 shadow-xl py-2 w-56 animate-in fade-in slide-in-from-top-2 duration-150">
+              {presets.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => {
+                    onDateRangeChange(preset);
+                    setShowPresetDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors cursor-pointer ${
+                    dateRange === preset
+                      ? 'bg-purple-50 text-[#583BE8] font-black'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

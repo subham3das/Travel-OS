@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -31,14 +31,37 @@ import {
   USER_TRAVEL_STATS,
   Trip,
   UserBooking,
+  TravelStats,
   MasterTripStatus,
 } from '../../data/trips';
+import { tripService } from '../../services/trip.service';
 
 export const MyTripsPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'trips' | 'bookings' | 'stats'>('trips');
   const [selectedCompanionTrip, setSelectedCompanionTrip] = useState<Trip | null>(null);
   const [selectedBookingForModal, setSelectedBookingForModal] = useState<any>(null);
+
+  const [trips, setTrips] = useState<Trip[]>(TRIPS_DATA);
+  const [bookings, setBookings] = useState<UserBooking[]>(USER_BOOKINGS_DATA);
+  const [stats, setStats] = useState<TravelStats>(USER_TRAVEL_STATS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    tripService.getMyTrips().then((res) => {
+      if (isMounted) {
+        if (res.trips && res.trips.length > 0) setTrips(res.trips);
+        if (res.bookings && res.bookings.length > 0) setBookings(res.bookings);
+        if (res.stats && res.stats.totalTrips > 0) setStats(res.stats);
+        setLoading(false);
+      }
+    }).catch((err) => {
+      console.warn('Failed to fetch live trips:', err);
+      if (isMounted) setLoading(false);
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const getStatusColor = (status: MasterTripStatus) => {
     switch (status) {
@@ -75,7 +98,7 @@ export const MyTripsPage: React.FC = () => {
                 : 'text-slate-500 hover:text-[#0F172A]'
             }`}
           >
-            My Trips ({TRIPS_DATA.length})
+            My Trips ({trips.length})
           </button>
 
           <button
@@ -87,7 +110,7 @@ export const MyTripsPage: React.FC = () => {
                 : 'text-slate-500 hover:text-[#0F172A]'
             }`}
           >
-            My Bookings ({USER_BOOKINGS_DATA.length})
+            My Bookings ({bookings.length})
           </button>
 
           <button
@@ -106,7 +129,7 @@ export const MyTripsPage: React.FC = () => {
         {/* 2. TAB CONTENT: MY TRIPS */}
         {activeTab === 'trips' && (
           <div className="space-y-4">
-            {TRIPS_DATA.length === 0 ? (
+            {trips.length === 0 ? (
               <EmptyState
                 emoji="🎒"
                 title="No Upcoming Trips Found"
@@ -115,7 +138,7 @@ export const MyTripsPage: React.FC = () => {
                 onAction={() => navigate('/explore')}
               />
             ) : (
-              TRIPS_DATA.map((trip) => (
+              trips.map((trip) => (
               <motion.div
                 key={trip.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -259,7 +282,16 @@ export const MyTripsPage: React.FC = () => {
         {/* 3. TAB CONTENT: MY BOOKINGS */}
         {activeTab === 'bookings' && (
           <div className="space-y-4">
-            {USER_BOOKINGS_DATA.map((booking) => (
+            {bookings.length === 0 ? (
+              <EmptyState
+                emoji="📋"
+                title="No Bookings Found"
+                description="You haven't made any bookings yet. Browse our top travel packages to get started!"
+                actionLabel="Explore Packages"
+                onAction={() => navigate('/explore')}
+              />
+            ) : (
+              bookings.map((booking) => (
               <motion.div
                 key={booking.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -340,7 +372,7 @@ export const MyTripsPage: React.FC = () => {
                   </button>
                 </div>
               </motion.div>
-            ))}
+            )))}
           </div>
         )}
 
@@ -359,22 +391,22 @@ export const MyTripsPage: React.FC = () => {
               {/* Stats Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                 <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-100">
-                  <span className="text-xl font-black text-[#583BE8] block">{USER_TRAVEL_STATS.totalTrips}</span>
+                  <span className="text-xl font-black text-[#583BE8] block">{stats.totalTrips}</span>
                   <span className="text-[11px] font-extrabold text-slate-500">Total Trips</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100">
-                  <span className="text-xl font-black text-emerald-700 block">{USER_TRAVEL_STATS.completedTrips}</span>
+                  <span className="text-xl font-black text-emerald-700 block">{stats.completedTrips}</span>
                   <span className="text-[11px] font-extrabold text-slate-500">Completed</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-100">
-                  <span className="text-xl font-black text-amber-700 block">{USER_TRAVEL_STATS.countriesVisited}</span>
+                  <span className="text-xl font-black text-amber-700 block">{stats.countriesVisited}</span>
                   <span className="text-[11px] font-extrabold text-slate-500">States & Countries</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100">
-                  <span className="text-xl font-black text-sky-700 block">{USER_TRAVEL_STATS.avgRatingGiven} ★</span>
+                  <span className="text-xl font-black text-sky-700 block">{stats.avgRatingGiven} ★</span>
                   <span className="text-[11px] font-extrabold text-slate-500">Avg. Rating</span>
                 </div>
               </div>
@@ -382,11 +414,11 @@ export const MyTripsPage: React.FC = () => {
               {/* Badges Section */}
               <div className="space-y-3 pt-2">
                 <h4 className="text-xs font-black text-[#0F172A] uppercase tracking-wider">
-                  Earned Travel Badges ({USER_TRAVEL_STATS.badges.length})
+                  Earned Travel Badges ({stats.badges.length})
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {USER_TRAVEL_STATS.badges.map((b, i) => (
+                  {stats.badges.map((b, i) => (
                     <div key={i} className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3">
                       <span className="text-2xl">{b.icon}</span>
                       <div>

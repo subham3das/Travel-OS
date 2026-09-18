@@ -87,9 +87,10 @@ export const UpcomingDeparturesSection: React.FC<UpcomingDeparturesSectionProps>
           })}
         </div>
       ) : (
-        <div className="py-8 text-center space-y-2">
+        <div className="py-8 text-center space-y-1.5">
           <MapPin className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="text-xs font-bold text-slate-400">No upcoming departures.</p>
+          <p className="text-xs font-bold text-slate-500">No upcoming departures.</p>
+          <p className="text-[11px] text-slate-400 font-medium">Scheduled departures for your packages will appear here.</p>
         </div>
       )}
     </motion.div>

@@ -15,8 +15,8 @@ import {
   CMSScheduledItem,
   CMSRecentChangeItem,
 } from '../../types/cmsManagement';
-import { adminCMSManagementService } from '../../services/adminCMSManagement.service';
 import {
+  adminCMSManagementService,
   initialHeroBanners,
   initialAnnouncements,
   initialTrendingDestinations,
@@ -29,7 +29,7 @@ import {
   initialCMSKPIStats,
   initialCMSScheduledItems,
   initialCMSRecentChanges,
-} from '../../data/cmsData';
+} from '../../services/adminCMSManagement.service';
 
 import { AdminCMSHeader } from '../../components/super-admin/cms/AdminCMSHeader';
 import { CMSKPIStats } from '../../components/super-admin/cms/CMSKPIStats';

@@ -99,7 +99,18 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
         setSubmitError('Failed to submit application. Please try again.');
       }
     } catch (err: any) {
-      setSubmitError(err?.message || 'An error occurred during submission. Please retry.');
+      let rawMsg = err?.message || 'An error occurred during submission. Please retry.';
+      try {
+        if (rawMsg.startsWith('[') || rawMsg.startsWith('{')) {
+          const parsed = JSON.parse(rawMsg);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            rawMsg = parsed.map((e: any) => e.message || 'Invalid input').join(' • ');
+          }
+        }
+      } catch {
+        // ignore
+      }
+      setSubmitError(rawMsg);
     } finally {
       setIsSubmitting(false);
     }

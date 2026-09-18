@@ -1,164 +1,194 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Building2, Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAgencyAuth } from '../../hooks/useAgencyAuth';
+import { agencyApiClient, AgencyApiResponse } from '../../services/agencyApiClient';
 import { AgencyVerificationStatus } from '../../types/agency';
-import { getSubmittedApplication } from '../../services/agencyOnboarding.service';
 
-/**
- * Agency Login Page
- * Route: /agency/login
- */
 export const AgencyLoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { loginAgency } = useAgencyAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (email && password) {
-      const submittedApp = getSubmittedApplication();
-      const status = (submittedApp?.status as AgencyVerificationStatus) || AgencyVerificationStatus.UNDER_REVIEW;
-
-      loginAgency(
-        {
-          id: 'ag-usr-001',
-          agencyId: 'ag-001',
-          name: 'Agency Owner',
-          email,
-          phone: '',
-          role: 'owner',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'ag-001',
-          name: submittedApp?.agencyName || 'My Agency',
-          slug: 'my-agency',
-          email,
-          phone: '',
-          country: 'India',
-          verificationStatus: status,
-          applicationId: submittedApp?.applicationId,
-          applicationSubmittedAt: submittedApp?.submittedAt,
-          rating: 0,
-          reviewCount: 0,
-          totalPackages: 0,
-          totalBookings: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        'mock-token-dev'
-      );
-
-      // Route according to AgencyVerificationStatus enum switch
-      switch (status) {
-        case AgencyVerificationStatus.PENDING:
-          navigate('/agency/onboarding');
-          break;
-        case AgencyVerificationStatus.UNDER_REVIEW:
-          navigate('/agency/verification-pending');
-          break;
-        case AgencyVerificationStatus.APPROVED: {
-          const hasSeenAnim = localStorage.getItem('apnatrip_agency_seen_approval_anim') === 'true';
-          if (!hasSeenAnim) {
-            navigate('/agency/onboarding/submitted');
-          } else {
-            navigate('/agency/dashboard');
-          }
-          break;
-        }
-        case AgencyVerificationStatus.REJECTED:
-          navigate('/agency/application-rejected');
-          break;
-        default:
-          navigate('/agency/verification-pending');
-          break;
-      }
-    } else {
+    if (!email.trim() || !password.trim()) {
       setError('Please enter your email and password.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await agencyApiClient.post<{
+        token: string;
+        user: any;
+        agency: any;
+        mustChangePassword?: boolean;
+      }>('/agencies/auth/login', {
+        email: email.trim(),
+        password: password.trim(),
+      }, { requiresAuth: false });
+
+      if (response.data && response.data.token) {
+        const { token, user, agency, mustChangePassword } = response.data;
+        loginAgency(user, agency, token);
+
+        const status = agency.verificationStatus as AgencyVerificationStatus;
+        const isApproved =
+          status === AgencyVerificationStatus.APPROVED ||
+          (status as any) === 'VERIFIED' ||
+          agency.status === 'ACTIVE';
+
+        if (isApproved) {
+          if (mustChangePassword || agency.passwordChanged === false) {
+            navigate('/agency/create-new-password', { replace: true });
+          } else {
+            const hasSeenAnim = localStorage.getItem('apnatrip_agency_seen_approval_anim') === 'true';
+            if (!hasSeenAnim) {
+              navigate('/agency/onboarding/submitted');
+            } else {
+              navigate('/agency/dashboard');
+            }
+          }
+        } else if (status === AgencyVerificationStatus.PENDING) {
+          navigate('/agency/onboarding');
+        } else if (status === AgencyVerificationStatus.REJECTED) {
+          navigate('/agency/application-rejected');
+        } else {
+          navigate('/agency/verification-pending');
+        }
+      } else {
+        setError(response.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (err: any) {
+      console.error('Agency login error:', err);
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center px-4 font-sans select-none">
-      <div className="w-full max-w-md space-y-6">
-        {/* Back */}
-        <button
-          onClick={() => navigate('/agency')}
-          className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#583BE8] transition-colors cursor-pointer"
+    <div className="min-h-screen bg-[#F8F9FC] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans select-none">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        {/* Brand / Logo */}
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#583BE8] text-white shadow-lg shadow-[#583BE8]/30 mb-4">
+          <Building2 className="w-6 h-6" />
+        </div>
+        <h2 className="text-2xl font-black tracking-tight text-[#0F172A]">
+          ApnaTrip Partner Portal
+        </h2>
+        <p className="mt-1 text-xs font-semibold text-slate-500">
+          Access your verified agency command center & operations
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white py-8 px-6 sm:px-10 shadow-sm border border-slate-100 rounded-3xl"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Agency Portal
-        </button>
-
-        {/* Card */}
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 space-y-6">
-          <div className="space-y-1">
-            <h1 className="text-xl font-black text-[#0F172A] tracking-tight">Agency Sign In</h1>
-            <p className="text-xs font-medium text-slate-400">Access your agency portal</p>
-          </div>
-
           {error && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-100 text-xs font-bold text-rose-600">
-              {error}
+            <div className="mb-6 p-3.5 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold flex items-center gap-2">
+              <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-600">Email Address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="agency@example.com"
-                className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-semibold text-[#0F172A] focus:outline-none focus:border-[#583BE8] focus:bg-white transition-all"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-600">Password</label>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {/* Email Field */}
+            <div>
+              <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                Registered Agency Email
+              </label>
               <div className="relative">
                 <input
-                  type={showPwd ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 pr-12 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-semibold text-[#0F172A] focus:outline-none focus:border-[#583BE8] focus:bg-white transition-all"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="contact@youragency.com"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#583BE8] focus:bg-white transition-colors"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-3.5 rounded-2xl bg-[#583BE8] hover:bg-[#492de0] text-white font-extrabold text-sm shadow-md shadow-[#583BE8]/20 transition-all cursor-pointer"
-            >
-              Sign In to Agency Portal
-            </button>
+            {/* Password Field */}
+            <div>
+              <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#583BE8] focus:bg-white transition-colors"
+                />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="flex justify-end mt-1.5">
+                <Link
+                  to="/agency/forgot-password"
+                  className="text-[11px] font-bold text-[#583BE8] hover:underline"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-[#583BE8] text-white text-xs font-extrabold shadow-md shadow-[#583BE8]/25 hover:bg-[#492de0] active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Sign In to Dashboard</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
           </form>
 
-          <p className="text-center text-xs font-medium text-slate-400">
-            Not registered?{' '}
-            <button
-              onClick={() => navigate('/agency/onboarding')}
-              className="text-[#583BE8] font-bold cursor-pointer"
-            >
-              Register your agency
-            </button>
-          </p>
-        </div>
+          {/* Footer info */}
+          <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col items-center gap-2 text-center">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <span>ApnaTrip Partner Verification System</span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium">
+              Want to partner with ApnaTrip?{' '}
+              <Link to="/agency/onboarding" className="text-[#583BE8] font-bold hover:underline">
+                Register Your Agency
+              </Link>
+            </p>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

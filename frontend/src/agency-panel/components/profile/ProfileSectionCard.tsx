@@ -8,7 +8,7 @@ interface ProfileSectionCardProps {
   subtitle: string;
   route?: string;
   badge?: string;
-  badgeType?: 'success' | 'purple';
+  badgeType?: 'success' | 'purple' | 'amber';
   onClick?: () => void;
 }
 
@@ -60,6 +60,8 @@ export const ProfileSectionCard: React.FC<ProfileSectionCardProps> = ({
             className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
               badgeType === 'success'
                 ? 'bg-emerald-100 text-emerald-700'
+                : badgeType === 'amber'
+                ? 'bg-amber-100 text-amber-700'
                 : 'bg-purple-100 text-[#583BE8]'
             }`}
           >

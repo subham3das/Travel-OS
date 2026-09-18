@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { apiClient } from './apiClient';
 
 export interface CloudinaryUploadResponse {
   secureUrl: string;
@@ -23,12 +23,9 @@ export class CloudinaryUploadService {
     return CloudinaryUploadService.instance;
   }
 
-  private getAuthToken(): string | null {
-    return localStorage.getItem('apnatrip_access_token');
-  }
-
   /**
    * Upload a single image to Cloudinary via backend API
+   * Used for both public onboarding/registration and authenticated uploads
    */
   public async uploadImage(
     file: File,
@@ -42,28 +39,15 @@ export class CloudinaryUploadService {
       formData.append('oldPublicId', oldPublicId);
     }
 
-    const headers: Record<string, string> = {};
-    const token = this.getAuthToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/upload/image`, {
-      method: 'POST',
-      headers,
-      body: formData,
+    const res = await apiClient.post<CloudinaryUploadResponse>('/upload/image', formData, {
+      requiresAuth: false,
     });
 
-    const data = await response.json().catch(() => ({
-      success: false,
-      message: 'Invalid response from upload server',
-    }));
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.message || 'Failed to upload image to Cloudinary');
+    if (!res.data) {
+      throw new Error(res.message || 'Failed to upload image to Cloudinary');
     }
 
-    return data.data as CloudinaryUploadResponse;
+    return res.data;
   }
 
   /**
@@ -79,28 +63,11 @@ export class CloudinaryUploadService {
     });
     formData.append('folder', folder);
 
-    const headers: Record<string, string> = {};
-    const token = this.getAuthToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/upload/multiple`, {
-      method: 'POST',
-      headers,
-      body: formData,
+    const res = await apiClient.post<{ images: CloudinaryUploadResponse[] }>('/upload/multiple', formData, {
+      requiresAuth: false,
     });
 
-    const data = await response.json().catch(() => ({
-      success: false,
-      message: 'Invalid response from upload server',
-    }));
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.message || 'Failed to upload images to Cloudinary');
-    }
-
-    return (data.data?.images || []) as CloudinaryUploadResponse[];
+    return res.data?.images || [];
   }
 
   /**
@@ -110,54 +77,27 @@ export class CloudinaryUploadService {
     const formData = new FormData();
     formData.append('photo', file);
 
-    const headers: Record<string, string> = {};
-    const token = this.getAuthToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/profile/photo`, {
-      method: 'POST',
-      headers,
-      body: formData,
+    const res = await apiClient.post<{ avatarUrl: string; publicId?: string }>('/profile/photo', formData, {
+      requiresAuth: true,
     });
 
-    const data = await response.json().catch(() => ({
-      success: false,
-      message: 'Invalid response from profile server',
-    }));
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.message || 'Failed to upload profile photo');
+    if (!res.data) {
+      throw new Error(res.message || 'Failed to upload profile photo');
     }
 
-    return data.data as { avatarUrl: string; publicId?: string };
+    return res.data;
   }
 
   /**
    * Delete an image from Cloudinary
    */
   public async deleteImage(publicId: string): Promise<{ success: boolean; message?: string }> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    const token = this.getAuthToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/upload/delete`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ publicId }),
-    });
-
-    const data = await response.json().catch(() => ({
-      success: false,
-      message: 'Failed to delete asset',
-    }));
-
-    return data;
+    const res = await apiClient.post<{ success: boolean; message?: string }>(
+      '/upload/delete',
+      { publicId },
+      { requiresAuth: false }
+    );
+    return res;
   }
 }
 

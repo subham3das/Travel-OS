@@ -3,44 +3,46 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAgencyAuthContext } from '../services/agencyAuth.service';
-import { getSubmittedApplication } from '../services/agencyOnboarding.service';
 import { AgencyVerificationStatus } from '../types/agency';
 
 /**
  * Protects all authenticated Agency Panel routes (e.g. /agency/dashboard, /agency/bookings).
- * An agency MUST be authenticated AND have AgencyVerificationStatus.APPROVED
+ * An agency MUST be authenticated AND have AgencyVerificationStatus.APPROVED / ACTIVE
  * to access protected dashboard features.
+ * Also enforces mandatory password creation before accessing protected dashboard.
  */
 export const AgencyProtectedRoute: React.FC = () => {
-  const { isAuthenticated, agency } = useAgencyAuthContext();
-  const submittedApp = getSubmittedApplication();
+  const { isAuthenticated, agency, token } = useAgencyAuthContext();
 
-  // Determine current verification status strictly using AgencyVerificationStatus enum
-  const status: AgencyVerificationStatus =
-    agency?.verificationStatus ||
-    (submittedApp?.status as AgencyVerificationStatus) ||
-    AgencyVerificationStatus.APPROVED;
+  // If not authenticated or token missing, immediately redirect to login
+  if (!isAuthenticated || !agency || !token) {
+    return <Navigate to="/agency/login" replace />;
+  }
 
-  // Allow direct access in preview/dev mode or when approved
-  if (!isAuthenticated && !submittedApp) {
+  const rawStatus = String(agency.verificationStatus || '');
+  const isApproved =
+    rawStatus === 'APPROVED' ||
+    rawStatus === 'VERIFIED' ||
+    agency.verificationStatus === AgencyVerificationStatus.APPROVED ||
+    agency.status === 'ACTIVE';
+
+  if (isApproved) {
+    // Mandatory first login password change enforcement
+    if (agency.passwordChanged === false) {
+      return <Navigate to="/agency/create-new-password" replace />;
+    }
     return <Outlet />;
   }
 
-  // Handle route protection based on AgencyVerificationStatus enum
-  switch (status) {
-    case AgencyVerificationStatus.PENDING:
-      return <Navigate to="/agency/onboarding" replace />;
-
-    case AgencyVerificationStatus.UNDER_REVIEW:
-      return <Navigate to="/agency/verification-pending" replace />;
-
-    case AgencyVerificationStatus.REJECTED:
-      return <Navigate to="/agency/application-rejected" replace />;
-
-    case AgencyVerificationStatus.APPROVED:
-      return <Outlet />;
-
-    default:
-      return <Outlet />;
+  if (rawStatus === 'PENDING' || agency.verificationStatus === AgencyVerificationStatus.PENDING) {
+    return <Navigate to="/agency/onboarding" replace />;
   }
+
+  if (rawStatus === 'REJECTED' || agency.verificationStatus === AgencyVerificationStatus.REJECTED) {
+    return <Navigate to="/agency/application-rejected" replace />;
+  }
+
+  return <Navigate to="/agency/verification-pending" replace />;
 };
+
+export default AgencyProtectedRoute;

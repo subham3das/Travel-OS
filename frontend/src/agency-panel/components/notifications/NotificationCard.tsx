@@ -124,57 +124,69 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
           </button>
 
           {showMenu && (
-            <div className="absolute right-0 mt-1 w-40 bg-white rounded-2xl border border-slate-100 shadow-xl py-1.5 z-20 animate-in fade-in zoom-in-95 duration-100">
-              {notification.isUnread ? (
+            <>
+              <div
+                className="fixed inset-0 z-10 bg-transparent"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(false);
+                }}
+              />
+              <div
+                className="absolute right-0 mt-1 w-40 bg-white rounded-2xl border border-slate-100 shadow-xl py-1.5 z-20 animate-in fade-in zoom-in-95 duration-100"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {notification.isUnread ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onMarkAsRead(notification.id);
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>Mark as Read</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onMarkAsUnread(notification.id);
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
+                  >
+                    <EyeOff className="w-3.5 h-3.5" />
+                    <span>Mark as Unread</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
-                    onMarkAsRead(notification.id);
+                    onArchive(notification.id);
                     setShowMenu(false);
                   }}
-                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
+                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                 >
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <span>Mark as Read</span>
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>Archive</span>
                 </button>
-              ) : (
+
                 <button
                   type="button"
                   onClick={() => {
-                    onMarkAsUnread(notification.id);
+                    onDelete(notification.id);
                     setShowMenu(false);
                   }}
-                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
+                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
                 >
-                  <EyeOff className="w-3.5 h-3.5" />
-                  <span>Mark as Unread</span>
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
                 </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => {
-                  onArchive(notification.id);
-                  setShowMenu(false);
-                }}
-                className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-              >
-                <Archive className="w-3.5 h-3.5" />
-                <span>Archive</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onDelete(notification.id);
-                  setShowMenu(false);
-                }}
-                className="w-full px-3.5 py-2 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 border-t border-slate-100 mt-1 pt-2"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete</span>
-              </button>
-            </div>
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -1,8 +1,26 @@
+import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-// Load environment variables from .env file
-dotenv.config();
+// Load environment variables from .env file with explicit path resolution
+const envCandidates = [
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), 'backend', '.env'),
+];
+
+let loadedEnvPath: string | null = null;
+for (const envPath of envCandidates) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    loadedEnvPath = envPath;
+    break;
+  }
+}
+
+if (!loadedEnvPath) {
+  dotenv.config();
+}
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
@@ -10,10 +28,11 @@ const envSchema = z.object({
   APP_NAME: z.string().default('TravelOS_API'),
   API_PREFIX: z.string().default('/api'),
   CLIENT_URL: z.string().default('http://localhost:5173'),
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
   ADMIN_URL: z.string().default('http://localhost:5173/admin'),
 
   // MongoDB Configuration
-  MONGODB_URI: z.string().default('mongodb://127.0.0.1:27017/travelos_db'),
+  MONGODB_URI: z.string().min(1, 'MONGODB_URI is required').default('mongodb://127.0.0.1:27017/travelos_db'),
   MONGODB_MAX_POOL_SIZE: z.string().default('50').transform((val) => parseInt(val, 10)),
 
   // JWT Configuration
@@ -62,3 +81,15 @@ if (!_env.success) {
 
 export const envConfig = _env.data;
 export type EnvConfig = z.infer<typeof envSchema>;
+
+/**
+ * Mask passwords/credentials in MongoDB connection URIs for safe logging
+ */
+export const maskMongoUri = (uri: string): string => {
+  if (!uri) return '';
+  try {
+    return uri.replace(/(mongodb(?:\+srv)?:\/\/[^:]+:)([^@]+)(@.+)/i, '$1******$3');
+  } catch {
+    return 'mongodb://******';
+  }
+};

@@ -47,30 +47,36 @@ export const RecentActivityCard: React.FC<RecentActivityCardProps> = ({
       </div>
 
       {/* Timeline Items */}
-      <div className="space-y-4">
-        {activities.map((item) => (
-          <div key={item.id} className="flex items-start gap-3 group cursor-pointer">
-            <div
-              className={`w-9 h-9 rounded-2xl ${item.bgColor} flex items-center justify-center shrink-0 border shadow-2xs group-hover:scale-105 transition-transform`}
-            >
-              {getIcon(item.type)}
-            </div>
+      {activities.length === 0 ? (
+        <div className="py-8 text-center text-xs font-semibold text-slate-400">
+          No recent activity records found in MongoDB audit logs.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {activities.map((item) => (
+            <div key={item.id} className="flex items-start gap-3 group cursor-pointer">
+              <div
+                className={`w-9 h-9 rounded-2xl ${item.bgColor} flex items-center justify-center shrink-0 border shadow-2xs group-hover:scale-105 transition-transform`}
+              >
+                {getIcon(item.type)}
+              </div>
 
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-extrabold text-[#0F172A] truncate leading-tight group-hover:text-[#6356E5] transition-colors">
-                {item.title}
-              </p>
-              <p className="text-[11px] font-semibold text-slate-400 leading-tight mt-0.5">
-                {item.subtitle}
-              </p>
-            </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-extrabold text-[#0F172A] truncate leading-tight group-hover:text-[#6356E5] transition-colors">
+                  {item.title}
+                </p>
+                <p className="text-[11px] font-semibold text-slate-400 leading-tight mt-0.5">
+                  {item.subtitle}
+                </p>
+              </div>
 
-            <span className="text-[10px] font-bold text-slate-400 shrink-0 whitespace-nowrap pt-0.5">
-              {item.timestamp}
-            </span>
-          </div>
-        ))}
-      </div>
+              <span className="text-[10px] font-bold text-slate-400 shrink-0 whitespace-nowrap pt-0.5">
+                {item.timestamp}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

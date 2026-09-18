@@ -16,7 +16,7 @@ export const CustomerHeader: React.FC<CustomerHeaderProps> = ({
   const navigate = useNavigate();
 
   return (
-    <div className="bg-white border-b border-slate-100/80 sticky top-0 z-30 select-none">
+    <div className="bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-[57px] sm:top-[65px] z-20 select-none">
 
 
       {/* Main Title & Action Row */}

@@ -32,6 +32,7 @@ export interface RoleMemberItem {
 export interface RoleItem {
   id: string;
   name: string;
+  slug?: string;
   type: RoleType;
   description: string;
   userCount: number;

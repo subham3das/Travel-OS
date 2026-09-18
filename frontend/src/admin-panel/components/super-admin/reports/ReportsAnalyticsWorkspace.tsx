@@ -40,7 +40,7 @@ export const ReportsAnalyticsWorkspace: React.FC<ReportsAnalyticsWorkspaceProps>
   const heatmapHours = ['12 AM', '4 AM', '8 AM', '12 PM', '4 PM', '8 PM', '12 AM'];
 
   // ── 1. Revenue Spline generator ──
-  const maxRevenue = 20;
+  const maxRevenue = Math.max(20, ...revenueTrend.map(d => Math.max(d.thisPeriod, d.lastPeriod)));
   const generateRevenuePath = (key: 'thisPeriod' | 'lastPeriod') => {
     const pts = revenueTrend.map((d, idx) => {
       const x = (idx / Math.max(revenueTrend.length - 1, 1)) * 100;
@@ -95,7 +95,7 @@ export const ReportsAnalyticsWorkspace: React.FC<ReportsAnalyticsWorkspaceProps>
               <path d={pathLast} fill="none" stroke="#C4B5FD" strokeWidth="1.8" strokeDasharray="3 3" strokeLinecap="round" />
               <path d={pathThis} fill="none" stroke="#6356E5" strokeWidth="2.5" strokeLinecap="round" />
               {revenueTrend.map((d, i) => {
-                const cx = (i / (revenueTrend.length - 1)) * 100;
+                const cx = (i / Math.max(revenueTrend.length - 1, 1)) * 100;
                 const cy = 100 - (d.thisPeriod / maxRevenue) * 85;
                 return <circle key={i} cx={cx} cy={cy} r="3" fill="#6356E5" />;
               })}
@@ -124,7 +124,7 @@ export const ReportsAnalyticsWorkspace: React.FC<ReportsAnalyticsWorkspaceProps>
               <div key={day} className="flex items-center gap-1">
                 <span className="w-5 text-[8px] font-mono font-bold text-slate-400">{day}</span>
                 <div className="grid grid-cols-7 gap-1 flex-1">
-                  {heatmapMatrix[dIdx].map((val, hIdx) => (
+                  {(heatmapMatrix[dIdx] || []).map((val, hIdx) => (
                     <div
                       key={hIdx}
                       className="h-2.5 rounded-sm"

@@ -7,12 +7,12 @@ import {
   AlertTriangle,
   FileSearch,
   ArrowRight,
-  ExternalLink,
+  ShieldAlert,
 } from 'lucide-react';
 import { AuditLogItem } from '../../../types/auditLogsManagement';
 
 interface EventInspectorSidebarProps {
-  log: AuditLogItem;
+  log?: AuditLogItem | null;
   onClose?: () => void;
   onExportEvent: () => void;
   onCopyEventId: () => void;
@@ -28,6 +28,31 @@ export const EventInspectorSidebar: React.FC<EventInspectorSidebarProps> = ({
   onFlagInvestigation,
   onViewRelatedLogs,
 }) => {
+  if (!log) {
+    return (
+      <div className="bg-white rounded-3xl p-6 border border-slate-100/90 shadow-2xs space-y-3 text-center select-none">
+        <Shield className="w-8 h-8 text-slate-300 mx-auto" />
+        <h3 className="text-xs font-black text-slate-700">No Event Selected</h3>
+        <p className="text-[11px] text-slate-400 font-medium">
+          Select any audit event on the timeline to inspect its full forensic telemetry.
+        </p>
+      </div>
+    );
+  }
+
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case 'High':
+      case 'Critical':
+        return 'bg-rose-50 text-rose-600 border-rose-200';
+      case 'Medium':
+        return 'bg-orange-50 text-orange-600 border-orange-200';
+      case 'Low':
+      default:
+        return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+    }
+  };
+
   return (
     <div className="bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs space-y-3.5 select-none">
       {/* ── Header ── */}
@@ -73,7 +98,7 @@ export const EventInspectorSidebar: React.FC<EventInspectorSidebarProps> = ({
 
           <div className="flex justify-between items-center pt-1 border-t border-slate-200/60 text-[11px]">
             <span className="text-slate-400">Severity</span>
-            <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-600 text-[10px] font-black border border-emerald-200">
+            <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-black border ${getSeverityBadge(log.severity)}`}>
               {log.severity}
             </span>
           </div>
@@ -101,7 +126,7 @@ export const EventInspectorSidebar: React.FC<EventInspectorSidebarProps> = ({
               />
             ) : (
               <div className="w-8 h-8 rounded-full bg-[#6356E5] text-white font-bold text-xs flex items-center justify-center">
-                SYS
+                {log.actor.isSystem ? 'SYS' : log.actor.name?.charAt(0) || 'A'}
               </div>
             )}
 
@@ -116,7 +141,7 @@ export const EventInspectorSidebar: React.FC<EventInspectorSidebarProps> = ({
           </div>
 
           <div className="text-[10px] font-mono text-slate-500 space-y-0.5 pt-1 border-t border-slate-200/60">
-            <p className="truncate">{log.actor.email}</p>
+            {log.actor.email && <p className="truncate">{log.actor.email}</p>}
             <p className="font-bold text-slate-700">User ID: {log.actor.userId}</p>
           </div>
         </div>

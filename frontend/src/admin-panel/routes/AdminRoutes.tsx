@@ -1,12 +1,15 @@
 // ─── Super Admin Panel Route Definitions ──────────────────────────────────────
-// All routes prefixed with /admin
+// All routes prefixed with /admin and /super-admin
+// Wrapped inside isolated SuperAdminThemeProvider
 
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Outlet } from 'react-router-dom';
 import { AdminProtectedRoute } from './AdminProtectedRoute';
 import { AdminLayout } from '../layouts/AdminLayout/AdminLayout';
+import { SuperAdminThemeProvider } from '../context/SuperAdminThemeContext';
 
 import { AdminLoginPage } from '../pages/Login/AdminLoginPage';
+import { AdminResetPasswordPage } from '../pages/Login/AdminResetPasswordPage';
 import { AdminDashboardPage } from '../pages/Dashboard/AdminDashboardPage';
 import { AdminAgenciesPage } from '../pages/Agencies/AdminAgenciesPage';
 import { AdminAgencyDetailsPage } from '../pages/AgencyDetails/AdminAgencyDetailsPage';
@@ -30,16 +33,22 @@ import { AdminProfilePage } from '../pages/Profile/AdminProfilePage';
 import { AdminNotFoundPage } from '../pages/NotFound/AdminNotFoundPage';
 
 /**
- * Returns all Super Admin Panel route elements to be embedded inside <Routes>.
- * Usage in App.tsx:
- *   <>
- *     {AdminRoutes()}
- *   </>
+ * Isolated Super Admin Theme Wrapper
+ */
+const SuperAdminThemeWrapper: React.FC = () => (
+  <SuperAdminThemeProvider>
+    <Outlet />
+  </SuperAdminThemeProvider>
+);
+
+/**
+ * Returns all Super Admin Panel route elements wrapped in SuperAdminThemeProvider.
  */
 export const AdminRoutes = () => (
-  <>
+  <Route element={<SuperAdminThemeWrapper />}>
     {/* Public Admin Routes */}
     <Route path="/admin/login" element={<AdminLoginPage />} />
+    <Route path="/admin/reset-password" element={<AdminResetPasswordPage />} />
 
     {/* Protected Admin Routes embedded in AdminLayout */}
     <Route element={<AdminProtectedRoute />}>
@@ -91,5 +100,5 @@ export const AdminRoutes = () => (
     {/* Fallback 404 for Admin Panel */}
     <Route path="/admin/*" element={<AdminNotFoundPage />} />
     <Route path="/super-admin/*" element={<AdminNotFoundPage />} />
-  </>
+  </Route>
 );

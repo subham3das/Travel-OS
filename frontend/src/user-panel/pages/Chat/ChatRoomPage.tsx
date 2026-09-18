@@ -15,6 +15,8 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import { getChatById, sendMessage, markChatRead, ChatConversation, ChatMessage } from '../../data/chats';
+import { customerChatService } from '../../services/customerChat.service';
+import { userSocketService } from '../../services/userSocket.service';
 import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
 
 export const ChatRoomPage: React.FC = () => {
@@ -28,20 +30,64 @@ export const ChatRoomPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    markChatRead(chat.id);
-  }, [chat.id]);
+    let isMounted = true;
+    const targetChatId = chatId || 'chat-001';
+
+    customerChatService.getConversationById(targetChatId).then((liveConv) => {
+      if (isMounted && liveConv) {
+        setChat(liveConv);
+      }
+    });
+
+    userSocketService.joinConversation(targetChatId);
+
+    const unsubscribe = userSocketService.subscribe('message:new', (data: any) => {
+      if (!isMounted) return;
+      if (data.conversationId === targetChatId && data.message) {
+        setChat((prev) => {
+          const exists = prev.messages.some((m) => m.id === data.message.id);
+          if (exists) return prev;
+          return {
+            ...prev,
+            messages: [...prev.messages, data.message],
+            lastMessage: data.message.text,
+          };
+        });
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      userSocketService.leaveConversation(targetChatId);
+      unsubscribe();
+    };
+  }, [chatId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat.messages]);
 
-  const handleSend = (textToSend?: string) => {
+  const handleSend = async (textToSend?: string) => {
     const text = textToSend || inputText;
     if (!text.trim()) return;
 
-    sendMessage(chat.id, text.trim());
-    setChat({ ...getChatById(chat.id)! });
     setInputText('');
+    try {
+      const sentMsg = await customerChatService.sendMessage(chat.id, text.trim());
+      setChat((prev) => {
+        const exists = prev.messages.some((m) => m.id === sentMsg.id);
+        if (exists) return prev;
+        return {
+          ...prev,
+          messages: [...prev.messages, sentMsg],
+          lastMessage: sentMsg.text,
+        };
+      });
+    } catch {
+      sendMessage(chat.id, text.trim());
+      const updated = getChatById(chat.id);
+      if (updated) setChat({ ...updated });
+    }
   };
 
   const quickReplies = [

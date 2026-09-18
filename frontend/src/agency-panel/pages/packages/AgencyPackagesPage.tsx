@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
 import { DesktopSidebar } from '../../components/dashboard/DesktopSidebar';
@@ -10,7 +10,8 @@ import { PackageFilters, PackageFilterType } from '../../components/packages/Pac
 import { PackageCard } from '../../components/packages/PackageCard';
 import { EmptyPackagesState } from '../../components/packages/EmptyPackagesState';
 import { CreatePackageCTA } from '../../components/packages/CreatePackageCTA';
-import { MOCK_AGENCY_PACKAGES, AgencyPackage } from '../../data/packages';
+import { agencyPackagesService, AgencyPackage, AgencyPackageStats } from '../../services/agencyPackages.service';
+import { Loader2 } from 'lucide-react';
 
 /**
  * Agency Package Management Page
@@ -19,39 +20,35 @@ import { MOCK_AGENCY_PACKAGES, AgencyPackage } from '../../data/packages';
 export const AgencyPackagesPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const [packagesList, setPackagesList] = useState<AgencyPackage[]>(MOCK_AGENCY_PACKAGES);
+  const [packagesList, setPackagesList] = useState<AgencyPackage[]>([]);
+  const [stats, setStats] = useState<AgencyPackageStats>({ total: 0, published: 0, draft: 0, archived: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<PackageFilterType>('All');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Computed summary statistics
-  const stats = useMemo(() => {
-    const total = packagesList.length;
-    const published = packagesList.filter((p) => p.status === 'Active').length;
-    const draft = packagesList.filter((p) => p.status === 'Draft').length;
-    const archived = packagesList.filter((p) => p.status === 'Hidden' || p.status === 'Archived').length;
-    return { total, published, draft, archived };
-  }, [packagesList]);
+  const fetchPackages = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const [pkgsRes, statsRes] = await Promise.all([
+        agencyPackagesService.getPackages({
+          search: searchTerm || undefined,
+          status: activeFilter !== 'All' ? activeFilter : undefined,
+        }),
+        agencyPackagesService.getPackageStats(),
+      ]);
 
-  // Filtered packages
-  const filteredPackages = useMemo(() => {
-    return packagesList.filter((p) => {
-      const query = searchTerm.toLowerCase().trim();
-      const matchesSearch =
-        !query ||
-        p.packageName.toLowerCase().includes(query) ||
-        p.destination.toLowerCase().includes(query) ||
-        p.packageId.toLowerCase().includes(query);
+      setPackagesList(pkgsRes.items || []);
+      setStats(statsRes);
+    } catch (err) {
+      console.error('Failed to load agency packages:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchTerm, activeFilter]);
 
-      let matchesFilter = true;
-      if (activeFilter === 'Active') matchesFilter = p.status === 'Active';
-      else if (activeFilter === 'Draft') matchesFilter = p.status === 'Draft';
-      else if (activeFilter === 'Hidden') matchesFilter = p.status === 'Hidden' || p.status === 'Archived';
-      else if (activeFilter === 'Domestic') matchesFilter = p.packageType === 'Domestic';
-      else if (activeFilter === 'International') matchesFilter = p.packageType === 'International';
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [packagesList, searchTerm, activeFilter]);
+  useEffect(() => {
+    fetchPackages();
+  }, [fetchPackages]);
 
   // Action handlers
   const handleCreatePackage = () => {
@@ -66,42 +63,41 @@ export const AgencyPackagesPage: React.FC = () => {
     navigate(`/agency/packages/${packageId}/edit`);
   };
 
-  const handleDuplicatePackage = (id: string) => {
-    const target = packagesList.find((p) => p.id === id);
-    if (!target) return;
-    const newPkg: AgencyPackage = {
-      ...target,
-      id: `pkg-${Date.now()}`,
-      packageId: `PKG-${Math.floor(1000 + Math.random() * 9000)}`,
-      packageName: `${target.packageName} (Copy)`,
-      status: 'Draft',
-      bookings: 0,
-      rating: 0,
-      reviewCount: 0,
-      lastUpdated: 'Just now',
-    };
-    setPackagesList((prev) => [newPkg, ...prev]);
-    alert(`Created duplicate draft: "${newPkg.packageName}"`);
-  };
-
-  const handleArchivePackage = (id: string) => {
-    setPackagesList((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: 'Archived' } : p))
-    );
-  };
-
-  const handleHidePackage = (id: string) => {
-    setPackagesList((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, status: p.status === 'Hidden' ? 'Active' : 'Hidden' } : p
-      )
-    );
-  };
-
-  const handleDeletePackage = (id: string) => {
-    if (confirm('Are you sure you want to delete this package?')) {
-      setPackagesList((prev) => prev.filter((p) => p.id !== id));
+  const handleDuplicatePackage = async (id: string) => {
+    try {
+      const cloned = await agencyPackagesService.duplicatePackage(id);
+      setPackagesList((prev) => [cloned, ...prev]);
+      setStats((prev) => ({ ...prev, draft: prev.draft + 1, total: prev.total + 1 }));
+    } catch (err) {
+      console.error('Error duplicating package:', err);
     }
+  };
+
+  const handleArchivePackage = async (id: string) => {
+    try {
+      const updated = await agencyPackagesService.updatePackageStatus(id, 'Archived');
+      setPackagesList((prev) => prev.map((p) => (p.id === id || p.packageId === id ? updated : p)));
+      fetchPackages();
+    } catch (err) {
+      console.error('Error archiving package:', err);
+    }
+  };
+
+  const handleHidePackage = async (id: string) => {
+    try {
+      const current = packagesList.find((p) => p.id === id || p.packageId === id);
+      const nextStatus = current?.status === 'Hidden' ? 'Active' : 'Hidden';
+      const updated = await agencyPackagesService.updatePackageStatus(id, nextStatus);
+      setPackagesList((prev) => prev.map((p) => (p.id === id || p.packageId === id ? updated : p)));
+      fetchPackages();
+    } catch (err) {
+      console.error('Error toggling package visibility:', err);
+    }
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setActiveFilter('All');
   };
 
   return (
@@ -109,16 +105,16 @@ export const AgencyPackagesPage: React.FC = () => {
       {/* Desktop Sidebar */}
       <DesktopSidebar />
 
-      {/* Main Content Shell */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-28 md:pb-24">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-20 md:pb-12">
+        {/* Top Header */}
         <DashboardHeader />
 
-        {/* Sticky Sub Header */}
+        {/* Sticky Packages Actions Header */}
         <PackagesHeader onCreatePackage={handleCreatePackage} />
 
-        {/* Main Body */}
-        <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 space-y-5 max-w-5xl mx-auto w-full">
-          {/* Summary Stats Cards */}
+        <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 space-y-6 max-w-7xl mx-auto w-full">
+          {/* Summary Stats Grid */}
           <PackageStats
             total={stats.total}
             published={stats.published}
@@ -126,53 +122,48 @@ export const AgencyPackagesPage: React.FC = () => {
             archived={stats.archived}
           />
 
-          {/* Search + Filter Chips */}
+          {/* Search & Filter Controls */}
           <div className="space-y-3">
             <PackageSearch
               value={searchTerm}
               onChange={setSearchTerm}
-              filterCount={activeFilter !== 'All' ? 1 : 0}
-              onFilterClick={() => alert('Filter options — coming soon')}
             />
+
             <PackageFilters
               activeFilter={activeFilter}
               onChange={setActiveFilter}
             />
           </div>
 
-          {/* Packages List */}
-          <div className="space-y-3.5">
-            {filteredPackages.length > 0 ? (
-              <>
-                {filteredPackages.map((pkg, idx) => (
-                  <PackageCard
-                    key={pkg.id}
-                    pkg={pkg}
-                    index={idx}
-                    onView={handleViewPackage}
-                    onEdit={handleEditPackage}
-                    onDuplicate={handleDuplicatePackage}
-                    onArchive={handleArchivePackage}
-                    onHide={handleHidePackage}
-                    onDelete={handleDeletePackage}
-                  />
-                ))}
+          {/* Packages List Grid or Empty State */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 space-y-3 text-slate-400">
+              <Loader2 className="w-8 h-8 animate-spin text-[#583BE8]" />
+              <p className="text-xs font-bold text-slate-500">Loading tour packages...</p>
+            </div>
+          ) : packagesList.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {packagesList.map((pkg, idx) => (
+                <PackageCard
+                  key={pkg.id || pkg.packageId}
+                  pkg={pkg}
+                  index={idx}
+                  onView={handleViewPackage}
+                  onEdit={handleEditPackage}
+                  onDuplicate={handleDuplicatePackage}
+                  onArchive={handleArchivePackage}
+                  onHide={handleHidePackage}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyPackagesState
+              onCreatePackage={handleCreatePackage}
+            />
+          )}
 
-                {/* Bottom CTA Card */}
-                <CreatePackageCTA onCreatePackage={handleCreatePackage} />
-              </>
-            ) : (
-              <EmptyPackagesState
-                onCreatePackage={handleCreatePackage}
-                title={searchTerm ? 'No matching packages found' : 'No Packages Yet'}
-                subtitle={
-                  searchTerm
-                    ? 'Try searching for a different keyword or resetting your filters.'
-                    : 'Create your first travel package and start receiving bookings.'
-                }
-              />
-            )}
-          </div>
+          {/* Quick Create CTA Bar (Mobile only) */}
+          <CreatePackageCTA onCreatePackage={handleCreatePackage} />
         </main>
       </div>
 

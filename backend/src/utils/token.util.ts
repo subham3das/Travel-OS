@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { jwtConfig } from '../config/jwt.config.js';
 import { UnauthorizedError } from './errors.util.js';
 
@@ -18,6 +19,7 @@ export class TokenUtil {
       algorithm: jwtConfig.algorithm,
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience,
+      jwtid: crypto.randomUUID(),
     });
   }
 
@@ -27,6 +29,7 @@ export class TokenUtil {
       algorithm: jwtConfig.algorithm,
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience,
+      jwtid: crypto.randomUUID(),
     });
   }
 

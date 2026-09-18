@@ -26,6 +26,8 @@ import {
   Menu,
 } from 'lucide-react';
 
+import { adminAgencyRequestService } from '../../services/adminAgencyRequest.service';
+
 interface SidebarItem {
   id: string;
   label: string;
@@ -45,11 +47,33 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number | undefined>(undefined);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    adminAgencyRequestService
+      .getSummaryStats()
+      .then((stats) => {
+        if (isMounted && stats?.pendingRequests?.count !== undefined) {
+          setPendingRequestsCount(stats.pendingRequests.count);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [location.pathname]);
 
   const navItems: SidebarItem[] = [
     { id: 'dashboard', label: 'Dashboard', path: '/admin', icon: <LayoutDashboard className="w-4.5 h-4.5" /> },
     { id: 'agencies', label: 'Agencies', path: '/admin/agencies', icon: <Building2 className="w-4.5 h-4.5" /> },
-    { id: 'requests', label: 'Agency Requests', path: '/admin/verification-pending', icon: <UserCheck className="w-4.5 h-4.5" />, badge: 23 },
+    {
+      id: 'requests',
+      label: 'Agency Requests',
+      path: '/admin/verification-pending',
+      icon: <UserCheck className="w-4.5 h-4.5" />,
+      badge: pendingRequestsCount && pendingRequestsCount > 0 ? pendingRequestsCount : undefined,
+    },
     { id: 'users', label: 'Users', path: '/admin/users', icon: <Users className="w-4.5 h-4.5" /> },
     { id: 'packages', label: 'Packages', path: '/admin/packages', icon: <Package className="w-4.5 h-4.5" /> },
     { id: 'bookings', label: 'Bookings', path: '/admin/bookings', icon: <CalendarCheck className="w-4.5 h-4.5" /> },

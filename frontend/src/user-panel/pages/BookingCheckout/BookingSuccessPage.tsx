@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Calendar, MapPin, Download, ArrowRight, Home } from 'lucide-react';
+import { bookingService } from '../../services/booking.service';
 
 export const BookingSuccessPage: React.FC = () => {
   const navigate = useNavigate();
@@ -9,14 +10,31 @@ export const BookingSuccessPage: React.FC = () => {
 
   const stateData = location.state || {};
   const displayBookingId = bookingId || stateData.bookingId || 'BK-782910';
-  const paymentId = stateData.paymentId || 'pay_9812479128';
-  const pkg = stateData.pkg || {
+  const [liveBooking, setLiveBooking] = useState<any>(null);
+
+  useEffect(() => {
+    if (displayBookingId && displayBookingId !== 'BK-782910') {
+      bookingService.getBookingById(displayBookingId).then((res) => {
+        if (res) setLiveBooking(res);
+      }).catch((err) => {
+        console.warn('Could not fetch live booking:', err);
+      });
+    }
+  }, [displayBookingId]);
+
+  const paymentId = stateData.paymentId || liveBooking?.transactionId || 'pay_9812479128';
+  const pkg = liveBooking ? {
+    title: liveBooking.packageName || '7-Day Meghalaya Waterfall & Cave Trail',
+    agencyName: liveBooking.agencyName || 'Himalayan Explorers',
+    coverImage: liveBooking.packageThumbnail || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
+    duration: liveBooking.durationText || '7 Days / 6 Nights',
+  } : (stateData.pkg || {
     title: '7-Day Meghalaya Waterfall & Cave Trail',
     agencyName: 'Himalayan Explorers',
     coverImage: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
     duration: '7 Days / 6 Nights',
-  };
-  const totalAmount = stateData.totalAmount || 25495;
+  });
+  const totalAmount = liveBooking?.totalAmount || liveBooking?.paidAmount || stateData.totalAmount || 25495;
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col items-center justify-center p-4 font-sans">

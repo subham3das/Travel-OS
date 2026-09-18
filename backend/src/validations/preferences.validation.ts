@@ -4,6 +4,8 @@ export const TravelPreferencesSchema = z.object({
   travelInterests: z.array(z.string()).min(1, 'Please select at least 1 travel interest'),
   travelStyle: z.array(z.string()).min(1, 'Please select at least 1 travel style'),
   budgetPreference: z.string().min(1, 'Budget preference is required'),
+  preferredBudgetAmount: z.number().min(1000).max(10000000).optional(),
+  preferredBudgetTier: z.enum(['Budget', 'Comfort', 'Luxury', 'Mid Range']).optional(),
   preferredTripDuration: z.array(z.string()).min(1, 'Preferred trip duration is required'),
   preferredTransportation: z.array(z.string()).min(1, 'Preferred transportation is required'),
   foodPreference: z.string().min(1, 'Food preference is required'),

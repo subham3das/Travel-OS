@@ -4,60 +4,109 @@ import {
   QuickCommandItem,
   RecentSearchItem,
 } from '../types/globalSearch';
-import {
-  indexedGlobalSearchResults,
-  initialQuickCommands,
-  initialRecentSearches,
-} from '../data/globalSearchData';
+import { adminApiClient } from './adminApiClient';
+
+export const initialQuickCommands: QuickCommandItem[] = [
+  {
+    id: 'cmd-agency',
+    title: 'Create Agency',
+    description: 'Add a new travel agency',
+    iconType: 'agency',
+    targetRoute: '/admin/agencies',
+    actionType: 'create_agency',
+  },
+  {
+    id: 'cmd-package',
+    title: 'New Package',
+    description: 'Create a new tour package',
+    iconType: 'package',
+    targetRoute: '/admin/packages',
+    actionType: 'create_package',
+  },
+  {
+    id: 'cmd-booking',
+    title: 'New Booking',
+    description: 'Create a new booking',
+    iconType: 'booking',
+    targetRoute: '/admin/bookings',
+    actionType: 'create_booking',
+  },
+  {
+    id: 'cmd-report',
+    title: 'Create Report',
+    description: 'Generate a new report',
+    iconType: 'report',
+    targetRoute: '/admin/reports',
+    actionType: 'create_report',
+  },
+  {
+    id: 'cmd-backup',
+    title: 'Backup Now',
+    description: 'Create a platform backup',
+    iconType: 'backup',
+    targetRoute: '/admin/settings',
+    actionType: 'trigger_backup',
+  },
+  {
+    id: 'cmd-settings',
+    title: 'Platform Settings',
+    description: 'Open platform settings',
+    iconType: 'settings',
+    targetRoute: '/admin/settings',
+  },
+  {
+    id: 'cmd-audit',
+    title: 'Audit Logs',
+    description: 'View recent audit logs',
+    iconType: 'audit',
+    targetRoute: '/admin/audit-logs',
+  },
+  {
+    id: 'cmd-support',
+    title: 'Support Tickets',
+    description: 'View all support tickets',
+    iconType: 'support',
+    targetRoute: '/admin/support',
+  },
+];
+
+export const initialRecentSearches: RecentSearchItem[] = [
+  { id: 'rec-1', query: 'Wanderlust Holidays', timestamp: '10 mins ago', targetRoute: '/admin/agencies' },
+  { id: 'rec-2', query: 'Booking BK-78452', timestamp: '25 mins ago', targetRoute: '/admin/bookings' },
+  { id: 'rec-3', query: 'Refund Requests', timestamp: '1 hour ago', targetRoute: '/admin/finance' },
+];
+
+export const indexedGlobalSearchResults: GlobalSearchResultItem[] = [];
 
 const RECENT_SEARCHES_STORAGE_KEY = 'apnatrip_admin_recent_searches';
 
 class GlobalSearchService {
-  private indexedData: GlobalSearchResultItem[] = indexedGlobalSearchResults;
   private quickCommands: QuickCommandItem[] = initialQuickCommands;
 
-  public search(
+  public async search(
     query: string,
     category: GlobalSearchCategory = 'all'
   ): Promise<GlobalSearchResultItem[]> {
-    return new Promise((resolve) => {
-      const cleanQuery = query.trim().toLowerCase();
+    const cleanQuery = query.trim();
+    if (!cleanQuery) {
+      return [];
+    }
 
-      // If query is empty, return default top recommendations
-      if (!cleanQuery) {
-        const filtered =
-          category === 'all'
-            ? this.indexedData.slice(0, 10)
-            : this.indexedData.filter((item) => item.category === category);
-        return setTimeout(() => resolve(filtered), 20);
-      }
-
-      // Multi-term fuzzy matching
-      const queryTokens = cleanQuery.split(/\s+/).filter(Boolean);
-
-      const results = this.indexedData.filter((item) => {
-        // Category check
-        if (category !== 'all' && item.category !== category) {
-          return false;
-        }
-
-        const searchableText = [
-          item.title,
-          item.subtitle,
-          item.details || '',
-          item.amount || '',
-          item.status || '',
-          ...(item.keywords || []),
-        ]
-          .join(' ')
-          .toLowerCase();
-
-        // Must match all query tokens
-        return queryTokens.every((token) => searchableText.includes(token));
+    try {
+      const response = await adminApiClient.get<GlobalSearchResultItem[]>('/global-search', {
+        params: { q: cleanQuery },
       });
-
-      setTimeout(() => resolve(results), 40);
-    });
+      if (response.success && response.data) {
+        let results = response.data;
+        if (category !== 'all') {
+          results = results.filter((r) => r.category === category);
+        }
+        return results;
+      }
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   public getQuickCommands(): QuickCommandItem[] {

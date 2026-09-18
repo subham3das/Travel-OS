@@ -14,8 +14,8 @@ import {
   CommunityActivityEventItem,
   AnnouncementPayload,
 } from '../../types/communityManagement';
-import { adminCommunityManagementService } from '../../services/adminCommunityManagement.service';
 import {
+  adminCommunityManagementService,
   initialCommunityKPIStats,
   initialActivityDaily,
   initialEngagementFunnel,
@@ -25,7 +25,7 @@ import {
   initialCommunityHealthScore,
   initialTopCreators,
   initialLiveActivityEvents,
-} from '../../data/communityData';
+} from '../../services/adminCommunityManagement.service';
 import { AdminCommunityHeader } from '../../components/super-admin/community/AdminCommunityHeader';
 import { CommunityKPIStatsCards } from '../../components/super-admin/community/CommunityKPIStats';
 import { CommunityAnalyticsRow } from '../../components/super-admin/community/CommunityAnalyticsRow';

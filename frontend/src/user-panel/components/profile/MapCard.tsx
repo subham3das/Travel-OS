@@ -1,7 +1,20 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
 
-export const MapCard: React.FC = () => {
+interface MapCardProps {
+  statesVisited?: number;
+  countriesVisited?: number;
+  locationLabel?: string;
+}
+
+export const MapCard: React.FC<MapCardProps> = ({
+  statesVisited = 1,
+  countriesVisited = 1,
+  locationLabel = 'India',
+}) => {
+  const indiaPercentage = Math.min(Math.round((statesVisited / 28) * 100), 100);
+  const worldPercentage = Math.min(Math.round((countriesVisited / 195) * 100), 100);
+
   return (
     <div className="w-full rounded-3xl bg-white border border-slate-100 p-5 sm:p-6 shadow-2xs">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
@@ -12,12 +25,15 @@ export const MapCard: React.FC = () => {
             <div className="flex items-center justify-between text-xs sm:text-sm font-bold">
               <span className="text-[#0F172A]">India</span>
               <span className="text-slate-500">
-                <span className="text-[#0F172A] font-extrabold">12</span> / 28 States
+                <span className="text-[#0F172A] font-extrabold">{statesVisited}</span> / 28 States
               </span>
             </div>
 
             <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full w-[42%]" />
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(indiaPercentage, 4)}%` }}
+              />
             </div>
           </div>
 
@@ -26,12 +42,15 @@ export const MapCard: React.FC = () => {
             <div className="flex items-center justify-between text-xs sm:text-sm font-bold">
               <span className="text-[#0F172A]">World</span>
               <span className="text-slate-500">
-                <span className="text-[#0F172A] font-extrabold">2</span> / 195 Countries
+                <span className="text-[#0F172A] font-extrabold">{countriesVisited}</span> / 195 Countries
               </span>
             </div>
 
             <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-              <div className="h-full bg-sky-500 rounded-full w-[10%]" />
+              <div
+                className="h-full bg-sky-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(worldPercentage, 2)}%` }}
+              />
             </div>
           </div>
         </div>
@@ -44,15 +63,9 @@ export const MapCard: React.FC = () => {
           </svg>
 
           {/* Map Pin 1 */}
-          <div className="absolute top-1/3 left-1/3 flex items-center gap-1 bg-white px-2 py-0.5 rounded-full shadow-xs text-[10px] font-bold text-slate-700 animate-bounce">
+          <div className="absolute top-1/3 left-1/3 flex items-center gap-1 bg-white px-2.5 py-1 rounded-full shadow-xs text-[10px] font-bold text-slate-700">
             <MapPin className="w-3 h-3 text-emerald-500 fill-emerald-500" />
-            <span>India (12)</span>
-          </div>
-
-          {/* Map Pin 2 */}
-          <div className="absolute bottom-1/3 right-1/4 flex items-center gap-1 bg-white px-2 py-0.5 rounded-full shadow-xs text-[10px] font-bold text-slate-700">
-            <MapPin className="w-3 h-3 text-sky-500 fill-sky-500" />
-            <span>Bali, IN</span>
+            <span>{locationLabel}</span>
           </div>
         </div>
       </div>

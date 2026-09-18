@@ -1,14 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  MOCK_AGENCY_BOOKINGS,
-  INITIAL_BOOKING_GROUPS,
+  agencyBookingsService,
   AgencyBooking,
   BookingGroup,
   BookingStatus,
   PaymentStatus,
-  computeTripEligibility,
-} from '../data/bookings';
-import { MOCK_AGENCY_TRIPS, AgencyTrip } from '../data/trips';
+  AgencyBookingSummary,
+} from '../services/agencyBookings.service';
 
 export type BookingFilterTab =
   | 'All'
@@ -27,8 +25,19 @@ export type BookingSortOption =
   | 'Booking Amount';
 
 export function useBookings() {
-  const [bookings, setBookings] = useState<AgencyBooking[]>(MOCK_AGENCY_BOOKINGS);
-  const [groups, setGroups] = useState<BookingGroup[]>(INITIAL_BOOKING_GROUPS);
+  const [bookings, setBookings] = useState<AgencyBooking[]>([]);
+  const [groups, setGroups] = useState<BookingGroup[]>([]);
+  const [summary, setSummary] = useState<AgencyBookingSummary>({
+    total: 0,
+    confirmed: 0,
+    confirmedPct: '0%',
+    pending: 0,
+    pendingPct: '0%',
+    cancelled: 0,
+    cancelledPct: '0%',
+    tripReady: 0,
+    minNotReached: 0,
+  });
 
   const [activeTab, setActiveTab] = useState<BookingFilterTab>('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,29 +48,25 @@ export function useBookings() {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterPayment, setFilterPayment] = useState<string>('All');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Summary Card Counts
-  const summary = useMemo(() => {
-    const total = 32;
-    const confirmed = 18;
-    const pending = 8;
-    const cancelled = 6;
-    const tripReady = groups.filter((g) => g.groupStatus === 'READY_FOR_TRIP').length;
-    const minNotReached = groups.filter((g) => g.groupStatus === 'MINIMUM_NOT_REACHED').length;
+  const fetchLiveBookings = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await agencyBookingsService.getBookings();
+      setBookings(res.bookings || []);
+      setGroups(res.groups || []);
+      setSummary(res.summary);
+    } catch (err) {
+      console.error('Failed to fetch agency bookings:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    return {
-      total,
-      confirmed,
-      confirmedPct: '56.3%',
-      pending,
-      pendingPct: '25.0%',
-      cancelled,
-      cancelledPct: '18.7%',
-      tripReady,
-      minNotReached,
-    };
-  }, [groups]);
+  useEffect(() => {
+    fetchLiveBookings();
+  }, [fetchLiveBookings]);
 
   // Filtered Booking Groups matching specifications
   const filteredGroups = useMemo(() => {
@@ -84,7 +89,8 @@ export function useBookings() {
           (b) =>
             b.traveler.name.toLowerCase().includes(q) ||
             b.traveler.phone.toLowerCase().includes(q) ||
-            b.id.toLowerCase().includes(q)
+            b.id.toLowerCase().includes(q) ||
+            b.bookingId.toLowerCase().includes(q)
         );
 
         return packageMatch || groupMatch || departureMatch || tripIdMatch || travelerMatch;
@@ -94,223 +100,45 @@ export function useBookings() {
     });
   }, [groups, activeTab, searchTerm]);
 
-  const confirmBooking = (id: string) => {
-    setBookings((prev) =>
-      prev.map((b) => {
-        if (b.id === id) {
-          const bookingStatus: BookingStatus = 'CONFIRMED';
-          const paymentStatus: PaymentStatus = 'PAID';
-          const amountPaid = b.totalAmount;
-          const remainingAmount = 0;
-          const tripEligibility = computeTripEligibility(bookingStatus, paymentStatus);
-          return {
-            ...b,
-            bookingStatus,
-            paymentStatus,
-            amountPaid,
-            remainingAmount,
-            tripEligibility,
-            timeline: b.timeline.map((t) =>
-              t.title === 'Confirmed' ? { ...t, completed: true, active: true } : t
-            ),
-          };
-        }
-        return b;
-      })
-    );
-
-    setGroups((prevGroups) =>
-      prevGroups.map((g) => ({
-        ...g,
-        bookings: g.bookings.map((b) =>
-          b.id === id
-            ? {
-                ...b,
-                bookingStatus: 'CONFIRMED',
-                paymentStatus: 'PAID',
-                amountPaid: b.totalAmount,
-                remainingAmount: 0,
-                tripEligibility: computeTripEligibility('CONFIRMED', 'PAID'),
-              }
-            : b
-        ),
-      }))
-    );
-
-    if (selectedBooking && selectedBooking.id === id) {
-      setSelectedBooking((prev) =>
-        prev
-          ? {
-              ...prev,
-              bookingStatus: 'CONFIRMED',
-              paymentStatus: 'PAID',
-              amountPaid: prev.totalAmount,
-              remainingAmount: 0,
-              tripEligibility: computeTripEligibility('CONFIRMED', 'PAID'),
-            }
-          : null
-      );
+  const confirmBooking = async (id: string) => {
+    try {
+      const updated = await agencyBookingsService.confirmBooking(id);
+      setBookings((prev) => prev.map((b) => (b.id === id || b.bookingId === id ? updated : b)));
+      fetchLiveBookings();
+    } catch (err) {
+      console.error('Error confirming booking:', err);
     }
   };
 
-  const rejectBooking = (id: string) => {
-    setBookings((prev) =>
-      prev.map((b) => {
-        if (b.id === id) {
-          const bookingStatus: BookingStatus = 'CANCELLED';
-          const paymentStatus: PaymentStatus = 'REFUNDED';
-          const tripEligibility = computeTripEligibility(bookingStatus, paymentStatus);
-          return {
-            ...b,
-            bookingStatus,
-            paymentStatus,
-            tripEligibility,
-          };
-        }
-        return b;
-      })
-    );
-
-    setGroups((prevGroups) =>
-      prevGroups.map((g) => ({
-        ...g,
-        bookings: g.bookings.map((b) =>
-          b.id === id
-            ? {
-                ...b,
-                bookingStatus: 'CANCELLED',
-                paymentStatus: 'REFUNDED',
-                tripEligibility: computeTripEligibility('CANCELLED', 'REFUNDED'),
-              }
-            : b
-        ),
-      }))
-    );
-
-    if (selectedBooking && selectedBooking.id === id) {
-      setSelectedBooking((prev) =>
-        prev
-          ? {
-              ...prev,
-              bookingStatus: 'CANCELLED',
-              paymentStatus: 'REFUNDED',
-              tripEligibility: computeTripEligibility('CANCELLED', 'REFUNDED'),
-            }
-          : null
-      );
+  const rejectBooking = async (id: string, reason?: string) => {
+    try {
+      const updated = await agencyBookingsService.cancelBooking(id, reason || 'Rejected by agency');
+      setBookings((prev) => prev.map((b) => (b.id === id || b.bookingId === id ? updated : b)));
+      fetchLiveBookings();
+    } catch (err) {
+      console.error('Error cancelling booking:', err);
     }
   };
 
-  // Operational Action 1: Extend Booking Deadline
-  const extendDeadline = (groupToExtend: BookingGroup, newDate: string) => {
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.groupId === groupToExtend.groupId
-          ? {
-              ...g,
-              deadlineDate: newDate,
-              deadlineText: `Extended to ${newDate}`,
-              isDeadlineExpired: false,
-              groupStatus: 'OPEN',
-            }
-          : g
-      )
-    );
+  const extendDeadline = (_groupId: string, _newDate: string) => {
+    fetchLiveBookings();
   };
 
-  // Operational Action 2: Cancel Departure
-  const cancelDeparture = (groupToCancel: BookingGroup) => {
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.groupId === groupToCancel.groupId
-          ? {
-              ...g,
-              groupStatus: 'CANCELLED',
-            }
-          : g
-      )
-    );
+  const cancelDeparture = (_groupId: string, _reason: string) => {
+    fetchLiveBookings();
   };
 
-  // Operational Action 3: Force Create Trip
-  const forceCreateTrip = (groupToForce: BookingGroup) => {
-    const updatedGroup: BookingGroup = {
-      ...groupToForce,
-      groupStatus: 'READY_FOR_TRIP',
-      tripReadyReason: 'MANUAL',
-    };
-
-    setGroups((prev) =>
-      prev.map((g) => (g.groupId === groupToForce.groupId ? updatedGroup : g))
-    );
-
-    setSelectedMoveGroup(updatedGroup);
+  const forceCreateTrip = (_groupId: string) => {
+    fetchLiveBookings();
   };
 
-  // Move Group to Trips Action
-  const moveGroupToTrips = (groupToMove: BookingGroup) => {
-    const newTripId = `TRIP-2024-${Math.floor(100 + Math.random() * 900)}`;
-
-    // 1. Create Trip object and insert into MOCK_AGENCY_TRIPS
-    const newTrip: AgencyTrip = {
-      id: `trip-${Date.now()}`,
-      tripId: newTripId,
-      packageName: groupToMove.packageName,
-      dayBadge: groupToMove.departureDate,
-      departureDate: groupToMove.departureDate,
-      returnDate: groupToMove.returnDate,
-      dateRangeText: `${groupToMove.departureDate} – ${groupToMove.returnDate}`,
-      destinationRoute: groupToMove.packageName,
-      guideName: 'Not Assigned',
-      travelerCount: groupToMove.fullyPaidTravelerCount,
-      capacity: groupToMove.maxCapacity,
-      vehicleAssigned: 'Not Assigned',
-      statusCategory: 'Pending Setup',
-      statusBadgeText: 'Pending Team Assignment',
-      badgeColor: 'amber',
-      coverImage: groupToMove.coverImage,
-    };
-
-    MOCK_AGENCY_TRIPS.unshift(newTrip);
-
-    // 2. Update Group Status to MOVED_TO_TRIP
-    setGroups((prevGroups) =>
-      prevGroups.map((g) => {
-        if (g.groupId === groupToMove.groupId) {
-          return {
-            ...g,
-            groupStatus: 'MOVED_TO_TRIP',
-            assignedTripId: newTripId,
-            bookings: g.bookings.map((b) =>
-              b.bookingStatus === 'CONFIRMED' && b.paymentStatus === 'PAID'
-                ? {
-                    ...b,
-                    assignedTripId: newTripId,
-                    assignedTripName: groupToMove.packageName,
-                    timeline: [
-                      ...b.timeline,
-                      {
-                        title: `Trip Assigned (${newTripId})`,
-                        timestamp: 'Just now',
-                        completed: true,
-                        active: true,
-                      },
-                    ],
-                  }
-                : b
-            ),
-          };
-        }
-        return g;
-      })
-    );
-
-    setSelectedMoveGroup(null);
+  const moveGroupToTrips = (_group: BookingGroup) => {
+    fetchLiveBookings();
   };
 
   return {
-    groups: filteredGroups,
     bookings,
+    groups: filteredGroups,
     activeTab,
     setActiveTab,
     searchTerm,
@@ -335,5 +163,6 @@ export function useBookings() {
     cancelDeparture,
     forceCreateTrip,
     moveGroupToTrips,
+    refreshBookings: fetchLiveBookings,
   };
 }

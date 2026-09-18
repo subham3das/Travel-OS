@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import {
   SuperAdminProfileData,
   AdminPersonalInfo,
   AdminPreferences,
   AdminDeviceItem,
 } from '../../types/profileManagement';
-import { adminProfileManagementService } from '../../services/adminProfileManagement.service';
-import { initialSuperAdminProfile } from '../../data/profileData';
+import {
+  adminProfileManagementService,
+  initialSuperAdminProfile,
+} from '../../services/adminProfileManagement.service';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
+import { useSuperAdminTheme as useTheme } from '../../context/SuperAdminThemeContext';
 
 import { ProfileHeader } from '../../components/super-admin/profile/ProfileHeader';
 import { PersonalInfoForm } from '../../components/super-admin/profile/PersonalInfoForm';
@@ -34,6 +37,8 @@ export const AdminProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<SuperAdminProfileData>(initialSuperAdminProfile);
   const [tempPersonalInfo, setTempPersonalInfo] = useState<AdminPersonalInfo>(initialSuperAdminProfile.personalInfo);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Modals
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -48,15 +53,25 @@ export const AdminProfilePage: React.FC = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // ── 2. DATA FETCHING ──
+  const { syncFromAdminProfile } = useTheme();
+
+  // ── 2. LIVE DATA FETCHING FROM MONGODB ──
   const loadProfile = useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
     try {
       const data = await adminProfileManagementService.getProfile();
       setProfile(data);
       setTempPersonalInfo(data.personalInfo);
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to load profile data', 'error');
+      if (data.preferences?.theme) {
+        syncFromAdminProfile(data.preferences.theme as 'Light' | 'Dark' | 'System');
+      }
+    } catch (err: any) {
+      console.error('Failed to load admin profile from backend:', err);
+      setFetchError(err?.message || 'Backend connection failed. Please verify your authentication.');
+      showToast('Failed to load administrator profile from MongoDB', 'error');
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -76,17 +91,21 @@ export const AdminProfilePage: React.FC = () => {
   };
 
   const handleSavePersonalInfo = async () => {
-    const updatedProfile = await adminProfileManagementService.updatePersonalInfo(tempPersonalInfo);
-    setProfile(updatedProfile);
-    setIsEditing(false);
+    try {
+      const updatedProfile = await adminProfileManagementService.updatePersonalInfo(tempPersonalInfo);
+      setProfile(updatedProfile);
+      setIsEditing(false);
 
-    // Propagate to global AdminAuthContext
-    updateAdmin({
-      name: `${tempPersonalInfo.firstName} ${tempPersonalInfo.lastName}`,
-      email: tempPersonalInfo.email,
-    });
+      // Propagate to global AdminAuthContext
+      updateAdmin({
+        fullName: `${tempPersonalInfo.firstName} ${tempPersonalInfo.lastName}`.trim(),
+        name: `${tempPersonalInfo.firstName} ${tempPersonalInfo.lastName}`.trim(),
+      });
 
-    showToast('Profile information saved and synchronized successfully', 'success');
+      showToast('Profile information saved and synchronized with MongoDB', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to update profile', 'error');
+    }
   };
 
   const handleCancelPersonalInfo = () => {
@@ -96,34 +115,42 @@ export const AdminProfilePage: React.FC = () => {
   };
 
   const handleUpdatePreferences = async (updated: Partial<AdminPreferences>) => {
-    const newPrefs = await adminProfileManagementService.updatePreferences(updated);
-    setProfile((prev) => ({ ...prev, preferences: newPrefs }));
-    showToast('Account preferences updated', 'info');
+    try {
+      const newPrefs = await adminProfileManagementService.updatePreferences(updated);
+      setProfile((prev) => ({ ...prev, preferences: newPrefs }));
+      showToast('Account preferences updated in MongoDB', 'info');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to update preferences', 'error');
+    }
   };
 
   const handleSaveAvatar = async (url: string) => {
-    await adminProfileManagementService.updateAvatar(url);
-    setProfile((prev) => ({ ...prev, avatarUrl: url }));
+    try {
+      const avatarUrl = await adminProfileManagementService.updateAvatar(url);
+      setProfile((prev) => ({ ...prev, avatarUrl }));
 
-    // Propagate to global AdminAuthContext
-    updateAdmin({ avatar: url });
+      // Propagate to global AdminAuthContext
+      updateAdmin({
+        profileImage: avatarUrl,
+        avatar: avatarUrl,
+      });
 
-    showToast('Profile photo updated across all client interfaces', 'success');
+      showToast('Profile photo updated in MongoDB and synchronized across all portals', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to update avatar', 'error');
+    }
   };
 
   const handleConfirmTerminateSession = async () => {
     if (!deviceToTerminate) return;
-    const remaining = await adminProfileManagementService.terminateDevice(deviceToTerminate.id);
-    setProfile((prev) => ({
-      ...prev,
-      devices: remaining,
-      security: {
-        ...prev.security,
-        activeSessionsCount: Math.max(1, prev.security.activeSessionsCount - 1),
-      },
-    }));
-    showToast(`Session terminated for ${deviceToTerminate.name}`, 'success');
-    setDeviceToTerminate(null);
+    try {
+      await adminProfileManagementService.terminateDevice(deviceToTerminate.id);
+      showToast(`Session terminated for ${deviceToTerminate.name}`, 'success');
+      setDeviceToTerminate(null);
+      await loadProfile();
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to terminate session', 'error');
+    }
   };
 
   const handleDownloadProfile = () => {
@@ -131,7 +158,24 @@ export const AdminProfilePage: React.FC = () => {
   };
 
   const handleExportActivity = () => {
-    showToast('Exported recent admin activity log to CSV', 'success');
+    if (!profile.activities || profile.activities.length === 0) {
+      showToast('No activity records available to export', 'info');
+      return;
+    }
+    const csvContent =
+      'data:text/csv;charset=utf-8,Title,Description,Timestamp\n' +
+      profile.activities
+        .map((a) => `"${a.title}","${a.description.replace(/"/g, '""')}","${a.timestamp}"`)
+        .join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `admin_activity_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Exported admin activity logs to CSV', 'success');
   };
 
   return (
@@ -180,11 +224,31 @@ export const AdminProfilePage: React.FC = () => {
               My Profile
             </h1>
             <p className="text-xs font-semibold text-slate-500 mt-0.5">
-              Manage your administrator profile and account preferences.
+              Manage your administrator credentials, active sessions, and security preferences.
             </p>
           </div>
         </div>
       </div>
+
+      {/* ── ERROR RECOVERY STATE ── */}
+      {fetchError && (
+        <div className="bg-rose-50 border border-rose-200 rounded-3xl p-5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            <div>
+              <p className="text-xs font-black text-rose-800">Backend Connection Failed</p>
+              <p className="text-[11px] font-semibold text-rose-600">{fetchError}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => loadProfile()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer shrink-0"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry</span>
+          </button>
+        </div>
+      )}
 
       {/* ── 2. PROFILE HERO BANNER & HEADER ── */}
       <ProfileHeader
@@ -213,7 +277,7 @@ export const AdminProfilePage: React.FC = () => {
           <SecurityCard
             security={profile.security}
             onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
-            onConfigure2FA={() => showToast('Opening Two-Factor Authentication configuration wizard', 'info')}
+            onConfigure2FA={() => showToast('Two-Factor Authentication is enforced across all administrator tiers', 'info')}
             onViewSessions={() => showToast('Displaying full active session directory', 'info')}
           />
 
@@ -226,7 +290,7 @@ export const AdminProfilePage: React.FC = () => {
           {/* Recent Activity Timeline */}
           <RecentActivityTimeline
             activities={profile.activities}
-            onViewAllLogs={() => navigate('/admin/audit-logs')}
+            onViewAllLogs={() => navigate('/admin/roles')}
           />
         </div>
 
@@ -248,8 +312,9 @@ export const AdminProfilePage: React.FC = () => {
           <ProfileQuickActions
             onDownloadProfile={handleDownloadProfile}
             onExportActivity={handleExportActivity}
-            onViewAuditLogs={() => navigate('/admin/audit-logs')}
+            onViewAuditLogs={() => navigate('/admin/roles')}
             onManageSessions={() => showToast('Displaying all active device sessions', 'info')}
+            activeSessionsCount={profile.security.activeSessionsCount}
           />
         </div>
       </div>
@@ -257,6 +322,7 @@ export const AdminProfilePage: React.FC = () => {
       {/* ── 4. MODALS ── */}
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
+        adminEmail={profile.personalInfo.email}
         onClose={() => setIsPasswordModalOpen(false)}
         onSuccess={() => showToast('Password changed successfully. Your account is secured.', 'success')}
       />

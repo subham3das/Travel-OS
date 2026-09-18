@@ -1,106 +1,163 @@
-// ─── Admin Auth Service ───────────────────────────────────────────────────────
-// Service layer for Super Admin authentication and Google Workspace integration.
+// ─── Super Admin Auth Service ───────────────────────────────────────────────────
+// Production Service layer connecting to backend MongoDB Admin Authentication.
 
 import { Admin } from '../types/admin';
-import { adminAccessControlService } from './adminAccessControl.service';
+import { adminApiClient, ADMIN_AUTH_STORAGE_KEYS } from './adminApiClient';
 
 export interface AdminLoginResponse {
   success: boolean;
   admin: Admin;
-  token: string;
-  refreshToken: string;
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+    expiresIn?: string;
+  };
 }
 
 /**
- * Authenticate administrator using Login ID / Email and Password with Strict Access Control.
+ * Authenticate administrator using Email and Password against backend MongoDB.
  */
 export const loginAdminService = async (
   loginId: string,
   password: string
 ): Promise<AdminLoginResponse> => {
-  // Simulate network request delay
-  await new Promise((resolve) => setTimeout(resolve, 600));
+  const cleanEmail = loginId.trim().toLowerCase();
 
-  const cleanId = loginId.trim().toLowerCase();
+  const res = await adminApiClient.post<{
+    admin: Admin;
+    tokens: { accessToken: string; refreshToken: string; expiresIn?: string };
+  }>(
+    '/admin/auth/login',
+    { email: cleanEmail, password },
+    { requiresAuth: false }
+  );
 
-  // Validate password
-  if (password === 'wrong' || password === 'invalid') {
-    throw new Error('Invalid Login credentials.');
+  if (!res.data || !res.data.admin || !res.data.tokens) {
+    throw new Error(res.message || 'Login failed.');
   }
 
-  // Gate check against Authorized Admins IAM list
-  // Default fallback aliases: 'admin', 'superadmin', 'admin@travelos.com' -> 'admin@travelos.com'
-  const emailToCheck =
-    cleanId === 'admin' || cleanId === 'superadmin' || cleanId === 'admin@apnatrip.com'
-      ? 'admin@travelos.com'
-      : cleanId;
-
-  const authCheck = adminAccessControlService.verifyEmailForLogin(emailToCheck);
-
-  if (!authCheck.isAllowed) {
-    throw new Error(
-      authCheck.reason ||
-        'You are not authorized to access the Travel OS Admin Panel. Please contact your system administrator.'
-    );
-  }
-
-  const authorized = authCheck.admin;
+  // Save tokens in storage
+  adminApiClient.setTokens({
+    accessToken: res.data.tokens.accessToken,
+    refreshToken: res.data.tokens.refreshToken,
+  });
 
   return {
     success: true,
-    admin: {
-      id: authorized?.id || 'admin-001',
-      name: authorized?.name || 'Super Admin',
-      email: authorized?.email || cleanId,
-      role: 'SUPER_ADMIN',
-      avatar:
-        authorized?.avatar ||
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      isActive: true,
-      lastLogin: new Date().toISOString(),
-    },
-    token: `apnatrip_admin_token_${Date.now()}`,
-    refreshToken: `apnatrip_admin_refresh_${Date.now()}`,
+    admin: res.data.admin,
+    tokens: res.data.tokens,
   };
 };
 
 /**
- * Authenticate administrator using Google Workspace SSO token with Strict Access Control.
+ * Authenticate administrator using Google Workspace SSO token against backend MongoDB.
  */
-export const loginWithGoogleService = async (): Promise<AdminLoginResponse> => {
-  // Simulate network request delay
-  await new Promise((resolve) => setTimeout(resolve, 800));
+export const loginWithGoogleService = async (googlePayload: {
+  credential?: string;
+  idToken?: string;
+  accessToken?: string;
+}): Promise<AdminLoginResponse> => {
+  const res = await adminApiClient.post<{
+    admin: Admin;
+    tokens: { accessToken: string; refreshToken: string; expiresIn?: string };
+  }>(
+    '/admin/auth/google',
+    googlePayload,
+    { requiresAuth: false }
+  );
 
-  const defaultSSOEmail = 'admin@travelos.com';
-  const authCheck = adminAccessControlService.verifyEmailForLogin(defaultSSOEmail);
-
-  if (!authCheck.isAllowed) {
-    throw new Error(
-      authCheck.reason ||
-        'This Google account is not authorized to access the Travel OS Admin Panel.'
-    );
+  if (!res.data || !res.data.admin || !res.data.tokens) {
+    throw new Error(res.message || 'Google Login failed.');
   }
 
-  const authorized = authCheck.admin;
+  // Save tokens in storage
+  adminApiClient.setTokens({
+    accessToken: res.data.tokens.accessToken,
+    refreshToken: res.data.tokens.refreshToken,
+  });
 
   return {
     success: true,
-    admin: {
-      id: authorized?.id || 'admin-sso-001',
-      name: authorized?.name || 'Authorized Admin',
-      email: authorized?.email || defaultSSOEmail,
-      role: 'SUPER_ADMIN',
-      avatar:
-        authorized?.avatar ||
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      isActive: true,
-      lastLogin: new Date().toISOString(),
-    },
-    token: `apnatrip_google_sso_token_${Date.now()}`,
-    refreshToken: `apnatrip_google_sso_refresh_${Date.now()}`,
+    admin: res.data.admin,
+    tokens: res.data.tokens,
   };
 };
 
-export const logoutAdminService = async (): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 200));
+/**
+ * Fetch current authenticated administrator profile from MongoDB
+ */
+export const getAdminMeService = async (): Promise<Admin | null> => {
+  try {
+    const res = await adminApiClient.get<{ admin: Admin }>('/admin/auth/me', {
+      requiresAuth: true,
+    });
+    return res.data?.admin || null;
+  } catch {
+    return null;
+  }
 };
+
+/**
+ * Log out administrator and revoke backend session
+ */
+export const logoutAdminService = async (): Promise<void> => {
+  const refreshToken = adminApiClient.getRefreshToken();
+  try {
+    if (refreshToken) {
+      await adminApiClient.post(
+        '/admin/auth/logout',
+        { refreshToken },
+        { requiresAuth: false }
+      );
+    }
+  } catch {
+    // Ignore network error on logout
+  } finally {
+    adminApiClient.clearTokens();
+  }
+};
+
+/**
+ * Request Password Reset Email for Administrator (POST /admin/auth/forgot-password)
+ */
+export const forgotPasswordAdminService = async (email: string): Promise<boolean> => {
+  try {
+    await adminApiClient.post(
+      '/admin/auth/forgot-password',
+      { email: email.toLowerCase().trim() },
+      { requiresAuth: false }
+    );
+    return true;
+  } catch (error: any) {
+    console.error('Forgot password request failed:', error);
+    const errMsg =
+      error?.data?.message ||
+      error?.message ||
+      'Unable to send verification email. Please try again in a few moments.';
+    throw new Error(errMsg);
+  }
+};
+
+/**
+ * Reset Administrator Password via Token (POST /admin/auth/reset-password)
+ */
+export const resetPasswordAdminService = async (token: string, newPassword: string): Promise<boolean> => {
+  try {
+    await adminApiClient.post(
+      '/admin/auth/reset-password',
+      { token, newPassword },
+      { requiresAuth: false }
+    );
+    return true;
+  } catch (error: any) {
+    console.error('Reset password request failed:', error);
+    const errMsg =
+      error?.data?.message ||
+      error?.message ||
+      'Unable to reset password. Please verify the reset link or request a new one.';
+    throw new Error(errMsg);
+  }
+};
+
+
+

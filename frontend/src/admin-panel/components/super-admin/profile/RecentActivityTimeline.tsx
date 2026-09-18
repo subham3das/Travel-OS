@@ -6,6 +6,7 @@ import {
   FileText,
   LogIn,
   HardDrive,
+  Clock,
 } from 'lucide-react';
 import { AdminActivityItem } from '../../../types/profileManagement';
 
@@ -44,7 +45,7 @@ export const RecentActivityTimeline: React.FC<RecentActivityTimelineProps> = ({
           <h3 className="text-sm font-black text-[#0F172A]">Recent Admin Activity</h3>
         </div>
 
-        {onViewAllLogs && (
+        {activities.length > 0 && onViewAllLogs && (
           <button
             onClick={onViewAllLogs}
             className="text-[10px] font-bold text-[#6356E5] hover:underline cursor-pointer"
@@ -55,26 +56,34 @@ export const RecentActivityTimeline: React.FC<RecentActivityTimelineProps> = ({
       </div>
 
       <div className="space-y-2">
-        {activities.map((act) => (
-          <div
-            key={act.id}
-            className="flex items-start gap-3 p-2.5 rounded-2xl bg-slate-50/60 border border-slate-100 text-xs"
-          >
-            <div className="w-7 h-7 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-              {getIcon(act.iconType)}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-1">
-                <h4 className="text-xs font-black text-[#0F172A] truncate">{act.title}</h4>
-                <span className="text-[9px] font-mono text-slate-400 shrink-0">{act.timestamp}</span>
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium truncate pt-0.5">
-                {act.description}
-              </p>
-            </div>
+        {activities.length === 0 ? (
+          <div className="py-8 text-center text-slate-400">
+            <Clock className="w-6 h-6 mx-auto mb-1 text-slate-300" />
+            <p className="text-[11px] font-bold text-slate-500">No recent activity records</p>
+            <p className="text-[10px] text-slate-400">Administrative actions will appear here in real time.</p>
           </div>
-        ))}
+        ) : (
+          activities.map((act) => (
+            <div
+              key={act.id}
+              className="flex items-start gap-3 p-2.5 rounded-2xl bg-slate-50/60 border border-slate-100 text-xs"
+            >
+              <div className="w-7 h-7 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                {getIcon(act.iconType)}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1">
+                  <h4 className="text-xs font-black text-[#0F172A] truncate">{act.title}</h4>
+                  <span className="text-[9px] font-mono text-slate-400 shrink-0">{act.timestamp}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium truncate pt-0.5">
+                  {act.description}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

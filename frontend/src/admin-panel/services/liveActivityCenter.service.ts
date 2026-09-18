@@ -1,3 +1,4 @@
+import { adminApiClient } from './adminApiClient';
 import {
   LiveEventItem,
   PlatformServiceStatus,
@@ -6,30 +7,70 @@ import {
   PaymentQueueItem,
   SupportQueueItem,
 } from '../types/liveActivityCenter';
-import {
-  initialLiveEvents,
-  initialServiceStatuses,
-  initialLiveMetrics,
-  initialActiveTrips,
-  initialPaymentQueue,
-  initialSupportQueue,
-} from '../data/liveActivityCenterData';
 
 type Listener = (events: LiveEventItem[]) => void;
 
 class LiveActivityCenterService {
-  private events: LiveEventItem[] = [...initialLiveEvents];
-  private serviceStatuses: PlatformServiceStatus[] = [...initialServiceStatuses];
-  private metrics: LiveMetricsData = { ...initialLiveMetrics };
-  private activeTrips: ActiveTripItem[] = [...initialActiveTrips];
-  private paymentQueue: PaymentQueueItem[] = [...initialPaymentQueue];
-  private supportQueue: SupportQueueItem[] = [...initialSupportQueue];
+  private events: LiveEventItem[] = [];
+  private serviceStatuses: PlatformServiceStatus[] = [];
+  private metrics: LiveMetricsData = {
+    onlineUsers: 1,
+    liveAgencies: 0,
+    bookingsToday: 0,
+    tripsRunning: 0,
+    paymentsProcessing: 0,
+    supportQueue: 0,
+  };
+  private activeTrips: ActiveTripItem[] = [];
+  private paymentQueue: PaymentQueueItem[] = [];
+  private supportQueue: SupportQueueItem[] = [];
   private listeners: Set<Listener> = new Set();
   private timer: NodeJS.Timeout | null = null;
   private isAutoRefreshEnabled: boolean = true;
+  private isFetching: boolean = false;
 
   constructor() {
-    this.startSimulation();
+    this.fetchLiveActivity();
+    this.startPolling();
+  }
+
+  public async fetchLiveActivity(): Promise<void> {
+    if (this.isFetching) return;
+    this.isFetching = true;
+
+    try {
+      const [liveRes, tripsRes, paymentsRes, supportRes] = await Promise.all([
+        adminApiClient.get<{
+          events: LiveEventItem[];
+          serviceStatuses: PlatformServiceStatus[];
+          metrics: LiveMetricsData;
+        }>('/admin/dashboard/live'),
+        adminApiClient.get<ActiveTripItem[]>('/admin/dashboard/active-trips'),
+        adminApiClient.get<PaymentQueueItem[]>('/admin/dashboard/payment-queue'),
+        adminApiClient.get<SupportQueueItem[]>('/admin/dashboard/support-queue'),
+      ]);
+
+      if (liveRes.data) {
+        this.events = liveRes.data.events || [];
+        this.serviceStatuses = liveRes.data.serviceStatuses || [];
+        this.metrics = liveRes.data.metrics || this.metrics;
+      }
+      if (tripsRes.data) {
+        this.activeTrips = tripsRes.data || [];
+      }
+      if (paymentsRes.data) {
+        this.paymentQueue = paymentsRes.data || [];
+      }
+      if (supportRes.data) {
+        this.supportQueue = supportRes.data || [];
+      }
+
+      this.notify();
+    } catch (err) {
+      console.warn('Failed to fetch live activity from backend:', err);
+    } finally {
+      this.isFetching = false;
+    }
   }
 
   public getEvents(): LiveEventItem[] {
@@ -69,9 +110,9 @@ class LiveActivityCenterService {
   public toggleAutoRefresh(enabled?: boolean): boolean {
     this.isAutoRefreshEnabled = enabled !== undefined ? enabled : !this.isAutoRefreshEnabled;
     if (this.isAutoRefreshEnabled) {
-      this.startSimulation();
+      this.startPolling();
     } else {
-      this.stopSimulation();
+      this.stopPolling();
     }
     return this.isAutoRefreshEnabled;
   }
@@ -81,97 +122,22 @@ class LiveActivityCenterService {
   }
 
   public forceRefresh(): void {
-    // Generate a fresh live simulated event
-    this.generateSimulatedEvent();
+    this.fetchLiveActivity();
   }
 
-  private startSimulation() {
+  private startPolling() {
     if (this.timer) clearInterval(this.timer);
     this.timer = setInterval(() => {
-      if (document.hidden) return; // Pause when tab inactive
-      this.generateSimulatedEvent();
-    }, 8000);
+      if (document.hidden) return; // Pause polling when tab is inactive
+      this.fetchLiveActivity();
+    }, 10000);
   }
 
-  private stopSimulation() {
+  private stopPolling() {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }
-  }
-
-  private generateSimulatedEvent() {
-    const samplePool: Omit<LiveEventItem, 'id' | 'timestamp' | 'time'>[] = [
-      {
-        type: 'booking_created',
-        title: 'New Booking Created',
-        subtitle: 'Kashmir Paradise 5D4N',
-        description: 'Booked by Rohit Malhotra • Instant Payment Confirmed',
-        amount: '₹28,500',
-        status: 'Confirmed',
-        statusColor: 'emerald',
-        targetRoute: '/admin/bookings',
-      },
-      {
-        type: 'payment_success',
-        title: 'Payment Received',
-        subtitle: 'Payment ID: PMT-99214',
-        description: 'Razorpay UPI Payment Successful for BK-8821',
-        amount: '₹42,000',
-        status: 'Completed',
-        statusColor: 'emerald',
-        targetRoute: '/admin/payments',
-      },
-      {
-        type: 'user_registered',
-        title: 'New Traveler Joined',
-        subtitle: 'Ananya Deshmukh',
-        description: 'Signed up via Mobile OTP • Profile 100% complete',
-        status: 'Active',
-        statusColor: 'blue',
-        targetRoute: '/admin/users',
-      },
-      {
-        type: 'agency_registered',
-        title: 'New Agency KYC Uploaded',
-        subtitle: 'Skyline Tours Pvt. Ltd.',
-        description: 'GST and PAN documents uploaded for verification',
-        status: 'Pending KYC',
-        statusColor: 'purple',
-        targetRoute: '/admin/verification-pending',
-      },
-      {
-        type: 'package_approved',
-        title: 'Package Published Live',
-        subtitle: 'Andaman Scuba Explorer 6D5N',
-        description: 'Approved and published to marketplace',
-        amount: '₹55,000',
-        status: 'Published',
-        statusColor: 'emerald',
-        targetRoute: '/admin/packages',
-      },
-    ];
-
-    const pick = samplePool[Math.floor(Math.random() * samplePool.length)];
-    const newEvent: LiveEventItem = {
-      ...pick,
-      id: `evt-${Date.now()}`,
-      time: 'Just now',
-      timestamp: Date.now(),
-    };
-
-    // Slight metric fluctuations
-    this.metrics = {
-      onlineUsers: this.metrics.onlineUsers + Math.floor(Math.random() * 5) - 2,
-      liveAgencies: this.metrics.liveAgencies + (Math.random() > 0.7 ? 1 : 0),
-      bookingsToday: this.metrics.bookingsToday + (pick.type === 'booking_created' ? 1 : 0),
-      tripsRunning: this.metrics.tripsRunning,
-      paymentsProcessing: Math.max(8, this.metrics.paymentsProcessing + Math.floor(Math.random() * 3) - 1),
-      supportQueue: Math.max(4, this.metrics.supportQueue + Math.floor(Math.random() * 2) - 1),
-    };
-
-    this.events = [newEvent, ...this.events].slice(0, 30);
-    this.notify();
   }
 }
 

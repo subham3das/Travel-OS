@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Check, Sparkles, Loader2 } from 'lucide-react';
+import { Camera, Check, Sparkles, Loader2, Globe, User as UserIcon, UtensilsCrossed, Accessibility } from 'lucide-react';
 import { Header } from '../../components/common/Header';
 import { AuthLayout } from '../../components/layouts/AuthLayout';
 import { Input } from '../../components/common/Input';
@@ -10,6 +10,50 @@ import { useToast } from '../../context/ToastContext';
 import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
 import { userAuthService } from '../../services/userAuth.service';
 
+const GENDER_OPTIONS = [
+  { id: 'male', label: 'Male', icon: '👨' },
+  { id: 'female', label: 'Female', icon: '👩' },
+  { id: 'other', label: 'Other', icon: '🧑' },
+  { id: 'prefer_not_to_say', label: 'Prefer not to say', icon: '✨' },
+] as const;
+
+const LANGUAGE_OPTIONS = [
+  'English',
+  'Hindi',
+  'Bengali',
+  'Spanish',
+  'French',
+  'German',
+  'Gujarati',
+  'Marathi',
+  'Tamil',
+  'Telugu',
+  'Kannada',
+  'Malayalam',
+  'Punjabi',
+  'Arabic',
+  'Japanese',
+  'Russian',
+];
+
+const FOOD_OPTIONS = [
+  { id: 'All Cuisines', label: 'All Cuisines', icon: '🍽️' },
+  { id: 'Local Street Food & Cafes', label: 'Street Food & Cafes', icon: '🍜' },
+  { id: 'Vegetarian', label: 'Vegetarian', icon: '🥗' },
+  { id: 'Non-Veg', label: 'Non-Veg', icon: '🍗' },
+  { id: 'Vegan', label: 'Vegan', icon: '🥑' },
+  { id: 'Halal', label: 'Halal', icon: '🍖' },
+  { id: 'Jain', label: 'Jain Food', icon: '🍲' },
+];
+
+const ACCESSIBILITY_CHIPS = [
+  'Standard / None',
+  'Wheelchair Accessible',
+  'Ground Floor Rooms',
+  'Elderly Friendly Pace',
+  'Visual / Hearing Support',
+];
+
 export const ProfileSetupPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, completeProfile } = useAuth();
@@ -18,6 +62,18 @@ export const ProfileSetupPage: React.FC = () => {
 
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatar || '');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | 'prefer_not_to_say'>(
+    (user?.gender as any) || 'prefer_not_to_say'
+  );
+  const [preferredLanguage, setPreferredLanguage] = useState<string>(
+    user?.preferredLanguage || 'English'
+  );
+  const [foodPreference, setFoodPreference] = useState<string>(
+    user?.foodPreference || 'All Cuisines'
+  );
+  const [accessibilityRequirements, setAccessibilityRequirements] = useState<string>(
+    user?.accessibilityRequirements || ''
+  );
   const [tagline, setTagline] = useState('Passionate about mountain treks & hidden beaches');
   const [selectedStyles, setSelectedStyles] = useState<string[]>(['Adventure', 'Solo Traveler']);
   const [loading, setLoading] = useState(false);
@@ -76,10 +132,18 @@ export const ProfileSetupPage: React.FC = () => {
       await userAuthService.updateProfile({
         bio: tagline,
         avatar: avatarUrl || undefined,
+        gender,
+        preferredLanguage,
+        foodPreference,
+        accessibilityRequirements,
       });
       completeProfile({
         bio: tagline,
         avatar: avatarUrl,
+        gender,
+        preferredLanguage,
+        foodPreference,
+        accessibilityRequirements,
       });
       showToast('Profile setup saved!', 'success');
       navigate('/travel-preferences');
@@ -88,6 +152,10 @@ export const ProfileSetupPage: React.FC = () => {
       completeProfile({
         bio: tagline,
         avatar: avatarUrl,
+        gender,
+        preferredLanguage,
+        foodPreference,
+        accessibilityRequirements,
       });
       navigate('/travel-preferences');
     } finally {
@@ -100,11 +168,22 @@ export const ProfileSetupPage: React.FC = () => {
       await userAuthService.updateProfile({
         bio: tagline,
         avatar: avatarUrl || undefined,
+        gender,
+        preferredLanguage,
+        foodPreference,
+        accessibilityRequirements,
       });
     } catch (e) {
       // Ignore
     }
-    completeProfile({ bio: tagline, avatar: avatarUrl });
+    completeProfile({
+      bio: tagline,
+      avatar: avatarUrl,
+      gender,
+      preferredLanguage,
+      foodPreference,
+      accessibilityRequirements,
+    });
     navigate('/travel-preferences');
   };
 
@@ -138,7 +217,7 @@ export const ProfileSetupPage: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleComplete} className="space-y-6">
+          <form onSubmit={handleComplete} className="space-y-5">
             {/* Hidden File Input */}
             <input
               type="file"
@@ -193,6 +272,140 @@ export const ProfileSetupPage: React.FC = () => {
               onChange={(e) => setTagline(e.target.value)}
             />
 
+            {/* Gender Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 ml-1 flex items-center gap-1.5">
+                <UserIcon className="w-3.5 h-3.5 text-[#FF4D6D]" />
+                <span>Gender</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {GENDER_OPTIONS.map((opt) => {
+                  const isSelected = gender === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setGender(opt.id)}
+                      className={`
+                        px-3 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none cursor-pointer border
+                        ${
+                          isSelected
+                            ? 'bg-[#FF4D6D] text-white border-[#FF4D6D] shadow-md shadow-[#FF4D6D]/20 scale-[1.02]'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                        }
+                      `}
+                    >
+                      <span className="text-sm">{opt.icon}</span>
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Preferred Language */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 ml-1 flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-[#FF4D6D]" />
+                <span>Preferred Language</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={preferredLanguage}
+                  onChange={(e) => setPreferredLanguage(e.target.value)}
+                  className="w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-[#FF4D6D] rounded-2xl px-4 py-3 text-xs sm:text-sm font-semibold text-[#0F172A] shadow-2xs transition-colors appearance-none cursor-pointer focus:outline-none"
+                >
+                  {LANGUAGE_OPTIONS.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {lang}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Food & Dining Preference */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 ml-1 flex items-center gap-1.5">
+                <UtensilsCrossed className="w-3.5 h-3.5 text-[#FF4D6D]" />
+                <span>Food & Dining Preference</span>
+              </label>
+              <div className="flex flex-wrap gap-2 pt-0.5">
+                {FOOD_OPTIONS.map((opt) => {
+                  const isSelected = foodPreference === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setFoodPreference(opt.id)}
+                      className={`
+                        px-3.5 py-2 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5 focus:outline-none cursor-pointer border
+                        ${
+                          isSelected
+                            ? 'bg-[#FF4D6D] text-white border-[#FF4D6D] shadow-md shadow-[#FF4D6D]/20 scale-[1.02]'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                        }
+                      `}
+                    >
+                      <span>{opt.icon}</span>
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Accessibility & Special Assistance */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 ml-1 flex items-center gap-1.5">
+                <Accessibility className="w-3.5 h-3.5 text-[#FF4D6D]" />
+                <span>Accessibility / Special Needs</span>
+                <span className="text-[11px] font-normal text-slate-400">(Optional)</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {ACCESSIBILITY_CHIPS.map((chip) => {
+                  const isSelected =
+                    accessibilityRequirements === chip ||
+                    (chip === 'Standard / None' && !accessibilityRequirements);
+                  return (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() =>
+                        setAccessibilityRequirements(chip === 'Standard / None' ? '' : chip)
+                      }
+                      className={`
+                        px-3 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none cursor-pointer border
+                        ${
+                          isSelected
+                            ? 'bg-rose-50 text-[#FF4D6D] border-[#FF4D6D] font-bold'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }
+                      `}
+                    >
+                      {chip}
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="text"
+                value={accessibilityRequirements}
+                onChange={(e) => setAccessibilityRequirements(e.target.value)}
+                placeholder="Or specify any dietary allergies / medical assistance..."
+                className="w-full bg-slate-50 border border-slate-200 focus:border-[#FF4D6D] focus:bg-white rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#0F172A] placeholder-slate-400 shadow-2xs transition-all focus:outline-none"
+              />
+            </div>
+
             {/* Select Travel Style Chips */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 ml-1">
@@ -232,3 +445,6 @@ export const ProfileSetupPage: React.FC = () => {
     </AuthLayout>
   );
 };
+
+export default ProfileSetupPage;
+

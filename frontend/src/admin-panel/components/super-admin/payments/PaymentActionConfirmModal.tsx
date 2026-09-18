@@ -9,7 +9,7 @@ import { AdminPaymentItem } from '../../../types/paymentManagement';
 
 interface PaymentActionConfirmModalProps {
   isOpen: boolean;
-  type: 'approve_settlement' | 'reject_settlement' | 'refund' | 'bulk_approve' | 'bulk_reject' | 'bulk_refund';
+  type: 'approve_settlement' | 'reject_settlement' | 'refund' | 'bulk_approve' | 'bulk_reject' | 'bulk_refund' | 'retry' | 'bulk_settle' | 'bulk_export';
   payment?: AdminPaymentItem | null;
   selectedCount?: number;
   isProcessing?: boolean;

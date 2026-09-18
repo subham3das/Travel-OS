@@ -16,6 +16,7 @@ export const BookingActionMenu: React.FC<BookingActionMenuProps> = ({
   onReject,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,14 +29,21 @@ export const BookingActionMenu: React.FC<BookingActionMenuProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isOpen && menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUpwards(spaceBelow < 250);
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
-    <div className="relative" ref={menuRef}>
+    <div className={`relative ${isOpen ? 'z-50' : 'z-10'}`} ref={menuRef}>
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
+        onClick={handleToggle}
         className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
         aria-label="Booking Options"
       >
@@ -43,7 +51,11 @@ export const BookingActionMenu: React.FC<BookingActionMenuProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-10 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-30 select-none animate-in fade-in zoom-in-95 duration-100">
+        <div
+          className={`absolute right-0 ${
+            openUpwards ? 'bottom-10 origin-bottom-right' : 'top-10 origin-top-right'
+          } w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-50 select-none animate-in fade-in zoom-in-95 duration-100`}
+        >
           <button
             type="button"
             onClick={(e) => {

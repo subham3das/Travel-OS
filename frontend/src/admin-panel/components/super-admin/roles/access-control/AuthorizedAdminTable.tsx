@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Search,
   Filter,
@@ -64,6 +65,55 @@ export const AuthorizedAdminTable: React.FC<AuthorizedAdminTableProps> = ({
   onExportCSV,
 }) => {
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number; openUpwards: boolean }>({
+    top: 0,
+    left: 0,
+    openUpwards: false,
+  });
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openActionMenuId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenActionMenuId(null);
+      }
+    };
+    const handleScrollOrResize = () => {
+      setOpenActionMenuId(null);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenActionMenuId(null);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openActionMenuId]);
+
+  const handleToggleMenu = (e: React.MouseEvent<HTMLButtonElement>, id: string) => {
+    e.stopPropagation();
+    if (openActionMenuId === id) {
+      setOpenActionMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpwards = spaceBelow < 280 && rect.top > 280;
+      const menuWidth = 192; // w-48 = 192px
+      const left = Math.max(10, rect.right - menuWidth);
+      const top = openUpwards ? rect.top - 6 : rect.bottom + 6;
+      setMenuCoords({ top, left, openUpwards });
+      setOpenActionMenuId(id);
+    }
+  };
 
   const isAllSelected = admins.length > 0 && selectedAdminIds.length === admins.length;
 
@@ -309,74 +359,100 @@ export const AuthorizedAdminTable: React.FC<AuthorizedAdminTableProps> = ({
                   <td className="py-3 px-3">{getStatusBadge(adm.accountStatus)}</td>
 
                   {/* Actions Dropdown */}
-                  <td className="py-3 px-3 text-right relative">
+                  <td className="py-3 px-3 text-right">
                     <button
                       type="button"
-                      onClick={() => setOpenActionMenuId(isMenuOpen ? null : adm.id)}
+                      onClick={(e) => handleToggleMenu(e, adm.id)}
                       className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
 
-                    {isMenuOpen && (
-                      <div
-                        className="absolute right-3 top-10 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 p-1.5 z-40 text-left space-y-0.5 text-xs font-bold text-slate-700"
-                        onClick={() => setOpenActionMenuId(null)}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => onEditAdmin(adm)}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-purple-50 hover:text-[#6356E5] transition-colors cursor-pointer"
+                    {isMenuOpen &&
+                      createPortal(
+                        <div
+                          ref={menuRef}
+                          style={{
+                            position: 'fixed',
+                            left: `${menuCoords.left}px`,
+                            ...(menuCoords.openUpwards
+                              ? { bottom: `${window.innerHeight - menuCoords.top}px` }
+                              : { top: `${menuCoords.top}px` }),
+                            zIndex: 9999,
+                          }}
+                          className="w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 p-1.5 text-left space-y-0.5 text-xs font-bold text-slate-700 select-none"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          <span>Edit Details</span>
-                        </button>
-
-                        {adm.invitationStatus === 'Pending' && (
                           <button
                             type="button"
-                            onClick={() => onResendInvite(adm.id)}
+                            onClick={() => {
+                              setOpenActionMenuId(null);
+                              onEditAdmin(adm);
+                            }}
                             className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-purple-50 hover:text-[#6356E5] transition-colors cursor-pointer"
                           >
-                            <Send className="w-3.5 h-3.5" />
-                            <span>Resend Invitation</span>
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>Edit Details</span>
                           </button>
-                        )}
 
-                        {adm.accountStatus === 'Active' && adm.role !== 'Super Admin' && (
-                          <button
-                            type="button"
-                            onClick={() => onChangeStatus(adm.id, 'Suspended')}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                          >
-                            <Ban className="w-3.5 h-3.5" />
-                            <span>Suspend Account</span>
-                          </button>
-                        )}
+                          {adm.invitationStatus === 'Pending' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                onResendInvite(adm.id);
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-purple-50 hover:text-[#6356E5] transition-colors cursor-pointer"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              <span>Resend Invitation</span>
+                            </button>
+                          )}
 
-                        {adm.accountStatus === 'Suspended' && (
-                          <button
-                            type="button"
-                            onClick={() => onChangeStatus(adm.id, 'Active')}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                            <span>Activate Account</span>
-                          </button>
-                        )}
+                          {adm.accountStatus === 'Active' && adm.role !== 'Super Admin' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                onChangeStatus(adm.id, 'Suspended');
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                              <span>Suspend Account</span>
+                            </button>
+                          )}
 
-                        {adm.role !== 'Super Admin' && (
-                          <button
-                            type="button"
-                            onClick={() => onDeleteAdmin(adm.id)}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete Access</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
+                          {adm.accountStatus === 'Suspended' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                onChangeStatus(adm.id, 'Active');
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                              <span>Activate Account</span>
+                            </button>
+                          )}
+
+                          {adm.role !== 'Super Admin' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                onDeleteAdmin(adm.id);
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete Access</span>
+                            </button>
+                          )}
+                        </div>,
+                        document.body
+                      )}
                   </td>
                 </tr>
               );

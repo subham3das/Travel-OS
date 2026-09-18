@@ -89,7 +89,7 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                   {payment.transactionId}
                 </h2>
                 <p className="text-[10px] font-semibold text-slate-400">
-                  {payment.date} • {payment.time}
+                  {payment.paymentDate || payment.date} • {payment.paymentTime || payment.time}
                 </p>
               </div>
 
@@ -171,20 +171,20 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                         <span className="font-black text-[#0F172A] text-sm">{payment.totalAmount}</span>
                       </div>
                       <div className="flex items-center justify-between text-slate-600">
-                        <span>Platform Commission ({payment.commissionRate})</span>
+                        <span>Platform Commission ({payment.commissionRate || '10%'})</span>
                         <span className="font-extrabold text-[#6356E5]">{payment.platformFee}</span>
                       </div>
                       <div className="flex items-center justify-between text-slate-600">
-                        <span>Taxes Collected ({payment.taxRate})</span>
-                        <span className="font-bold text-slate-700">{payment.taxAmount}</span>
+                        <span>Taxes Collected ({payment.taxRate || '18%'})</span>
+                        <span className="font-bold text-slate-700">{payment.gstAmount || payment.taxAmount || '₹0'}</span>
                       </div>
                       <div className="flex items-center justify-between text-slate-600">
                         <span>Gateway Processing Fee</span>
-                        <span className="font-bold text-slate-700">{payment.gatewayFee}</span>
+                        <span className="font-bold text-slate-700">{payment.gatewayFee || '₹0'}</span>
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs font-black text-[#0F172A]">
                         <span>Net Payable to Agency</span>
-                        <span className="text-emerald-600 font-extrabold text-sm">{payment.agencyPayout}</span>
+                        <span className="text-emerald-600 font-extrabold text-sm">{payment.agencyEarnings || payment.agencyPayout || '₹0'}</span>
                       </div>
                     </div>
                   </div>
@@ -215,14 +215,14 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 block">Settlement Date</span>
                           <span className="font-semibold text-slate-700 text-[10px] block mt-0.5">
-                            {payment.settlementDate || 'Scheduled next cycle'}
+                            {payment.scheduledSettlementDate || payment.settlementDate || 'Scheduled next cycle'}
                           </span>
                         </div>
 
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 block">Agency Bank</span>
                           <span className="font-bold text-slate-700 text-[10px] block mt-0.5">
-                            {payment.bankAccount || 'HDFC Bank •••• 4821'}
+                            {payment.settlementAccount || payment.bankAccount || 'HDFC Bank •••• 4821'}
                           </span>
                         </div>
                       </div>
@@ -337,20 +337,20 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                       <span className="font-black text-[#0F172A]">{payment.totalAmount}</span>
                     </div>
                     <div className="flex justify-between text-purple-700 font-semibold">
-                      <span>- Platform Commission ({payment.commissionRate}):</span>
+                      <span>- Platform Commission ({payment.commissionRate || '10%'}):</span>
                       <span>{payment.platformFee}</span>
                     </div>
                     <div className="flex justify-between text-slate-600">
                       <span>- GST on Commission (18%):</span>
-                      <span>₹{(parseFloat(payment.platformFee.replace(/[^0-9.]/g, '')) * 0.18).toFixed(2)}</span>
+                      <span>₹{(parseFloat(payment.platformFee.replace(/[^0-9.]/g, '') || '0') * 0.18).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-slate-600">
                       <span>- TDS (1% u/s 194O):</span>
-                      <span>₹{(parseFloat(payment.totalAmount.replace(/[^0-9.]/g, '')) * 0.01).toFixed(2)}</span>
+                      <span>₹{(parseFloat(payment.totalAmount.replace(/[^0-9.]/g, '') || '0') * 0.01).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-purple-200 text-sm font-black text-emerald-700">
                       <span>Final Net Disbursement:</span>
-                      <span>{payment.agencyPayout}</span>
+                      <span>{payment.agencyEarnings || payment.agencyPayout || '₹0'}</span>
                     </div>
                   </div>
                 </div>
@@ -383,7 +383,7 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                     <div className="relative space-y-0.5">
                       <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-white" />
                       <p className="text-xs font-black text-[#0F172A]">Payment Captured & Reconciled</p>
-                      <p className="text-[10px] font-semibold text-slate-400">{payment.date} {payment.time} • Razorpay Webhook</p>
+                      <p className="text-[10px] font-semibold text-slate-400">{payment.paymentDate || payment.date} {payment.paymentTime || payment.time} • Razorpay Webhook</p>
                     </div>
                     <div className="relative space-y-0.5">
                       <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#6356E5] ring-4 ring-white" />

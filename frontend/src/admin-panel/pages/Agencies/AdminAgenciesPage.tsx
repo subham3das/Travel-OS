@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../../../user-panel/context/ToastContext';
 
@@ -18,7 +18,7 @@ import { AgencyDrawer } from '../../components/super-admin/agencies/AgencyDrawer
 /**
  * Super Admin Agency Management Page Component
  * Route: /admin/agencies
- * Single Source of Truth matching super-agencies.png
+ * 100% Backend-Driven Architecture connected to MongoDB
  */
 export const AdminAgenciesPage: React.FC = () => {
   const { showToast } = useToast();
@@ -36,6 +36,8 @@ export const AdminAgenciesPage: React.FC = () => {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Filters State
   const [filters, setFilters] = useState<AgencyFilters>({
@@ -49,35 +51,39 @@ export const AdminAgenciesPage: React.FC = () => {
     search: '',
   });
 
-  // Load initial summary stats and agencies list
+  // Fetch Stats & Agencies from Backend
+  const loadStats = useCallback(async () => {
+    try {
+      const statsData = await adminAgencyService.getSummaryStats();
+      setStats(statsData);
+    } catch (err) {
+      console.error('Failed to load agency stats:', err);
+    }
+  }, []);
+
+  const loadAgencies = useCallback(
+    async (page = currentPage, limit = itemsPerPage, activeFilters = filters) => {
+      try {
+        const res = await adminAgencyService.getAgencies(activeFilters, page, limit);
+        setAgencies(res.agencies);
+        setTotalPages(res.pagination.totalPages);
+        setTotalItems(res.pagination.total);
+      } catch (err) {
+        console.error('Failed to load agencies list:', err);
+      }
+    },
+    [currentPage, itemsPerPage, filters]
+  );
+
+  // Initial Load
   useEffect(() => {
     let isMounted = true;
-
-    const fetchData = async () => {
-      try {
-        const [statsData, agenciesData] = await Promise.all([
-          adminAgencyService.getSummaryStats(),
-          adminAgencyService.getAgencies(filters),
-        ]);
-
-        if (isMounted) {
-          setStats(statsData);
-          setAgencies(agenciesData);
-          // Set initial drawer selection to Wanderlust Holidays if available
-          if (agenciesData.length > 0 && !selectedAgency) {
-            setSelectedAgency(agenciesData[0]);
-            setIsDrawerOpen(true);
-          }
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('Failed to load agency management data', err);
-        if (isMounted) setLoading(false);
-      }
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([loadStats(), loadAgencies(1, itemsPerPage, filters)]);
+      if (isMounted) setLoading(false);
     };
-
-    fetchData();
-
+    init();
     return () => {
       isMounted = false;
     };
@@ -100,20 +106,23 @@ export const AdminAgenciesPage: React.FC = () => {
       search: '',
     };
     setFilters(initialFilters);
-    adminAgencyService.getAgencies(initialFilters).then(setAgencies);
+    setCurrentPage(1);
+    loadAgencies(1, itemsPerPage, initialFilters);
     showToast('Filters reset to default', 'info');
   };
 
   const handleApplyFilters = () => {
-    adminAgencyService.getAgencies(filters).then((data) => {
-      setAgencies(data);
-      showToast(`Found ${data.length} matching agencies`, 'success');
+    setCurrentPage(1);
+    loadAgencies(1, itemsPerPage, filters).then(() => {
+      showToast(`Filter applied`, 'success');
     });
   };
 
   const handleQuickSearch = (q: string) => {
-    handleFilterChange('search', q);
-    adminAgencyService.getAgencies({ ...filters, search: q }).then(setAgencies);
+    const updatedFilters = { ...filters, search: q };
+    setFilters(updatedFilters);
+    setCurrentPage(1);
+    loadAgencies(1, itemsPerPage, updatedFilters);
   };
 
   // Checkbox selection handlers
@@ -138,78 +147,114 @@ export const AdminAgenciesPage: React.FC = () => {
   };
 
   const handleAction = async (actionType: string, agency: Agency) => {
-    switch (actionType) {
-      case 'verify':
-        await adminAgencyService.verifyAgency(agency.id);
-        setAgencies((prev) =>
-          prev.map((a) => (a.id === agency.id ? { ...a, verification: 'Verified' } : a))
-        );
-        showToast(`Agency "${agency.name}" has been verified successfully`, 'success');
-        break;
-      case 'activate':
-        await adminAgencyService.activateAgency(agency.id);
-        setAgencies((prev) =>
-          prev.map((a) => (a.id === agency.id ? { ...a, status: 'Active' } : a))
-        );
-        showToast(`Agency "${agency.name}" has been activated`, 'success');
-        break;
-      case 'suspend':
-        await adminAgencyService.suspendAgency(agency.id);
-        setAgencies((prev) =>
-          prev.map((a) => (a.id === agency.id ? { ...a, status: 'Suspended' } : a))
-        );
-        showToast(`Agency "${agency.name}" has been suspended`, 'info');
-        break;
-      case 'reject':
-        setAgencies((prev) =>
-          prev.map((a) => (a.id === agency.id ? { ...a, status: 'Rejected' } : a))
-        );
-        showToast(`Agency "${agency.name}" application rejected`, 'error');
-        break;
-      case 'delete':
-        await adminAgencyService.deleteAgency(agency.id);
-        setAgencies((prev) => prev.filter((a) => a.id !== agency.id));
-        setSelectedIds((prev) => prev.filter((id) => id !== agency.id));
-        showToast(`Agency "${agency.name}" deleted`, 'info');
-        break;
-      case 'edit':
+    try {
+      if (actionType === 'verify') {
+        const res = await adminAgencyService.verifyAgency(agency.id);
+        if (res.success) {
+          showToast(`Agency "${agency.name}" has been verified successfully`, 'success');
+          loadAgencies();
+          loadStats();
+        } else {
+          showToast(res.message || 'Failed to verify agency', 'error');
+        }
+      } else if (actionType === 'activate') {
+        const res = await adminAgencyService.activateAgency(agency.id);
+        if (res.success) {
+          showToast(`Agency "${agency.name}" has been activated`, 'success');
+          loadAgencies();
+          loadStats();
+        } else {
+          showToast(res.message || 'Failed to activate agency', 'error');
+        }
+      } else if (actionType === 'suspend') {
+        const res = await adminAgencyService.suspendAgency(agency.id);
+        if (res.success) {
+          showToast(`Agency "${agency.name}" has been suspended`, 'info');
+          loadAgencies();
+          loadStats();
+        } else {
+          showToast(res.message || 'Failed to suspend agency', 'error');
+        }
+      } else if (actionType === 'delete') {
+        const res = await adminAgencyService.deleteAgency(agency.id);
+        if (res.success) {
+          showToast(`Agency "${agency.name}" deleted`, 'info');
+          setSelectedIds((prev) => prev.filter((id) => id !== agency.id));
+          loadAgencies();
+          loadStats();
+        } else {
+          showToast(res.message || 'Failed to delete agency', 'error');
+        }
+      } else if (actionType === 'edit') {
         showToast(`Editing agency details for "${agency.name}"`, 'info');
-        break;
-      default:
-        break;
+      }
+    } catch (err: any) {
+      showToast(err.message || 'An error occurred', 'error');
     }
   };
 
   // Bulk action handlers
-  const handleVerifySelected = () => {
-    setAgencies((prev) =>
-      prev.map((a) => (selectedIds.includes(a.id) ? { ...a, verification: 'Verified' } : a))
-    );
-    showToast(`Verified ${selectedIds.length} selected agencies`, 'success');
+  const handleVerifySelected = async () => {
+    const res = await adminAgencyService.bulkAgencyAction('verify', selectedIds);
+    if (res.success) {
+      showToast(`Verified ${res.modifiedCount ?? selectedIds.length} selected agencies`, 'success');
+      setSelectedIds([]);
+      loadAgencies();
+      loadStats();
+    } else {
+      showToast(res.message || 'Bulk verify failed', 'error');
+    }
   };
 
-  const handleSuspendSelected = () => {
-    setAgencies((prev) =>
-      prev.map((a) => (selectedIds.includes(a.id) ? { ...a, status: 'Suspended' } : a))
-    );
-    showToast(`Suspended ${selectedIds.length} selected agencies`, 'info');
+  const handleSuspendSelected = async () => {
+    const res = await adminAgencyService.bulkAgencyAction('suspend', selectedIds);
+    if (res.success) {
+      showToast(`Suspended ${res.modifiedCount ?? selectedIds.length} selected agencies`, 'info');
+      setSelectedIds([]);
+      loadAgencies();
+      loadStats();
+    } else {
+      showToast(res.message || 'Bulk suspend failed', 'error');
+    }
   };
 
-  const handleActivateSelected = () => {
-    setAgencies((prev) =>
-      prev.map((a) => (selectedIds.includes(a.id) ? { ...a, status: 'Active' } : a))
-    );
-    showToast(`Activated ${selectedIds.length} selected agencies`, 'success');
+  const handleActivateSelected = async () => {
+    const res = await adminAgencyService.bulkAgencyAction('activate', selectedIds);
+    if (res.success) {
+      showToast(`Activated ${res.modifiedCount ?? selectedIds.length} selected agencies`, 'success');
+      setSelectedIds([]);
+      loadAgencies();
+      loadStats();
+    } else {
+      showToast(res.message || 'Bulk activate failed', 'error');
+    }
   };
 
   const handleExportSelected = () => {
     showToast(`Exporting data for ${selectedIds.length} agencies to CSV...`, 'info');
   };
 
-  const handleDeleteSelected = () => {
-    setAgencies((prev) => prev.filter((a) => !selectedIds.includes(a.id)));
-    setSelectedIds([]);
-    showToast(`Deleted ${selectedIds.length} selected agencies`, 'info');
+  const handleDeleteSelected = async () => {
+    const res = await adminAgencyService.bulkAgencyAction('delete', selectedIds);
+    if (res.success) {
+      showToast(`Deleted ${res.modifiedCount ?? selectedIds.length} selected agencies`, 'info');
+      setSelectedIds([]);
+      loadAgencies();
+      loadStats();
+    } else {
+      showToast(res.message || 'Bulk delete failed', 'error');
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    loadAgencies(page, itemsPerPage, filters);
+  };
+
+  const handleItemsPerPageChange = (newLimit: number) => {
+    setItemsPerPage(newLimit);
+    setCurrentPage(1);
+    loadAgencies(1, newLimit, filters);
   };
 
   if (loading || !stats) {
@@ -250,9 +295,9 @@ export const AdminAgenciesPage: React.FC = () => {
           if (statusKey === 'suspended') statusVal = 'Suspended';
           if (statusKey === 'rejected') statusVal = 'Rejected';
           handleFilterChange('status', statusVal);
-          adminAgencyService
-            .getAgencies({ ...filters, status: statusVal })
-            .then(setAgencies);
+          const updatedFilters = { ...filters, status: statusVal };
+          setCurrentPage(1);
+          loadAgencies(1, itemsPerPage, updatedFilters);
         }}
       />
 
@@ -273,7 +318,7 @@ export const AdminAgenciesPage: React.FC = () => {
         {selectedIds.length > 0 && (
           <AgencyBulkToolbar
             selectedCount={selectedIds.length}
-            totalCount={1248}
+            totalCount={totalItems}
             onSelectAll={() => setSelectedIds(agencies.map((a) => a.id))}
             onVerifySelected={handleVerifySelected}
             onSuspendSelected={handleSuspendSelected}
@@ -297,11 +342,11 @@ export const AdminAgenciesPage: React.FC = () => {
       {/* ── 6. PAGINATION FOOTER ── */}
       <PaginationFooter
         currentPage={currentPage}
-        totalPages={125}
-        totalItems={1248}
+        totalPages={totalPages}
+        totalItems={totalItems}
         itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
-        onItemsPerPageChange={setItemsPerPage}
+        onPageChange={handlePageChange}
+        onItemsPerPageChange={handleItemsPerPageChange}
       />
 
       {/* ── 7. RIGHT DETAILS DRAWER ── */}

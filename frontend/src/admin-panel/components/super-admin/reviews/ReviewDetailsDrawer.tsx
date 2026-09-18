@@ -172,30 +172,35 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
 
                     <div className="flex items-center gap-3">
                       <img
-                        src={review.traveler.avatar}
-                        alt={review.traveler.name}
+                        src={
+                          review.traveler?.avatar ||
+                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'
+                        }
+                        alt={review.traveler?.name || 'Traveler'}
                         className="w-10 h-10 rounded-full object-cover border border-slate-200"
                       />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <h4 className="text-xs font-black text-[#0F172A]">{review.traveler.name}</h4>
-                          {review.traveler.verified && (
+                          <h4 className="text-xs font-black text-[#0F172A]">
+                            {review.traveler?.name || 'Verified Traveler'}
+                          </h4>
+                          {review.traveler?.verified && (
                             <span className="px-2 py-0.2 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-100">
                               Verified Traveler
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-500">{review.traveler.email}</p>
+                        <p className="text-[11px] text-slate-500">{review.traveler?.email || 'traveler@email.com'}</p>
                         <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
                           <MapPin className="w-3 h-3 text-slate-400" />
-                          <span>{review.traveler.location}</span>
+                          <span>{review.traveler?.location || 'India'}</span>
                         </p>
                       </div>
                     </div>
 
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-semibold">
-                      <span>Member since {review.traveler.memberSince}</span>
-                      <span>Total Reviews: {review.traveler.totalReviews}</span>
+                      <span>Member since {review.traveler?.memberSince || '2024'}</span>
+                      <span>Total Reviews: {review.traveler?.totalReviews ?? 1}</span>
                     </div>
                   </div>
 
@@ -208,20 +213,20 @@ export const ReviewDetailsDrawer: React.FC<ReviewDetailsDrawerProps> = ({
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between items-center py-1 border-b border-slate-50">
                         <span className="text-slate-400 font-bold">Booking ID</span>
-                        <span className="font-mono font-bold text-slate-800">{review.booking.id}</span>
+                        <span className="font-mono font-bold text-slate-800">{review.booking?.id || 'BK-1001'}</span>
                       </div>
                       <div className="flex justify-between items-center py-1 border-b border-slate-50">
                         <span className="text-slate-400 font-bold">Travel Date</span>
-                        <span className="font-bold text-slate-800">{review.booking.travelDates}</span>
+                        <span className="font-bold text-slate-800">{review.booking?.travelDates || 'Recent'}</span>
                       </div>
                       <div className="flex justify-between items-center py-1 border-b border-slate-50">
                         <span className="text-slate-400 font-bold">Travelers</span>
-                        <span className="font-bold text-slate-800">{review.booking.travelerCount}</span>
+                        <span className="font-bold text-slate-800">{review.booking?.travelerCount || '1 Traveler'}</span>
                       </div>
                       <div className="flex justify-between items-center py-1">
                         <span className="text-slate-400 font-bold">Booking Amount</span>
                         <span className="font-mono font-black text-slate-900">
-                          {review.booking.bookingAmount}
+                          {review.booking?.bookingAmount || '₹0'}
                         </span>
                       </div>
                     </div>

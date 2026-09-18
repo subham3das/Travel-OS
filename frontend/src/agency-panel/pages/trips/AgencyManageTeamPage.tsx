@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
 import { DesktopSidebar } from '../../components/dashboard/DesktopSidebar';
 import { BottomNavigation } from '../../components/dashboard/BottomNavigation';
@@ -22,6 +21,7 @@ import {
   AvailableStaffMember,
 } from '../../data/staff';
 import { MOCK_TRIP_DETAILS } from '../../data/tripDetails';
+import { agencyTripsService, TripDetailResponse } from '../../services/agencyTrips.service';
 
 /**
  * Agency Manage Operational Team Page
@@ -37,6 +37,16 @@ export const AgencyManageTeamPage: React.FC = () => {
   const [availableStaff, setAvailableStaff] = useState<AvailableStaffMember[]>(MOCK_AVAILABLE_STAFF);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('All Roles');
+  const [tripData, setTripData] = useState<TripDetailResponse | null>(null);
+
+  useEffect(() => {
+    agencyTripsService.getTripById(currentTripId).then((res) => {
+      setTripData(res);
+      if (res.teamAssignments && res.teamAssignments.length > 0) {
+        setAssignedTeam(res.teamAssignments as any);
+      }
+    }).catch((err) => console.error('Failed to load trip team:', err));
+  }, [currentTripId]);
 
   // Filtered available staff based on search & role dropdown
   const filteredAvailableStaff = useMemo(() => {
@@ -91,10 +101,17 @@ export const AgencyManageTeamPage: React.FC = () => {
   };
 
   // Handler: Save Assignments
-  const handleSaveAssignments = () => {
+  const handleSaveAssignments = async () => {
+    try {
+      await agencyTripsService.updateTripTeam(currentTripId, assignedTeam as any);
+    } catch (err) {
+      console.error('Failed to save team assignments in backend:', err);
+    }
     // Navigate back to trip details page with teamAssigned=true signal
     navigate(`/agency/trips/${currentTripId}?teamAssigned=true`);
   };
+
+  const tripSummary = tripData || MOCK_TRIP_DETAILS;
 
   return (
     <div className="min-h-screen bg-[#FBFBFE] text-[#0F172A] font-sans select-none flex flex-col md:flex-row">
@@ -113,13 +130,13 @@ export const AgencyManageTeamPage: React.FC = () => {
           {/* Trip Summary Card */}
           <TripSummaryCard
             tripId={currentTripId}
-            packageName={MOCK_TRIP_DETAILS.packageName}
-            coverImage={MOCK_TRIP_DETAILS.coverImage}
-            dateRangeText={MOCK_TRIP_DETAILS.dateRangeText}
-            destinationRoute={MOCK_TRIP_DETAILS.destinationRoute}
-            travelerCount={MOCK_TRIP_DETAILS.travelerCount}
-            capacity={MOCK_TRIP_DETAILS.capacity}
-            statusText={MOCK_TRIP_DETAILS.statusText}
+            packageName={tripSummary.packageName}
+            coverImage={tripSummary.coverImage}
+            dateRangeText={tripSummary.dateRangeText}
+            destinationRoute={tripSummary.destinationRoute}
+            travelerCount={tripSummary.travelerCount}
+            capacity={tripSummary.capacity}
+            statusText={(tripSummary as any).statusText || (tripSummary as any).statusBadgeText || 'Confirmed'}
           />
 
           {/* Assigned Team Section */}

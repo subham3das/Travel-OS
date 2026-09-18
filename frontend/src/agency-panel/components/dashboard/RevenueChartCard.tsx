@@ -1,11 +1,11 @@
 import React from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { RevenueData } from '../../data/dashboardInsights';
 
 interface RevenueChartCardProps {
   data: RevenueData;
   selectedRange: string;
-  onRangeChange: (range: any) => void;
+  onRangeChange: (range: 'Today' | 'This Week' | 'This Month' | 'This Year') => void;
 }
 
 export const RevenueChartCard: React.FC<RevenueChartCardProps> = ({
@@ -13,18 +13,50 @@ export const RevenueChartCard: React.FC<RevenueChartCardProps> = ({
   selectedRange,
   onRangeChange,
 }) => {
-  return (
-    <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 select-none flex flex-col justify-between">
-      {/* Header with Title & Dropdown */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs sm:text-sm font-bold text-slate-500">
-          Revenue This Month
-        </span>
+  const points = data.chartPoints && data.chartPoints.length >= 2
+    ? data.chartPoints
+    : [20, 35, 45, 60, 80];
 
+  const labels = data.chartLabels && data.chartLabels.length > 0
+    ? data.chartLabels
+    : ['1st', '8th', '15th', '22nd', 'End'];
+
+  // Map values to SVG coordinates (width: 300, height: 100, chart area: y from 20 to 80, x from 30 to 270)
+  const minVal = Math.min(...points);
+  const maxVal = Math.max(...points);
+  const valRange = maxVal === minVal ? 1 : maxVal - minVal;
+
+  const svgCoords = points.map((val, idx) => {
+    const x = 30 + (idx / (points.length - 1)) * 240;
+    const y = 80 - ((val - minVal) / valRange) * 55;
+    return { x: Math.round(x), y: Math.round(y) };
+  });
+
+  const pathD = svgCoords.reduce((acc, curr, idx) => {
+    if (idx === 0) return `M ${curr.x} ${curr.y}`;
+    const prev = svgCoords[idx - 1];
+    const cpX1 = prev.x + (curr.x - prev.x) / 2;
+    const cpY1 = prev.y;
+    const cpX2 = prev.x + (curr.x - prev.x) / 2;
+    const cpY2 = curr.y;
+    return `${acc} C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${curr.x} ${curr.y}`;
+  }, '');
+
+  const areaD = `${pathD} L ${svgCoords[svgCoords.length - 1].x} 90 L ${svgCoords[0].x} 90 Z`;
+
+  return (
+    <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 select-none">
+      {/* Header: Title & Time Range Dropdown */}
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+          Revenue {selectedRange}
+        </h4>
         <select
           value={selectedRange}
-          onChange={(e) => onRangeChange(e.target.value)}
-          className="appearance-none bg-slate-50 border border-slate-200/80 text-slate-700 font-extrabold text-[11px] px-3 py-1 rounded-xl focus:outline-none shadow-2xs cursor-pointer"
+          onChange={(e) =>
+            onRangeChange(e.target.value as 'Today' | 'This Week' | 'This Month' | 'This Year')
+          }
+          className="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200/80 rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-[#583BE8] cursor-pointer"
         >
           <option value="This Month">This Month</option>
           <option value="This Week">This Week</option>
@@ -38,9 +70,17 @@ export const RevenueChartCard: React.FC<RevenueChartCardProps> = ({
         <h3 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
           {data.revenueAmount}
         </h3>
-        <p className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-          <ArrowUpRight className="w-3.5 h-3.5" />
-          <span>{data.growthPct} vs last month</span>
+        <p
+          className={`text-xs font-bold flex items-center gap-1 ${
+            data.isPositive ? 'text-emerald-600' : 'text-rose-600'
+          }`}
+        >
+          {data.isPositive ? (
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          ) : (
+            <ArrowDownRight className="w-3.5 h-3.5" />
+          )}
+          <span>{data.growthPct} vs last {selectedRange.toLowerCase()}</span>
         </p>
       </div>
 
@@ -59,43 +99,37 @@ export const RevenueChartCard: React.FC<RevenueChartCardProps> = ({
           <line x1="0" y1="50" x2="300" y2="50" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
           <line x1="0" y1="80" x2="300" y2="80" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
 
-          {/* Y Axis Labels */}
-          <text x="0" y="22" fill="#94A3B8" fontSize="8" fontWeight="600">₹60K</text>
-          <text x="0" y="52" fill="#94A3B8" fontSize="8" fontWeight="600">₹40K</text>
-          <text x="0" y="82" fill="#94A3B8" fontSize="8" fontWeight="600">₹20K</text>
-
           {/* Area Fill */}
-          <path
-            d="M 30 75 Q 70 65, 110 50 T 190 35 T 270 20 L 270 90 L 30 90 Z"
-            fill="url(#purpleGradient)"
-          />
+          <path d={areaD} fill="url(#purpleGradient)" />
 
           {/* Smooth Line Path */}
           <path
-            d="M 30 75 Q 70 65, 110 50 T 190 35 T 270 20"
+            d={pathD}
             fill="none"
             stroke="#583BE8"
             strokeWidth="3"
             strokeLinecap="round"
           />
 
-          {/* Data Dots matching reference image */}
-          <circle cx="30" cy="75" r="4" fill="#583BE8" stroke="white" strokeWidth="2" />
-          <circle cx="70" cy="70" r="4" fill="#583BE8" stroke="white" strokeWidth="2" />
-          <circle cx="110" cy="50" r="4" fill="#583BE8" stroke="white" strokeWidth="2" />
-          <circle cx="150" cy="62" r="4" fill="#583BE8" stroke="white" strokeWidth="2" />
-          <circle cx="190" cy="35" r="4" fill="#583BE8" stroke="white" strokeWidth="2" />
-          <circle cx="230" cy="42" r="4" fill="#583BE8" stroke="white" strokeWidth="2" />
-          <circle cx="270" cy="20" r="5" fill="#583BE8" stroke="white" strokeWidth="2" />
+          {/* Dynamic Data Dots */}
+          {svgCoords.map((coord, i) => (
+            <circle
+              key={i}
+              cx={coord.x}
+              cy={coord.y}
+              r={i === svgCoords.length - 1 ? 5 : 4}
+              fill="#583BE8"
+              stroke="white"
+              strokeWidth="2"
+            />
+          ))}
         </svg>
 
         {/* X Axis Labels */}
         <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 pt-1 px-1">
-          <span>1 Aug</span>
-          <span>8 Aug</span>
-          <span>15 Aug</span>
-          <span>22 Aug</span>
-          <span>31 Aug</span>
+          {labels.map((lbl, i) => (
+            <span key={i}>{lbl}</span>
+          ))}
         </div>
       </div>
     </div>

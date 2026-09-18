@@ -170,30 +170,34 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
         </span>
 
         <div className="space-y-0.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
-          {categories.map((cat) => {
-            const isSelected = selectedCategory === cat.name;
-            return (
-              <div
-                key={cat.id}
-                onClick={() => onSelectCategory(isSelected ? 'All' : cat.name)}
-                className={`flex items-center justify-between p-2 rounded-2xl transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-purple-50 text-[#6356E5] font-black shadow-2xs'
-                    : 'hover:bg-slate-50 text-slate-700 font-bold'
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="shrink-0">{getCategoryIcon(cat.name)}</div>
-                  <span className="text-xs truncate">{cat.name}</span>
-                </div>
+          {categories.length === 0 ? (
+            <p className="text-[11px] text-slate-400 p-2 text-center">No categories recorded</p>
+          ) : (
+            categories.map((cat) => {
+              const isSelected = selectedCategory === cat.name;
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => onSelectCategory(isSelected ? 'All' : cat.name)}
+                  className={`flex items-center justify-between p-2 rounded-2xl transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-purple-50 text-[#6356E5] font-black shadow-2xs'
+                      : 'hover:bg-slate-50 text-slate-700 font-bold'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="shrink-0">{getCategoryIcon(cat.name)}</div>
+                    <span className="text-xs truncate">{cat.name}</span>
+                  </div>
 
-                <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400">
-                  <span>{cat.count.toLocaleString()}</span>
-                  <ChevronDown className="w-2.5 h-2.5" />
+                  <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400">
+                    <span>{cat.count.toLocaleString()}</span>
+                    <ChevronDown className="w-2.5 h-2.5" />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Download, CheckCircle2, WifiOff } from 'lucide-react';
-import { getTripById } from '../../data/trips';
-import { getDocumentsByTripId } from '../../data/documents';
+import { getTripById, Trip } from '../../data/trips';
+import { getDocumentsByTripId, TravelDocument } from '../../data/documents';
+import { tripService } from '../../services/trip.service';
 
 import { TripSummaryCard } from './components/TripSummaryCard';
 import { DocumentsList } from './components/DocumentsList';
@@ -21,11 +22,21 @@ export const TravelDocumentsPage: React.FC = () => {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   const targetId = tripId || id || 'trip-001';
-  const trip = getTripById(targetId);
-  const documents = getDocumentsByTripId(targetId);
+  const [trip, setTrip] = useState<Trip>(getTripById(targetId));
+  const [documents, setDocuments] = useState<TravelDocument[]>(getDocumentsByTripId(targetId));
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 400);
+    let isMounted = true;
+    Promise.all([
+      tripService.getTripById(targetId).catch(() => null),
+      tripService.getTripDocuments(targetId).catch(() => null),
+    ]).then(([liveTrip, liveDocs]) => {
+      if (isMounted) {
+        if (liveTrip) setTrip(liveTrip);
+        if (liveDocs && liveDocs.length > 0) setDocuments(liveDocs);
+        setLoading(false);
+      }
+    });
 
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -34,11 +45,11 @@ export const TravelDocumentsPage: React.FC = () => {
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      clearTimeout(timer);
+      isMounted = false;
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [targetId]);
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#6356E5]/20 selection:text-[#6356E5]">

@@ -54,6 +54,16 @@ export const AdminDashboardPage: React.FC = () => {
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
 
+  const [selectedRange, setSelectedRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [isRangeOpen, setIsRangeOpen] = useState(false);
+
+  const rangeLabels: Record<'7d' | '30d' | '90d' | '1y', string> = {
+    '7d': 'Last 7 Days',
+    '30d': 'Last 30 Days',
+    '90d': 'Last 90 Days',
+    '1y': 'Last 1 Year',
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -72,13 +82,13 @@ export const AdminDashboardPage: React.FC = () => {
           actionsData,
         ] = await Promise.all([
           adminDashboardService.getStats(),
-          adminDashboardService.getRevenueOverview(),
-          adminDashboardService.getBookingTrend(),
-          adminDashboardService.getUserGrowth(),
-          adminDashboardService.getAgencyGrowth(),
-          adminDashboardService.getRecentActivities(),
-          adminDashboardService.getLatestTransactions(),
-          adminDashboardService.getPendingApprovals(),
+          adminDashboardService.getRevenueOverview(selectedRange),
+          adminDashboardService.getBookingTrend(selectedRange),
+          adminDashboardService.getUserGrowth(selectedRange),
+          adminDashboardService.getAgencyGrowth(selectedRange),
+          adminDashboardService.getRecentActivities(5),
+          adminDashboardService.getLatestTransactions(5),
+          adminDashboardService.getPendingApprovals(5),
           adminDashboardService.getSystemHealth(),
           adminDashboardService.getQuickActions(),
         ]);
@@ -97,7 +107,7 @@ export const AdminDashboardPage: React.FC = () => {
           setLoading(false);
         }
       } catch (err) {
-        console.error('Failed to load admin dashboard data', err);
+        console.error('Failed to load admin dashboard data from backend', err);
         if (isMounted) setLoading(false);
       }
     };
@@ -107,7 +117,7 @@ export const AdminDashboardPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [selectedRange]);
 
   const handleQuickActionClick = (actionKey: string) => {
     switch (actionKey) {
@@ -163,18 +173,43 @@ export const AdminDashboardPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 self-start sm:self-auto">
-          <button
-            type="button"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 text-slate-700 text-xs font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
-          >
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <span>May 21 – Jun 21, 2025</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-          </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto relative">
+          {/* Dynamic Range Selector Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsRangeOpen((prev) => !prev)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 text-slate-700 text-xs font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <span>{rangeLabels[selectedRange]}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isRangeOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isRangeOpen && (
+              <div className="absolute right-0 mt-2 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 p-1.5 z-50 text-xs font-bold text-slate-700 space-y-0.5">
+                {(['7d', '30d', '90d', '1y'] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => {
+                      setSelectedRange(r);
+                      setIsRangeOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-xl transition-colors cursor-pointer ${
+                      selectedRange === r ? 'bg-purple-50 text-[#6356E5] font-black' : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    {rangeLabels[r]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
+            onClick={() => showToast('Displaying real-time platform telemetry metrics', 'info')}
             className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 text-slate-700 text-xs font-extrabold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
           >
             <Filter className="w-4 h-4 text-slate-400" />

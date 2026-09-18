@@ -1,7 +1,3 @@
-import { Router } from 'express';
+import customerChatRoutes from './customerChat.routes.js';
 
-const router = Router();
-
-// Module placeholder ready for Module 11: Support
-
-export default router;
+export default customerChatRoutes;

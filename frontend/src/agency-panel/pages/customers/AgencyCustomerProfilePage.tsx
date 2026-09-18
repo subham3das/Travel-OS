@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, User, Phone, Mail, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
 import { DesktopSidebar } from '../../components/dashboard/DesktopSidebar';
 import { BottomNavigation } from '../../components/dashboard/BottomNavigation';
@@ -16,56 +16,75 @@ import { EmergencyContactCard } from '../../components/customers/EmergencyContac
 import { TravelPreferenceCard } from '../../components/customers/TravelPreferenceCard';
 import { CustomerQuickActionsBar } from '../../components/customers/CustomerQuickActionsBar';
 
-import { MOCK_CUSTOMERS, Customer, AgencyNoteItem } from '../../data/customers';
+import { MOCK_CUSTOMERS, Customer } from '../../data/customers';
+import { agencyCustomersService } from '../../services/agencyCustomers.service';
 
 /**
  * Agency Customer Profile Detail Page
  * Route: /agency/customers/:customerId (Protected: APPROVED agencies only)
- *
- * Displays full 360-degree profile for a customer:
- * 1. Overview
- * 2. Loyalty Summary
- * 3. Trip History
- * 4. Booking History
- * 5. Customer Reviews
- * 6. Agency Private Notes (Add / Edit / Delete)
- * 7. Emergency Contact
- * 8. Travel Preferences
- * 9. Quick Actions
  */
 export const AgencyCustomerProfilePage: React.FC = () => {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
 
-  const foundCustomer = MOCK_CUSTOMERS.find((c) => c.id === customerId) || MOCK_CUSTOMERS[0];
-  const [customer, setCustomer] = useState<Customer>(foundCustomer);
+  const [customer, setCustomer] = useState<Customer>(MOCK_CUSTOMERS[0]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadCustomer = useCallback(async () => {
+    if (!customerId) return;
+    try {
+      setIsLoading(true);
+      const data = await agencyCustomersService.getCustomerById(customerId);
+      setCustomer(data);
+    } catch (err) {
+      console.error('Failed to load customer dossier from backend:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [customerId]);
+
+  useEffect(() => {
+    loadCustomer();
+  }, [loadCustomer]);
 
   // Note Handlers
-  const handleAddNote = (noteText: string) => {
-    const newNote: AgencyNoteItem = {
-      id: `n-${Date.now()}`,
-      noteText,
-      author: 'Agency Staff',
-      createdAt: 'Just now',
-    };
-    setCustomer((prev) => ({
-      ...prev,
-      notes: [newNote, ...prev.notes],
-    }));
+  const handleAddNote = async (noteText: string) => {
+    if (!customerId) return;
+    try {
+      const newNote = await agencyCustomersService.addNote(customerId, noteText);
+      setCustomer((prev) => ({
+        ...prev,
+        notes: [newNote, ...prev.notes],
+      }));
+    } catch (err) {
+      console.error('Failed to add customer note in backend:', err);
+    }
   };
 
-  const handleEditNote = (id: string, newText: string) => {
-    setCustomer((prev) => ({
-      ...prev,
-      notes: prev.notes.map((n) => (n.id === id ? { ...n, noteText: newText } : n)),
-    }));
+  const handleEditNote = async (id: string, newText: string) => {
+    if (!customerId) return;
+    try {
+      const updatedNotes = await agencyCustomersService.editNote(customerId, id, newText);
+      setCustomer((prev) => ({
+        ...prev,
+        notes: updatedNotes,
+      }));
+    } catch (err) {
+      console.error('Failed to edit customer note in backend:', err);
+    }
   };
 
-  const handleDeleteNote = (id: string) => {
-    setCustomer((prev) => ({
-      ...prev,
-      notes: prev.notes.filter((n) => n.id !== id),
-    }));
+  const handleDeleteNote = async (id: string) => {
+    if (!customerId) return;
+    try {
+      await agencyCustomersService.deleteNote(customerId, id);
+      setCustomer((prev) => ({
+        ...prev,
+        notes: prev.notes.filter((n) => n.id !== id),
+      }));
+    } catch (err) {
+      console.error('Failed to delete customer note in backend:', err);
+    }
   };
 
   return (
@@ -76,7 +95,7 @@ export const AgencyCustomerProfilePage: React.FC = () => {
         <DashboardHeader />
 
         {/* Sticky Page Header */}
-        <div className="bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-[3.5rem] z-20">
+        <div className="bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-[57px] sm:top-[65px] z-20 select-none">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -99,44 +118,51 @@ export const AgencyCustomerProfilePage: React.FC = () => {
 
         {/* Main Content Body */}
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 space-y-6 max-w-4xl mx-auto w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            className="space-y-6"
-          >
-            {/* 1. Customer Overview Section */}
-            <CustomerOverviewCard customer={customer} />
+          {isLoading ? (
+            <div className="p-8 bg-white rounded-3xl border border-slate-100 animate-pulse space-y-4">
+              <div className="h-6 bg-slate-100 rounded w-1/3" />
+              <div className="h-4 bg-slate-100 rounded w-2/3" />
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6"
+            >
+              {/* 1. Customer Overview Section */}
+              <CustomerOverviewCard customer={customer} />
 
-            {/* 2. Loyalty Summary Section */}
-            <LoyaltyCard customer={customer} />
+              {/* 2. Loyalty Summary Section */}
+              <LoyaltyCard customer={customer} />
 
-            {/* 3. Quick Actions */}
-            <CustomerQuickActionsBar customer={customer} />
+              {/* 3. Quick Actions */}
+              <CustomerQuickActionsBar customer={customer} />
 
-            {/* 4. Trip History Section */}
-            <TripHistoryCard tripHistory={customer.tripHistory} />
+              {/* 4. Trip History Section */}
+              <TripHistoryCard tripHistory={customer.tripHistory} />
 
-            {/* 5. Booking History Section */}
-            <BookingHistoryCard bookingHistory={customer.bookingHistory} />
+              {/* 5. Booking History Section */}
+              <BookingHistoryCard bookingHistory={customer.bookingHistory} />
 
-            {/* 6. Reviews Section */}
-            <ReviewCard reviews={customer.reviews} />
+              {/* 6. Reviews Section */}
+              <ReviewCard reviews={customer.reviews} />
 
-            {/* 7. Agency Private Notes Section (Editable) */}
-            <AgencyNotesCard
-              notes={customer.notes}
-              onAddNote={handleAddNote}
-              onEditNote={handleEditNote}
-              onDeleteNote={handleDeleteNote}
-            />
+              {/* 7. Agency Private Notes Section (Editable) */}
+              <AgencyNotesCard
+                notes={customer.notes}
+                onAddNote={handleAddNote}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
+              />
 
-            {/* 8. Emergency Contact Section */}
-            <EmergencyContactCard contact={customer.emergencyContact} />
+              {/* 8. Emergency Contact Section */}
+              <EmergencyContactCard contact={customer.emergencyContact} />
 
-            {/* 9. Travel Preferences Section */}
-            <TravelPreferenceCard preferences={customer.travelPreferences} />
-          </motion.div>
+              {/* 9. Travel Preferences Section */}
+              <TravelPreferenceCard preferences={customer.travelPreferences} />
+            </motion.div>
+          )}
         </main>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TourPackage } from '../types/package';
-import { packagesData, getPackageById } from '../data/packages';
+import { marketplaceService } from '../services/marketplace.service';
+import { getPackageById as getMockPackageById } from '../data/packages';
 
 interface UsePackageResult {
   pkg: TourPackage | null;
@@ -14,31 +15,54 @@ export const usePackage = (packageId?: string): UsePackageResult => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
     setError(null);
 
-    // Simulate async API fetch (GET /api/packages/:packageId)
-    const timer = setTimeout(() => {
-      if (!packageId) {
-        setPkg(null);
-        setError('No package ID provided');
-        setLoading(false);
-        return;
-      }
-
-      const found = getPackageById(packageId) || packagesData.find((p) => p.id === packageId);
-
-      if (found) {
-        setPkg(found);
-        setError(null);
-      } else {
-        setPkg(null);
-        setError(`Package "${packageId}" not found`);
-      }
+    if (!packageId) {
+      setPkg(null);
+      setError('No package ID provided');
       setLoading(false);
-    }, 80);
+      return;
+    }
 
-    return () => clearTimeout(timer);
+    marketplaceService
+      .getPackageById(packageId)
+      .then((data) => {
+        if (!isMounted) return;
+        if (data) {
+          setPkg(data);
+          setError(null);
+        } else {
+          // Fallback if demo ID
+          const fallback = getMockPackageById(packageId);
+          if (fallback) {
+            setPkg(fallback);
+            setError(null);
+          } else {
+            setPkg(null);
+            setError(`Package "${packageId}" not found`);
+          }
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        const fallback = getMockPackageById(packageId);
+        if (fallback) {
+          setPkg(fallback);
+          setError(null);
+        } else {
+          setPkg(null);
+          setError(err?.message || `Package "${packageId}" not found`);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [packageId]);
 
   return { pkg, loading, error };

@@ -5,6 +5,7 @@ import { AdminGoogleButton } from './AdminGoogleButton';
 import { AdminSecurityNotice } from './AdminSecurityNotice';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { loginAdminService, loginWithGoogleService } from '../../services/adminAuth.service';
+import { triggerGoogleOAuth } from '../../../utils/googleAuth.util';
 
 export const AdminLoginCard: React.FC = () => {
   const navigate = useNavigate();
@@ -48,20 +49,14 @@ export const AdminLoginCard: React.FC = () => {
     if (!validateForm() || isLoading || isGoogleLoading) return;
 
     setIsLoading(true);
+    setServerError(null);
 
     try {
       const res = await loginAdminService(loginId, password);
-
-      if (res.admin.role !== 'SUPER_ADMIN') {
-        setServerError('You do not have permission to access the Admin Portal.');
-        setIsLoading(false);
-        return;
-      }
-
-      loginAdmin(res.admin, res.token, res.refreshToken);
+      loginAdmin(res.admin, res.tokens.accessToken, res.tokens.refreshToken);
       navigate('/admin/dashboard');
     } catch (err: any) {
-      setServerError(err?.message || 'Unable to sign in. Please try again.');
+      setServerError(err?.message || 'Unable to sign in. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -73,19 +68,14 @@ export const AdminLoginCard: React.FC = () => {
     setServerError(null);
 
     try {
-      const res = await loginWithGoogleService();
+      const { accessToken } = await triggerGoogleOAuth();
+      const res = await loginWithGoogleService({ accessToken });
 
-      if (res.admin.role !== 'SUPER_ADMIN') {
-        setServerError('You do not have permission to access the Admin Portal.');
-        setIsGoogleLoading(false);
-        return;
-      }
-
-      loginAdmin(res.admin, res.token, res.refreshToken);
+      loginAdmin(res.admin, res.tokens.accessToken, res.tokens.refreshToken);
       navigate('/admin/dashboard');
     } catch (err: any) {
       setServerError(
-        err?.message || 'This Google account is not authorized to access the Admin Portal.'
+        err?.message || 'This Google account is not authorized to access the Super Admin Portal.'
       );
     } finally {
       setIsGoogleLoading(false);

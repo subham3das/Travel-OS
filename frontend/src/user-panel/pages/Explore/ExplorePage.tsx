@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { marketplaceService } from '../../services/marketplace.service';
 import {
   Compass,
   Palmtree,
@@ -365,13 +366,59 @@ export const ExplorePage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [agencies, setAgencies] = useState<TravelAgency[]>(topAgencies);
+  const [packages, setPackages] = useState<TravelPackage[]>(popularPackages);
+
+  useEffect(() => {
+    marketplaceService
+      .getAgencies({ limit: 8 })
+      .then((res) => {
+        if (res.agencies && res.agencies.length > 0) {
+          const mapped: TravelAgency[] = res.agencies.map((a, idx) => {
+            const colors = ['bg-slate-900 text-white', 'bg-emerald-700 text-white', 'bg-amber-600 text-white', 'bg-sky-600 text-white'];
+            return {
+              id: a.id,
+              name: a.name,
+              isVerified: a.isVerified,
+              rating: a.rating,
+              reviewsCount: a.reviewCount,
+              specialization: a.specializationTags[0] || 'Adventure Experts',
+              tripsCompleted: a.tripsCompleted,
+              bgColor: colors[idx % colors.length],
+            };
+          });
+          setAgencies(mapped);
+        }
+      })
+      .catch((err) => console.warn('Failed to load agencies in explore:', err));
+
+    marketplaceService
+      .getPackages({ limit: 10 })
+      .then((res) => {
+        if (res.packages && res.packages.length > 0) {
+          const mapped: TravelPackage[] = res.packages.map((p) => ({
+            id: p.id,
+            badge: (p.badge as any) || 'Popular',
+            title: p.title,
+            price: p.price,
+            rating: p.rating,
+            reviewsCount: p.reviewCount,
+            duration: p.duration,
+            location: p.destinationName,
+            imageUrl: p.coverImage,
+          }));
+          setPackages(mapped);
+        }
+      })
+      .catch((err) => console.warn('Failed to load packages in explore:', err));
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#FF4D6D]/20 selection:text-[#FF4D6D]">
       {/* 1. App Header */}
       <AppHeader
-        unreadNotificationsCount={2}
-        unreadMessagesCount={1}
+        unreadNotificationsCount={0}
+        unreadMessagesCount={0}
         onNotificationClick={() => navigate('/notifications')}
         onMessageClick={() => navigate('/chat')}
       />
@@ -547,7 +594,7 @@ export const ExplorePage: React.FC = () => {
           <SectionHeader title="Top Rated Travel Agencies" onViewAll={() => navigate('/agencies')} />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {topAgencies.map((agency) => (
+            {agencies.map((agency) => (
               <AgencyCard key={agency.id} agency={agency} onViewAgency={() => navigate(`/agencies/${agency.id}`)} />
             ))}
           </div>
@@ -705,7 +752,7 @@ export const ExplorePage: React.FC = () => {
           <SectionHeader title="Popular Packages" onViewAll={() => navigate('/search?tab=packages')} />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {popularPackages.map((pkg) => (
+            {packages.map((pkg) => (
               <PackageCard key={pkg.id} packageData={pkg} />
             ))}
           </div>

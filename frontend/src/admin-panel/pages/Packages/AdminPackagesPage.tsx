@@ -44,14 +44,18 @@ export const AdminPackagesPage: React.FC = () => {
 
   // Filters
   const [filters, setFilters] = useState<PackageFilters>({
+    status: 'All Status',
+    destination: 'All Destinations',
     agency: 'All Agencies',
+    category: 'All Categories',
+    duration: 'All Durations',
+    priceRange: 'All Prices',
+    departureMonth: 'All Months',
+    rating: 'All Ratings',
+    search: '',
     destinationRegion: 'All Regions',
     destinationCountry: 'All Countries',
-    status: 'All Status',
     approvalStatus: 'All Approvals',
-    priceRange: 'All Prices',
-    duration: 'All Durations',
-    search: '',
   });
 
   // Modals state
@@ -117,14 +121,18 @@ export const AdminPackagesPage: React.FC = () => {
 
   const handleResetFilters = () => {
     setFilters({
+      status: 'All Status',
+      destination: 'All Destinations',
       agency: 'All Agencies',
+      category: 'All Categories',
+      duration: 'All Durations',
+      priceRange: 'All Prices',
+      departureMonth: 'All Months',
+      rating: 'All Ratings',
+      search: '',
       destinationRegion: 'All Regions',
       destinationCountry: 'All Countries',
-      status: 'All Status',
       approvalStatus: 'All Approvals',
-      priceRange: 'All Prices',
-      duration: 'All Durations',
-      search: '',
     });
     setQuickSearch('');
     setCurrentPage(1);

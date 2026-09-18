@@ -58,31 +58,37 @@ export const SupportQueueWidget: React.FC<SupportQueueWidgetProps> = ({ queue })
       </div>
 
       <div className="space-y-2">
-        {queue.map((tkt) => (
-          <div
-            key={tkt.id}
-            onClick={() => navigate(tkt.targetRoute)}
-            className="p-2.5 rounded-2xl bg-slate-50/70 hover:bg-purple-50/70 border border-slate-100 transition-all cursor-pointer flex items-center justify-between gap-2"
-          >
-            <div className="min-w-0 space-y-0.5">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] font-mono font-bold text-[#6356E5]">{tkt.id}</span>
-                {getPriorityBadge(tkt.priority)}
-                <span className="text-xs font-bold text-slate-800 truncate">{tkt.subject}</span>
-              </div>
-              <p className="text-[10px] text-slate-400 font-medium truncate">
-                Raised by {tkt.user}
-              </p>
-            </div>
-
-            <div className="flex flex-col items-end gap-0.5 shrink-0">
-              <span className="text-[9px] font-bold text-slate-600 bg-white px-1.5 py-0.5 rounded-md border border-slate-200">
-                {tkt.status}
-              </span>
-              <span className="text-[9px] text-slate-400 font-semibold">{tkt.time}</span>
-            </div>
+        {queue.length === 0 ? (
+          <div className="py-6 text-center text-xs font-semibold text-slate-400">
+            No open or critical customer support tickets in queue.
           </div>
-        ))}
+        ) : (
+          queue.map((tkt) => (
+            <div
+              key={tkt.id}
+              onClick={() => navigate(tkt.targetRoute)}
+              className="p-2.5 rounded-2xl bg-slate-50/70 hover:bg-purple-50/70 border border-slate-100 transition-all cursor-pointer flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-mono font-bold text-[#6356E5]">{tkt.id}</span>
+                  {getPriorityBadge(tkt.priority)}
+                  <span className="text-xs font-bold text-slate-800 truncate">{tkt.subject}</span>
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium truncate">
+                  Raised by {tkt.user}
+                </p>
+              </div>
+
+              <div className="flex flex-col items-end gap-0.5 shrink-0">
+                <span className="text-[9px] font-bold text-slate-600 bg-white px-1.5 py-0.5 rounded-md border border-slate-200">
+                  {tkt.status}
+                </span>
+                <span className="text-[9px] text-slate-400 font-semibold">{tkt.time}</span>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

@@ -38,10 +38,14 @@ export const LiveActivityCenter: React.FC = () => {
     setPaymentQueue(liveActivityCenterService.getPaymentQueue());
     setSupportQueue(liveActivityCenterService.getSupportQueue());
 
-    // Subscribe to live events
-    const unsubscribe = liveActivityCenterService.subscribe((updatedEvents) => {
-      setEvents(updatedEvents);
+    // Subscribe to live activity updates
+    const unsubscribe = liveActivityCenterService.subscribe(() => {
+      setEvents(liveActivityCenterService.getEvents());
+      setServiceStatuses(liveActivityCenterService.getServiceStatuses());
       setMetrics(liveActivityCenterService.getMetrics());
+      setActiveTrips(liveActivityCenterService.getActiveTrips());
+      setPaymentQueue(liveActivityCenterService.getPaymentQueue());
+      setSupportQueue(liveActivityCenterService.getSupportQueue());
       setLastUpdatedSeconds(0);
     });
 

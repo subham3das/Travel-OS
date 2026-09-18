@@ -7,8 +7,11 @@ import {
   AdminAccountStatus,
 } from '../../../../types/adminAccessControl';
 import { RoleItem } from '../../../../types/rolesManagement';
-import { adminAccessControlService } from '../../../../services/adminAccessControl.service';
-import { initialAdminAccessKPIs, initialAdminSecurityOverview } from '../../../../data/adminAccessControlData';
+import {
+  adminAccessControlService,
+  initialAdminAccessKPIs,
+  initialAdminSecurityOverview,
+} from '../../../../services/adminAccessControl.service';
 
 import { AdminAccessKPIsCards } from './AdminAccessKPIsCards';
 import { AuthorizedAdminTable } from './AuthorizedAdminTable';

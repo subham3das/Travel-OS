@@ -11,10 +11,11 @@ export const AgencyOverviewCard: React.FC<AgencyOverviewCardProps> = ({ agency }
     { label: 'Owner Name', value: agency.owner.name },
     { label: 'Email', value: agency.email },
     { label: 'Phone', value: agency.phone },
-    { label: 'Website', value: agency.website || 'www.wanderlustholidays.com' },
-    { label: 'GST Number', value: agency.gstNumber },
-    { label: 'Business Type', value: agency.businessType },
-    { label: 'Join Date', value: agency.joinDate },
+    { label: 'Website', value: agency.website || '—' },
+    { label: 'GST Number', value: agency.gstNumber || 'Not Provided' },
+    { label: 'Business Type', value: agency.businessType || 'Tour Operator' },
+    { label: 'City / State', value: `${agency.city || '—'}, ${agency.state || '—'}` },
+    { label: 'Join Date', value: agency.joinDate || 'Recently' },
   ];
 
   return (

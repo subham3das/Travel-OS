@@ -8,6 +8,8 @@ import {
 } from '../user-panel/utils/onboarding';
 import { userAuthService, UserAuthResponse } from '../user-panel/services/userAuth.service';
 
+import { apiClient, AUTH_STORAGE_KEYS } from '../services/apiClient';
+
 export interface AuthContextType extends OnboardingState {
   login: (userData: Partial<User> & { id?: string }) => void;
   signup: (userData: Partial<User> & { id?: string }) => void;
@@ -31,9 +33,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveOnboardingStateToStorage(state);
   }, [state]);
 
+  const logout = useCallback(async () => {
+    try {
+      await userAuthService.logout();
+    } catch {
+      // Ignore network errors on logout
+    }
+    clearOnboardingStorage();
+    apiClient.clearTokens();
+    setState({
+      isLoggedIn: false,
+      hasCompletedProfile: false,
+      hasCompletedPreferences: false,
+      hasSeenWelcome: false,
+      hasCompletedOnboarding: false,
+      user: null,
+    });
+  }, []);
+
+  // Listen to unauthorized global events from apiClient
+  useEffect(() => {
+    apiClient.setOnUnauthorized(() => {
+      logout();
+    });
+  }, [logout]);
+
   // Synchronize authenticated user from backend on initial load / refresh
   const refreshUser = useCallback(async () => {
-    const token = localStorage.getItem('apnatrip_access_token');
+    const token = apiClient.getAccessToken() || apiClient.getRefreshToken();
     if (!token) {
       setIsLoading(false);
       return;
@@ -44,15 +71,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (liveUser) {
         setAuthenticatedUser(liveUser);
       } else {
-        logout();
+        await logout();
       }
     } catch {
-      // If token is invalid or user deleted, log out
-      logout();
+      // If token is invalid or cannot be refreshed, log out cleanly
+      await logout();
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
     refreshUser();
@@ -71,6 +98,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: user.email,
         phone: user.phone,
         avatar: user.avatar || user.profileImage || '',
+        gender: user.gender,
+        preferredLanguage: user.preferredLanguage,
+        foodPreference: user.foodPreference,
+        accessibilityRequirements: user.accessibilityRequirements,
+        bio: user.bio,
+        homeCity: user.homeCity,
+        dateOfBirth: user.dateOfBirth,
       },
     });
   };
@@ -147,19 +181,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       saveOnboardingStateToStorage(newState);
       return newState;
-    });
-  };
-
-  const logout = async () => {
-    await userAuthService.logout();
-    clearOnboardingStorage();
-    setState({
-      isLoggedIn: false,
-      hasCompletedProfile: false,
-      hasCompletedPreferences: false,
-      hasSeenWelcome: false,
-      hasCompletedOnboarding: false,
-      user: null,
     });
   };
 

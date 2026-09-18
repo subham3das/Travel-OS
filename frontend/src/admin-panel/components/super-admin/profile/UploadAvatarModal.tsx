@@ -78,7 +78,7 @@ export const UploadAvatarModal: React.FC<UploadAvatarModalProps> = ({
             <div className="flex flex-col items-center justify-center py-2 space-y-2">
               <div className="w-20 h-20 rounded-3xl overflow-hidden border-4 border-purple-100 shadow-md">
                 <img
-                  src={customUrl.trim() || selectedAvatar}
+                  src={customUrl.trim() || selectedAvatar || presetAvatars[0]}
                   alt="Avatar Preview"
                   className="w-full h-full object-cover"
                 />

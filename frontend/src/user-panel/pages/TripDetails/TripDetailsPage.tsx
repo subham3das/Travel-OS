@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTripById } from '../../data/trips';
+import { getTripById, Trip } from '../../data/trips';
 import { useToast } from '../../context/ToastContext';
+import { tripService } from '../../services/trip.service';
 
 import { TripHero } from './components/TripHero';
 import { BookingCard } from './components/BookingCard';
@@ -24,7 +25,20 @@ export const TripDetailsPage: React.FC = () => {
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
   const targetId = tripId || id || 'trip-001';
-  const trip = getTripById(targetId);
+  const fallbackTrip = getTripById(targetId);
+  const [trip, setTrip] = useState<Trip>(fallbackTrip);
+
+  useEffect(() => {
+    let isMounted = true;
+    tripService.getTripById(targetId).then((res) => {
+      if (isMounted && res) {
+        setTrip(res);
+      }
+    }).catch((err) => {
+      console.warn('Using local fallback trip:', err);
+    });
+    return () => { isMounted = false; };
+  }, [targetId]);
 
   const handleScrollToItinerary = () => {
     const elem = document.getElementById('itinerary-section');

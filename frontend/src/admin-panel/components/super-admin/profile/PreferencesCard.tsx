@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sliders, Sun, Moon, Laptop, Globe, Bell, MessageSquare, Monitor } from 'lucide-react';
 import { AdminPreferences } from '../../../types/profileManagement';
+import { useSuperAdminTheme as useTheme } from '../../../context/SuperAdminThemeContext';
 
 interface PreferencesCardProps {
   preferences: AdminPreferences;
@@ -11,6 +12,7 @@ export const PreferencesCard: React.FC<PreferencesCardProps> = ({
   preferences,
   onUpdate,
 }) => {
+  const { theme, setTheme } = useTheme();
   return (
     <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-4 select-none">
       <div className="flex items-center justify-between pb-2 border-b border-slate-100/80">
@@ -29,27 +31,33 @@ export const PreferencesCard: React.FC<PreferencesCardProps> = ({
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-slate-400">Interface Theme</label>
             <div className="grid grid-cols-3 gap-2">
-              {(['Light', 'Dark', 'System'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => onUpdate({ theme: t })}
-                  className={`py-2 px-2.5 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    preferences.theme === t
-                      ? 'bg-[#6356E5] text-white border-[#6356E5] shadow-xs'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  {t === 'Light' ? (
-                    <Sun className="w-3.5 h-3.5" />
-                  ) : t === 'Dark' ? (
-                    <Moon className="w-3.5 h-3.5" />
-                  ) : (
-                    <Laptop className="w-3.5 h-3.5" />
-                  )}
-                  <span>{t}</span>
-                </button>
-              ))}
+              {(['Light', 'Dark', 'System'] as const).map((t) => {
+                const isCurrent = (preferences.theme || theme) === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setTheme(t);
+                      onUpdate({ theme: t });
+                    }}
+                    className={`py-2 px-2.5 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'bg-[#6356E5] text-white border-[#6356E5] shadow-xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {t === 'Light' ? (
+                      <Sun className="w-3.5 h-3.5" />
+                    ) : t === 'Dark' ? (
+                      <Moon className="w-3.5 h-3.5" />
+                    ) : (
+                      <Laptop className="w-3.5 h-3.5" />
+                    )}
+                    <span>{t}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

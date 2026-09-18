@@ -11,8 +11,8 @@ import {
   ReportedTravelerItem,
   ReviewFilters,
 } from '../../types/reviewManagement';
-import { adminReviewManagementService } from '../../services/adminReviewManagement.service';
 import {
+  adminReviewManagementService,
   initialReviewKPIStats,
   initialRatingDistribution,
   initialReviewTrendDaily,
@@ -20,7 +20,7 @@ import {
   initialRecentModeration,
   initialReportedAgencies,
   initialReportedTravelers,
-} from '../../data/reviewsData';
+} from '../../services/adminReviewManagement.service';
 import { AdminReviewsHeader } from '../../components/super-admin/reviews/AdminReviewsHeader';
 import { ReviewKPIStatsCards } from '../../components/super-admin/reviews/ReviewKPIStats';
 import { ReviewAnalyticsSection } from '../../components/super-admin/reviews/ReviewAnalyticsSection';

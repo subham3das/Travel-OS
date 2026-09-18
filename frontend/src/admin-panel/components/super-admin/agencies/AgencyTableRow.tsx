@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Star, MoreVertical, Eye, Edit, ShieldCheck, PauseCircle, PlayCircle, XCircle, Trash2 } from 'lucide-react';
 import { Agency } from '../../../types/agency';
 import { AgencyStatusBadge } from './AgencyStatusBadge';
@@ -20,17 +21,63 @@ export const AgencyTableRow: React.FC<AgencyTableRowProps> = ({
   onAction,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number; openUpwards: boolean }>({
+    top: 0,
+    left: 0,
+    openUpwards: false,
+  });
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const handleToggleMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isMenuOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpwards = spaceBelow < 280 && rect.top > 280;
+      const menuWidth = 176;
+      const left = Math.max(10, rect.right - menuWidth);
+      const top = openUpwards ? rect.top - 6 : rect.bottom + 6;
+      setMenuCoords({ top, left, openUpwards });
+      setIsMenuOpen(true);
+    } else {
+      setIsMenuOpen(false);
+    }
+  };
+
   useEffect(() => {
+    if (!isMenuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
         setIsMenuOpen(false);
       }
     };
+    const handleScrollOrResize = () => {
+      setIsMenuOpen(false);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMenuOpen]);
 
   return (
     <tr
@@ -125,17 +172,31 @@ export const AgencyTableRow: React.FC<AgencyTableRowProps> = ({
       <td className="py-3 px-3 text-slate-400 font-bold whitespace-nowrap">{agency.joinDate}</td>
 
       {/* Actions Dropdown */}
-      <td className="py-3 px-3 text-center relative">
-        <div ref={menuRef} className="inline-block">
-          <button
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="w-7 h-7 rounded-xl hover:bg-slate-200/70 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </button>
+      <td className="py-3 px-3 text-center">
+        <button
+          ref={buttonRef}
+          onClick={handleToggleMenu}
+          className="w-7 h-7 rounded-xl hover:bg-slate-200/70 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+          title="More Options"
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
 
-          {isMenuOpen && (
-            <div className="absolute right-0 mt-1 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 p-1.5 z-50 text-left space-y-0.5">
+        {isMenuOpen &&
+          createPortal(
+            <div
+              ref={menuRef}
+              style={{
+                position: 'fixed',
+                left: `${menuCoords.left}px`,
+                ...(menuCoords.openUpwards
+                  ? { bottom: `${window.innerHeight - menuCoords.top}px` }
+                  : { top: `${menuCoords.top}px` }),
+                zIndex: 9999,
+              }}
+              className="w-44 bg-white rounded-2xl shadow-2xl border border-slate-100 p-1.5 text-left space-y-0.5 select-none"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
@@ -214,9 +275,9 @@ export const AgencyTableRow: React.FC<AgencyTableRowProps> = ({
                   <span>Delete</span>
                 </button>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
-        </div>
       </td>
     </tr>
   );

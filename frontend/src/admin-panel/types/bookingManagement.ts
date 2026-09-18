@@ -107,9 +107,10 @@ export interface BookingFilters {
   user: string;
   amountRange: string;
   search: string;
+  dateRange?: string;
 }
 
 export interface BookingSortConfig {
-  key: 'bookingId' | 'traveler' | 'package' | 'amount' | 'bookingDate' | 'status';
+  key: 'bookingId' | 'traveler' | 'package' | 'amount' | 'bookingDate' | 'status' | 'bookedAtDate';
   direction: 'asc' | 'desc';
 }

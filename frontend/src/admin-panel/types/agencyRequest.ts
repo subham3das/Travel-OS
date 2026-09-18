@@ -3,13 +3,47 @@
 export type AgencyRequestStatus = 'Pending' | 'Under Review' | 'Approved' | 'Rejected';
 export type DocumentVerificationStatus = 'Complete' | 'Under Review' | 'Missing Docs';
 
+export type DocumentItemStatus =
+  | 'Approved'
+  | 'Pending'
+  | 'Under Review'
+  | 'Missing'
+  | 'Rejected'
+  | 'Re-upload Requested'
+  | 'Re-upload Submitted';
+
 export interface DocumentItem {
   id: string;
   name: string;
   type: string;
-  status: 'Approved' | 'Pending' | 'Rejected';
+  status: DocumentItemStatus;
   fileUrl: string;
   uploadedAt: string;
+  rejectionReason?: string;
+  customReason?: string;
+  internalNote?: string;
+  reuploadedAt?: string;
+  reuploadedFileUrl?: string;
+}
+
+export interface RequestedDocumentItem {
+  documentId: string;
+  documentName: string;
+  documentType: string;
+  previousStatus?: string;
+  status: 'PENDING_AGENCY_UPLOAD' | 'REUPLOAD_SUBMITTED' | 'APPROVED' | 'REJECTED';
+  reason: string;
+  customReason?: string;
+  internalNote?: string;
+  requestedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  requestedAt: string;
+  requestRound: number;
+  reuploadedFileUrl?: string;
+  reuploadedAt?: string;
 }
 
 export interface VerificationCheckitem {
@@ -33,6 +67,21 @@ export interface ActivityLogItem {
   action: string;
   notes?: string;
   status: string;
+}
+
+export interface AgencyBankDetails {
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+  branch?: string;
+  upiId?: string;
+  accountType?: string;
+  payoutMethod?: string;
+  verified?: boolean;
+  status?: 'Pending' | 'Under Review' | 'Verified' | 'Rejected';
+  verifiedAt?: string;
+  verifiedBy?: string;
 }
 
 export interface AgencyRequestItem {
@@ -63,10 +112,15 @@ export interface AgencyRequestItem {
   // Extended Details
   verificationChecklist: VerificationCheckitem[];
   documents: DocumentItem[];
+  bankDetails?: AgencyBankDetails;
   timeline: TimelineEvent[];
   activities: ActivityLogItem[];
   reviewNotes?: string;
   complianceScore: number;
+  requestedDocuments?: string[];
+  requestedDocumentsDetails?: RequestedDocumentItem[];
+  documentRequestMessage?: string;
+  documentRequestRound?: number;
 }
 
 export interface AgencyRequestSummaryStats {

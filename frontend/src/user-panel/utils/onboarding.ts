@@ -6,6 +6,12 @@ export interface User {
   avatar?: string;
   location?: string;
   bio?: string;
+  gender?: string;
+  preferredLanguage?: string;
+  foodPreference?: string;
+  accessibilityRequirements?: string;
+  homeCity?: string;
+  dateOfBirth?: string;
 }
 
 export interface OnboardingState {

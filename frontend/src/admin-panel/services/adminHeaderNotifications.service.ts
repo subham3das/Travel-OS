@@ -3,39 +3,77 @@ import {
   HeaderNotificationCategory,
   HeaderNotificationPriority,
 } from '../types/headerNotification';
-import { initialHeaderNotifications } from '../data/headerNotificationsData';
+import { adminApiClient } from './adminApiClient';
+import { adminSocketService } from './adminSocket.service';
 
-const STORAGE_KEY = 'apnatrip_admin_header_notifications';
+export const initialHeaderNotifications: HeaderNotificationItem[] = [];
 
 class AdminHeaderNotificationsService {
   private notifications: HeaderNotificationItem[] = [];
   private listeners: Set<(items: HeaderNotificationItem[]) => void> = new Set();
+  private socketCleanup: (() => void) | null = null;
 
   constructor() {
-    this.loadFromStorage();
+    this.fetchLive();
+    this.initSocketListeners();
   }
 
-  private loadFromStorage() {
+  /**
+   * Initialize real-time Socket.IO listeners for live notification updates
+   */
+  private initSocketListeners() {
+    // Listen for new notifications pushed from backend
+    const cleanupNew = adminSocketService.onNotificationNew((notification: any) => {
+      const newItem: HeaderNotificationItem = {
+        id: notification.id || notification._id,
+        category: (notification.category || 'system').toLowerCase() as HeaderNotificationCategory,
+        title: notification.title,
+        description: notification.description,
+        timestamp: notification.timestamp || 'Just now',
+        timeGroup: notification.timeGroup || 'Today',
+        priority: notification.priority || 'MEDIUM',
+        isRead: false,
+        targetRoute: notification.targetRoute || notification.ctaLink || '/admin/dashboard',
+        actions: notification.actions && notification.actions.length > 0
+          ? notification.actions
+          : [{ label: 'View', actionType: 'view', variant: 'secondary' }],
+      };
+
+      this.notifications = [newItem, ...this.notifications];
+      this.notifyListeners();
+    });
+
+    // Listen for individual notification read state changes
+    const cleanupRead = adminSocketService.onNotificationRead((data) => {
+      this.notifications = this.notifications.map((n) =>
+        n.id === data.id ? { ...n, isRead: true } : n
+      );
+      this.notifyListeners();
+    });
+
+    // Listen for mark-all-read broadcast
+    const cleanupReadAll = adminSocketService.onNotificationReadAll(() => {
+      this.notifications = this.notifications.map((n) => ({ ...n, isRead: true }));
+      this.notifyListeners();
+    });
+
+    this.socketCleanup = () => {
+      cleanupNew();
+      cleanupRead();
+      cleanupReadAll();
+    };
+  }
+
+  public async fetchLive() {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        this.notifications = JSON.parse(stored);
-        return;
+      const response = await adminApiClient.get<HeaderNotificationItem[]>('/notifications/header');
+      if (response.success && response.data) {
+        this.notifications = response.data;
+        this.notifyListeners();
       }
     } catch {
-      // ignore
+      // ignore — keep current state
     }
-    this.notifications = [...initialHeaderNotifications];
-    this.saveToStorage();
-  }
-
-  private saveToStorage() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.notifications));
-    } catch {
-      // ignore
-    }
-    this.notifyListeners();
   }
 
   private notifyListeners() {
@@ -62,106 +100,41 @@ class AdminHeaderNotificationsService {
     this.notifications = this.notifications.map((n) =>
       n.id === id ? { ...n, isRead: true } : n
     );
-    this.saveToStorage();
+    this.notifyListeners();
+
+    // Fire-and-forget backend call
+    adminApiClient.patch(`/notifications/${id}/read`).catch(() => {});
   }
 
   public markAllAsRead(): void {
     this.notifications = this.notifications.map((n) => ({ ...n, isRead: true }));
-    this.saveToStorage();
+    this.notifyListeners();
+
+    // Fire-and-forget backend call
+    adminApiClient.post('/notifications/read-all').catch(() => {});
   }
 
   public deleteNotification(id: string): void {
     this.notifications = this.notifications.filter((n) => n.id !== id);
-    this.saveToStorage();
+    this.notifyListeners();
+
+    // Fire-and-forget backend call
+    adminApiClient.delete(`/notifications/${id}`).catch(() => {});
   }
 
   public resetToDefault(): void {
-    this.notifications = [...initialHeaderNotifications];
-    this.saveToStorage();
+    this.fetchLive();
   }
 
   public executeAction(
     id: string,
     actionType: string
   ): { success: boolean; message: string } {
-    const target = this.notifications.find((n) => n.id === id);
-    if (!target) return { success: false, message: 'Notification not found' };
-
-    // Automatically mark as read when an action is executed
     this.markAsRead(id);
-
-    switch (actionType) {
-      case 'approve_agency':
-        return {
-          success: true,
-          message: `Agency application approved for ${target.meta?.entityName || 'agency'}`,
-        };
-      case 'reject_agency':
-        return {
-          success: true,
-          message: `Agency application rejected for ${target.meta?.entityName || 'agency'}`,
-        };
-      case 'approve_package':
-        return {
-          success: true,
-          message: `Package successfully approved and published to catalog`,
-        };
-      case 'reject_package':
-        return {
-          success: true,
-          message: `Package rejected and sent back to agency for corrections`,
-        };
-      case 'verify_booking':
-        return {
-          success: true,
-          message: `VIP Booking verified and confirmation dispatched`,
-        };
-      case 'retry_payment':
-        return {
-          success: true,
-          message: `Payment gateway retry triggered for ${target.meta?.amount || 'transaction'}`,
-        };
-      case 'refund_payment':
-        return {
-          success: true,
-          message: `Refund initiated for ${target.meta?.amount || 'transaction'}`,
-        };
-      case 'assign_ticket':
-        return {
-          success: true,
-          message: `Ticket assigned to Priority Support tier`,
-        };
-      case 'approve_review':
-        return {
-          success: true,
-          message: `Review moderation cleared and approved`,
-        };
-      case 'reject_review':
-        return {
-          success: true,
-          message: `Flagged review removed from public listing`,
-        };
-      case 'take_down_post':
-        return {
-          success: true,
-          message: `Spam post removed from community feed`,
-        };
-      case 'dismiss_post':
-        return {
-          success: true,
-          message: `Flag dismissed and post retained`,
-        };
-      case 'investigate_security':
-        return {
-          success: true,
-          message: `Security incident flagged for SOC investigation`,
-        };
-      default:
-        return {
-          success: true,
-          message: `Action executed successfully`,
-        };
-    }
+    return {
+      success: true,
+      message: `Action ${actionType} executed successfully`,
+    };
   }
 
   public addLiveNotification(item: {
@@ -185,7 +158,7 @@ class AdminHeaderNotificationsService {
       actions: item.actions,
     };
     this.notifications = [newItem, ...this.notifications];
-    this.saveToStorage();
+    this.notifyListeners();
   }
 }
 

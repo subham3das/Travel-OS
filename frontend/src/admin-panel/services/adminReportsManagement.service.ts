@@ -12,37 +12,37 @@ import {
   RecentExportItem,
   QuickStatisticsData,
 } from '../types/reportsManagement';
-import {
-  initialReportKPIStats,
-  initialReportLibraryData,
-  initialRevenueTrend,
-  initialBookingHeatmapMatrix,
-  initialGeographicData,
-  initialTopDestinations,
-  initialAgencyMatrixBubbles,
-  initialCategoryPerformance,
-  initialAIInsights,
-  initialQuickStatistics,
-  initialScheduledReports,
-  initialRecentExports,
-} from '../data/reportsData';
+import { adminApiClient } from './adminApiClient';
+
+// ─── Empty defaults (zero-value, no dummy data) ─────────────────────────────
+
+const emptyKPICard = {
+  id: '', title: '', value: '₹0', growth: '0%',
+  isPositive: true, comparison: 'vs last 30 days', iconType: 'revenue' as const, sparklineColor: '#6356E5',
+};
+
+export const emptyReportKPIStats: ReportKPIStats = {
+  grossRevenue: { ...emptyKPICard, id: 'grossRevenue', title: 'Gross Revenue', iconType: 'revenue' },
+  totalBookings: { ...emptyKPICard, id: 'totalBookings', title: 'Total Bookings', value: '0', iconType: 'bookings', sparklineColor: '#10B981' },
+  platformGrowth: { ...emptyKPICard, id: 'platformGrowth', title: 'Platform Growth', value: '0%', iconType: 'growth', sparklineColor: '#10B981' },
+  activeUsers: { ...emptyKPICard, id: 'activeUsers', title: 'Active Users', value: '0', iconType: 'users', sparklineColor: '#3B82F6' },
+  activeAgencies: { ...emptyKPICard, id: 'activeAgencies', title: 'Active Agencies', value: '0', iconType: 'agencies' },
+  avgBookingValue: { ...emptyKPICard, id: 'avgBookingValue', title: 'Avg. Booking Value', iconType: 'abv', sparklineColor: '#F97316' },
+  customerSatisfaction: { ...emptyKPICard, id: 'customerSatisfaction', title: 'Customer Satisfaction', value: 'N/A', iconType: 'csat', sparklineColor: '#F59E0B' },
+  netProfit: { ...emptyKPICard, id: 'netProfit', title: 'Net Profit', iconType: 'profit', sparklineColor: '#8B5CF6' },
+};
+
+// ─── Service ─────────────────────────────────────────────────────────────────
 
 class AdminReportsManagementService {
-  private kpiStats: ReportKPIStats = initialReportKPIStats;
-  private reports: ReportItem[] = initialReportLibraryData;
-  private revenueTrend: RevenueTrendDataPoint[] = initialRevenueTrend;
-  private heatmapMatrix: number[][] = initialBookingHeatmapMatrix;
-  private geographicData: GeographicRegionData[] = initialGeographicData;
-  private topDestinations: TopDestinationReportItem[] = initialTopDestinations;
-  private agencyBubbles: AgencyMatrixBubble[] = initialAgencyMatrixBubbles;
-  private categoryPerformance: CategoryPerformanceItem[] = initialCategoryPerformance;
-  private aiInsights: AIInsightItem[] = initialAIInsights;
-  private quickStats = initialQuickStatistics;
-  private scheduledReports: ScheduledReportItem[] = initialScheduledReports;
-  private recentExports: RecentExportItem[] = initialRecentExports;
-
   public async getKPIStats(): Promise<ReportKPIStats> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.kpiStats), 40));
+    try {
+      const response = await adminApiClient.get<ReportKPIStats>('/admin/reports/stats');
+      if (response.success && response.data) return response.data;
+      return emptyReportKPIStats;
+    } catch {
+      return emptyReportKPIStats;
+    }
   }
 
   public async getReports(
@@ -50,75 +50,119 @@ class AdminReportsManagementService {
     tab?: string,
     searchQuery?: string
   ): Promise<ReportItem[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        let result = [...this.reports];
-
+    try {
+      const response = await adminApiClient.get<ReportItem[]>('/admin/reports/library');
+      if (response.success && response.data) {
+        let result = response.data;
         if (category && category !== 'All') {
           result = result.filter((r) => r.category.toLowerCase() === category.toLowerCase());
         }
-
-        if (tab === 'Scheduled') {
-          result = result.filter((r) => r.scheduleStatus && r.scheduleStatus !== 'On Demand');
-        }
-
         if (searchQuery && searchQuery.trim() !== '') {
           const q = searchQuery.toLowerCase();
-          result = result.filter(
-            (r) =>
-              r.name.toLowerCase().includes(q) ||
-              r.category.toLowerCase().includes(q) ||
-              r.owner.toLowerCase().includes(q)
-          );
+          result = result.filter((r) => r.name.toLowerCase().includes(q));
         }
-
-        resolve(result);
-      }, 40);
-    });
+        return result;
+      }
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   public async getRevenueTrend(interval: 'Daily' | 'Weekly' | 'Monthly'): Promise<RevenueTrendDataPoint[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.revenueTrend), 40));
+    try {
+      const response = await adminApiClient.get<RevenueTrendDataPoint[]>('/admin/reports/revenue-trend', {
+        params: { interval },
+      });
+      if (response.success && response.data) return response.data;
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   public async getBookingHeatmap(): Promise<number[][]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.heatmapMatrix), 40));
+    try {
+      const response = await adminApiClient.get<number[][]>('/admin/reports/booking-heatmap');
+      if (response.success && response.data) return response.data;
+      return Array.from({ length: 7 }, () => Array(7).fill(0));
+    } catch {
+      return Array.from({ length: 7 }, () => Array(7).fill(0));
+    }
   }
 
   public async getGeographicData(): Promise<GeographicRegionData[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.geographicData), 40));
+    try {
+      const response = await adminApiClient.get<GeographicRegionData[]>('/admin/reports/geographic');
+      if (response.success && response.data) return response.data;
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   public async getTopDestinations(): Promise<TopDestinationReportItem[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.topDestinations), 40));
+    try {
+      const response = await adminApiClient.get<TopDestinationReportItem[]>('/admin/reports/top-destinations');
+      if (response.success && response.data) return response.data;
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   public async getAgencyMatrix(): Promise<AgencyMatrixBubble[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.agencyBubbles), 40));
+    try {
+      const response = await adminApiClient.get<AgencyMatrixBubble[]>('/admin/reports/agency-matrix');
+      if (response.success && response.data) return response.data;
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   public async getCategoryPerformance(): Promise<CategoryPerformanceItem[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.categoryPerformance), 40));
+    try {
+      const response = await adminApiClient.get<CategoryPerformanceItem[]>('/admin/reports/category-performance');
+      if (response.success && response.data) return response.data;
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   public async getAIInsights(): Promise<AIInsightItem[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.aiInsights), 40));
+    try {
+      const response = await adminApiClient.get<AIInsightItem[]>('/admin/reports/ai-insights');
+      if (response.success && response.data) return response.data;
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   public async getQuickStats(): Promise<QuickStatisticsData> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.quickStats), 40));
+    try {
+      const response = await adminApiClient.get<QuickStatisticsData>('/admin/reports/quick-stats');
+      if (response.success && response.data) return response.data;
+      return emptyQuickStats;
+    } catch {
+      return emptyQuickStats;
+    }
   }
 
+  // Client-side only — no backing collection
   public async getScheduledReports(): Promise<ScheduledReportItem[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.scheduledReports), 40));
+    return [];
   }
 
+  // Client-side only — no backing collection
   public async getRecentExports(): Promise<RecentExportItem[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.recentExports), 40));
+    return [];
   }
 
   public async createReport(name: string, category: ReportCategory): Promise<ReportItem> {
-    const newReport: ReportItem = {
+    return {
       id: `REP-${Date.now().toString().slice(-4)}`,
       name,
       category,
@@ -127,20 +171,23 @@ class AdminReportsManagementService {
       availableFormats: ['PDF', 'Excel', 'CSV'],
       scheduleStatus: 'On Demand',
     };
-    this.reports = [newReport, ...this.reports];
-    return newReport;
   }
 
   public async recordExport(name: string, format: 'PDF' | 'Excel' | 'CSV'): Promise<RecentExportItem> {
-    const newExport: RecentExportItem = {
+    return {
       id: `exp-${Date.now()}`,
       name,
       date: 'Just now',
       format,
     };
-    this.recentExports = [newExport, ...this.recentExports];
-    return newExport;
   }
 }
+
+const emptyQuickStats: QuickStatisticsData = {
+  cancellationRate: { value: '0%', change: '0%', isPositive: true },
+  refundsProcessed: { value: '₹0', change: '0%', isPositive: true },
+  successfulPayments: { value: '0%', change: '0%', isPositive: true },
+  chargebackRate: { value: '0%', change: '0%', isPositive: true },
+};
 
 export const adminReportsManagementService = new AdminReportsManagementService();

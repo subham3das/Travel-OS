@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { searchItems, GroupedSearchResults, FilterState, DEFAULT_FILTER_STATE } from '../data/search';
+import { GroupedSearchResults, FilterState, DEFAULT_FILTER_STATE } from '../data/search';
+import { marketplaceService } from '../services/marketplace.service';
 
 export const useSearch = (initialQuery: string = '', initialFilters: FilterState = DEFAULT_FILTER_STATE) => {
   const [query, setQuery] = useState(initialQuery);
@@ -27,9 +28,26 @@ export const useSearch = (initialQuery: string = '', initialFilters: FilterState
   }, [query]);
 
   useEffect(() => {
-    const res = searchItems(debouncedQuery, filters);
-    setResults(res);
-    setLoading(false);
+    let isMounted = true;
+    setLoading(true);
+
+    marketplaceService
+      .search(debouncedQuery, filters)
+      .then((res) => {
+        if (isMounted) {
+          setResults(res);
+        }
+      })
+      .catch((err) => {
+        console.warn('Search API failed:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [debouncedQuery, filters]);
 
   return {

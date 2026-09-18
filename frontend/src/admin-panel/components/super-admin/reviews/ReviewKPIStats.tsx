@@ -11,6 +11,7 @@ import {
   ArrowDownRight,
 } from 'lucide-react';
 import { ReviewKPIStats, ReviewKPICardItem } from '../../../types/reviewManagement';
+import { initialReviewKPIStats } from '../../../services/adminReviewManagement.service';
 
 interface ReviewKPIStatsProps {
   stats: ReviewKPIStats;
@@ -66,28 +67,30 @@ export const ReviewKPIStatsCards: React.FC<ReviewKPIStatsProps> = ({
   };
 
   const cardsList: ReviewKPICardItem[] = [
-    stats.totalReviews,
-    stats.pendingModeration,
-    stats.reportedReviews,
-    stats.removedReviews,
-    stats.avgRating,
-    stats.reviewsToday,
+    stats.totalReviews || initialReviewKPIStats.totalReviews,
+    stats.pendingModeration || initialReviewKPIStats.pendingModeration,
+    stats.reportedReviews || initialReviewKPIStats.reportedReviews,
+    stats.removedReviews || initialReviewKPIStats.removedReviews,
+    stats.avgRating || initialReviewKPIStats.avgRating,
+    stats.reviewsToday || initialReviewKPIStats.reviewsToday,
   ];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 w-full select-none">
       {cardsList.map((card, idx) => {
-        const { icon, bg, strokeColor } = getCardIcon(card.iconType);
-        const isSelected = selectedStatus?.toLowerCase() === card.id.toLowerCase();
+        if (!card) return null;
+        const cardId = card.id || `kpi-${idx}`;
+        const { icon, bg, strokeColor } = getCardIcon(card.iconType || 'total');
+        const isSelected = Boolean(selectedStatus && cardId && selectedStatus.toLowerCase() === cardId.toLowerCase());
 
         return (
           <motion.div
-            key={card.id || idx}
+            key={cardId}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: idx * 0.03 }}
             whileHover={{ y: -2 }}
-            onClick={() => onCardClick && onCardClick(card.id)}
+            onClick={() => onCardClick && onCardClick(cardId)}
             className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer flex flex-col justify-between group ${
               isSelected
                 ? 'border-[#6356E5] ring-2 ring-[#6356E5]/20 shadow-md'

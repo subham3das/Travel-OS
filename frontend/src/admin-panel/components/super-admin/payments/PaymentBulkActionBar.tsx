@@ -14,11 +14,12 @@ import {
 interface PaymentBulkActionBarProps {
   selectedCount: number;
   onClearSelection: () => void;
-  onBulkApproveSettlement: () => void;
-  onBulkRejectSettlement: () => void;
-  onBulkRefund: () => void;
-  onBulkExport: () => void;
-  onBulkDownloadInvoice: () => void;
+  onBulkApproveSettlement?: () => void;
+  onBulkRejectSettlement?: () => void;
+  onBulkRefund?: () => void;
+  onBulkExport?: () => void;
+  onBulkDownloadInvoice?: () => void;
+  onBulkSettle?: () => void;
 }
 
 export const PaymentBulkActionBar: React.FC<PaymentBulkActionBarProps> = ({
@@ -64,7 +65,7 @@ export const PaymentBulkActionBar: React.FC<PaymentBulkActionBarProps> = ({
       {/* Right: Actions */}
       <div className="flex items-center gap-2 flex-wrap">
         <button
-          onClick={onBulkExport}
+          onClick={() => onBulkExport?.()}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-[#6356E5] text-xs font-extrabold transition-colors cursor-pointer"
         >
           <Download className="w-3.5 h-3.5 text-[#6356E5]" />
@@ -72,7 +73,7 @@ export const PaymentBulkActionBar: React.FC<PaymentBulkActionBarProps> = ({
         </button>
 
         <button
-          onClick={onBulkApproveSettlement}
+          onClick={() => onBulkApproveSettlement?.()}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100 text-emerald-700 text-xs font-extrabold transition-colors cursor-pointer"
         >
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -80,7 +81,7 @@ export const PaymentBulkActionBar: React.FC<PaymentBulkActionBarProps> = ({
         </button>
 
         <button
-          onClick={onBulkRejectSettlement}
+          onClick={() => onBulkRejectSettlement?.()}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100 text-rose-700 text-xs font-extrabold transition-colors cursor-pointer"
         >
           <XCircle className="w-3.5 h-3.5 text-rose-600" />
@@ -88,7 +89,7 @@ export const PaymentBulkActionBar: React.FC<PaymentBulkActionBarProps> = ({
         </button>
 
         <button
-          onClick={onBulkRefund}
+          onClick={() => onBulkRefund?.()}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-[#6356E5] text-xs font-extrabold transition-colors cursor-pointer"
         >
           <RotateCcw className="w-3.5 h-3.5 text-[#6356E5]" />
@@ -96,7 +97,7 @@ export const PaymentBulkActionBar: React.FC<PaymentBulkActionBarProps> = ({
         </button>
 
         <button
-          onClick={onBulkDownloadInvoice}
+          onClick={() => onBulkDownloadInvoice?.()}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-[#6356E5] text-xs font-extrabold transition-colors cursor-pointer"
         >
           <FileText className="w-3.5 h-3.5 text-[#6356E5]" />
@@ -117,7 +118,7 @@ export const PaymentBulkActionBar: React.FC<PaymentBulkActionBarProps> = ({
               <button
                 onClick={() => {
                   setIsMoreOpen(false);
-                  onBulkExport();
+                  onBulkExport?.();
                 }}
                 className="w-full text-left px-3 py-1.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors flex items-center gap-2"
               >
@@ -127,7 +128,7 @@ export const PaymentBulkActionBar: React.FC<PaymentBulkActionBarProps> = ({
               <button
                 onClick={() => {
                   setIsMoreOpen(false);
-                  onBulkApproveSettlement();
+                  onBulkApproveSettlement?.();
                 }}
                 className="w-full text-left px-3 py-1.5 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors"
               >

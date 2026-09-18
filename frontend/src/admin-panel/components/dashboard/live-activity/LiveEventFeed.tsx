@@ -73,47 +73,53 @@ export const LiveEventFeed: React.FC<LiveEventFeedProps> = ({ events }) => {
       </div>
 
       <div className="space-y-2 overflow-y-auto max-h-[380px] scrollbar-thin pr-1 flex-1">
-        <AnimatePresence initial={false}>
-          {events.map((evt) => (
-            <motion.div
-              key={evt.id}
-              initial={{ opacity: 0, y: -12, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.25 }}
-              onClick={() => navigate(evt.targetRoute)}
-              className="p-2.5 rounded-2xl bg-slate-50/70 hover:bg-purple-50/70 border border-slate-100 hover:border-purple-200 transition-all cursor-pointer flex items-start justify-between gap-2.5 group shadow-2xs"
-            >
-              <div className="flex items-start gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-white border border-slate-100 flex items-center justify-center shrink-0 shadow-2xs group-hover:border-purple-100">
-                  {getEventIcon(evt.type)}
-                </div>
-                <div className="min-w-0 space-y-0.5">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <h4 className="text-xs font-black text-[#0F172A] group-hover:text-[#6356E5] transition-colors truncate">
-                      {evt.title}
-                    </h4>
-                    {getStatusBadge(evt.status, evt.statusColor)}
+        {events.length === 0 ? (
+          <div className="py-12 text-center text-xs font-semibold text-slate-400">
+            No live events logged yet. Real platform events will appear here automatically.
+          </div>
+        ) : (
+          <AnimatePresence initial={false}>
+            {events.map((evt) => (
+              <motion.div
+                key={evt.id}
+                initial={{ opacity: 0, y: -12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.25 }}
+                onClick={() => navigate(evt.targetRoute)}
+                className="p-2.5 rounded-2xl bg-slate-50/70 hover:bg-purple-50/70 border border-slate-100 hover:border-purple-200 transition-all cursor-pointer flex items-start justify-between gap-2.5 group shadow-2xs"
+              >
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-slate-100 flex items-center justify-center shrink-0 shadow-2xs group-hover:border-purple-100">
+                    {getEventIcon(evt.type)}
                   </div>
-                  <p className="text-[11px] font-bold text-slate-600 truncate">{evt.subtitle}</p>
-                  <p className="text-[10px] text-slate-400 font-medium truncate">{evt.description}</p>
-                  {evt.amount && (
-                    <span className="text-[10px] font-black text-[#6356E5] font-mono block">
-                      {evt.amount}
-                    </span>
-                  )}
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h4 className="text-xs font-black text-[#0F172A] group-hover:text-[#6356E5] transition-colors truncate">
+                        {evt.title}
+                      </h4>
+                      {getStatusBadge(evt.status, evt.statusColor)}
+                    </div>
+                    <p className="text-[11px] font-bold text-slate-600 truncate">{evt.subtitle}</p>
+                    <p className="text-[10px] text-slate-400 font-medium truncate">{evt.description}</p>
+                    {evt.amount && (
+                      <span className="text-[10px] font-black text-[#6356E5] font-mono block">
+                        {evt.amount}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className="text-[9px] font-semibold text-slate-400 whitespace-nowrap">
-                  {evt.time}
-                </span>
-                <ExternalLink className="w-3 h-3 text-slate-300 group-hover:text-[#6356E5] transition-colors" />
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className="text-[9px] font-semibold text-slate-400 whitespace-nowrap">
+                    {evt.time}
+                  </span>
+                  <ExternalLink className="w-3 h-3 text-slate-300 group-hover:text-[#6356E5] transition-colors" />
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );

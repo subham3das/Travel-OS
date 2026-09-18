@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Upload, MapPin, Globe, Phone, Mail, Building } from 'lucide-react';
 import { AgencyHeroData } from '../../data/profile';
@@ -7,7 +7,7 @@ interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   hero: AgencyHeroData;
-  onSave: (updated: Partial<AgencyHeroData>) => void;
+  onSave: (updated: Partial<AgencyHeroData>) => Promise<void> | void;
 }
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({
@@ -17,21 +17,46 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   onSave,
 }) => {
   const [formData, setFormData] = useState({
-    agencyName: hero.agencyName,
-    category: hero.category,
-    description: hero.description,
-    logo: hero.logo,
-    coverImage: hero.coverImage,
-    location: hero.location,
-    website: hero.website,
-    phone: hero.phone,
-    email: hero.email,
+    agencyName: hero.agencyName || '',
+    category: hero.category || '',
+    description: hero.description || '',
+    logo: hero.logo || '',
+    coverImage: hero.coverImage || '',
+    location: hero.location || '',
+    website: hero.website || '',
+    phone: hero.phone || '',
+    email: hero.email || '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        agencyName: hero.agencyName || '',
+        category: hero.category || '',
+        description: hero.description || '',
+        logo: hero.logo || '',
+        coverImage: hero.coverImage || '',
+        location: hero.location || '',
+        website: hero.website || '',
+        phone: hero.phone || '',
+        email: hero.email || '',
+      });
+    }
+  }, [isOpen, hero]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
-    onClose();
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+      onClose();
+    } catch (err) {
+      console.error('Failed to save profile modal:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -182,10 +207,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-2xl bg-[#583BE8] hover:bg-[#472dbf] text-white text-xs font-black flex items-center gap-2 shadow-md shadow-[#583BE8]/20 transition-all cursor-pointer"
+                  disabled={isSaving}
+                  className="px-6 py-2.5 rounded-2xl bg-[#583BE8] hover:bg-[#472dbf] text-white text-xs font-black flex items-center gap-2 shadow-md shadow-[#583BE8]/20 transition-all disabled:opacity-50 cursor-pointer"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Save Changes</span>
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

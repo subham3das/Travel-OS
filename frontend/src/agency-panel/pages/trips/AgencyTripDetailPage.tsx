@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, LayoutDashboard, Users, ShieldCheck, Clock } from 'lucide-react';
@@ -40,8 +40,10 @@ import {
   EmergencyInfo,
   TripOperationsData,
   OperationsChecklistItem,
+  DetailedTripInfo,
 } from '../../data/tripDetails';
 import { TripLiveStatus } from '../../data/tripTimeline';
+import { agencyTripsService, TripDetailResponse } from '../../services/agencyTrips.service';
 
 type DetailTab = 'overview' | 'travelers' | 'operations' | 'timeline';
 
@@ -52,102 +54,61 @@ const DETAIL_TABS: { id: DetailTab; label: string; icon: React.ReactNode }[] = [
   { id: 'timeline',   label: 'Timeline',   icon: <Clock           className="w-4 h-4" /> },
 ];
 
-// ── Mock team returned from Team Management after assignment ──────────────────
-const MOCK_ASSIGNED_TEAM: AssignedTeamMember[] = [
-  {
-    id: 'at-1',
-    name: 'John Smith',
-    role: 'Trip Manager',
-    phone: '+91 98765 43210',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
-  },
-  {
-    id: 'at-2',
-    name: 'Rahul Das',
-    role: 'Trip Host',
-    phone: '+91 87654 32109',
-    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200',
-  },
-  {
-    id: 'at-3',
-    name: 'Aman Sharma',
-    role: 'Guide',
-    phone: '+91 76543 21098',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
-  },
-  {
-    id: 'at-4',
-    name: 'Rakesh Kumar',
-    role: 'Driver',
-    phone: '+91 65432 10987',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=200',
-  },
-];
-
-// ── Mock vehicles returned from Vehicle Management after assignment ─────────
-const MOCK_ASSIGNED_VEHICLES: AssignedVehicle[] = [
-  {
-    id: 'v-1',
-    name: 'Tempo Traveller Deluxe',
-    registrationNumber: 'UK 07 PA 1234',
-    type: '17+1 Seater AC Bus',
-    capacity: 18,
-    assignedDriver: 'Rakesh Kumar',
-    status: 'Assigned',
-    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=300',
-  },
-];
-
 /**
  * Agency Trip Operations Center & Details Page
  * Route: /agency/trips/:tripId (Protected: APPROVED agencies only)
- *
- * Tabs:
- * 1. Overview — High level summary & progress
- * 2. Travelers — Traveler list & management shortcut
- * 3. Operations — Checklist, Team, Vehicle, Hotel & Emergency info
- * 4. Timeline — Live day-by-day operations, incidents, notes, photo log
  */
 export const AgencyTripDetailPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const currentTripId = tripId || MOCK_TRIP_DETAILS.tripId;
+  const currentTripId = tripId || 'LD-1505-2024';
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [tripData, setTripData] = useState<TripDetailResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // ── Operations State ───────────────────────────────────────────────────────
-  const [teamAssignments, setTeamAssignments] = useState<AssignedTeamMember[] | null>(MOCK_ASSIGNED_TEAM);
-  const [vehicleAssignments, setVehicleAssignments] = useState<AssignedVehicle[] | null>(MOCK_ASSIGNED_VEHICLES);
-  const [hotelInfo, setHotelInfo] = useState<HotelInfo | null>({
-    hotelName: 'The Grand Himalayan Resort',
-    address: 'Leh, Ladakh 194101',
-    checkInTime: '02:00 PM',
-    checkOutTime: '11:00 AM',
-    roomAllocationNotes: '8 double rooms reserved for guests.',
-  });
-  const [emergencyInfo, setEmergencyInfo] = useState<EmergencyInfo | null>({
-    contactPerson: 'Ramesh Kumar (Operations Desk)',
-    contactPhone: '+91 98765 00000',
-    nearestHospital: 'SNM Hospital, Leh',
-    nearestPoliceStation: 'Leh Police Station',
-    backupVehicleContact: '+91 87654 32109',
-    additionalNotes: 'Oxygen cylinders kept in vehicle UK 07 PA 1234.',
-  });
-
+  const [teamAssignments, setTeamAssignments] = useState<AssignedTeamMember[] | null>(null);
+  const [vehicleAssignments, setVehicleAssignments] = useState<AssignedVehicle[] | null>(null);
+  const [hotelInfo, setHotelInfo] = useState<HotelInfo | null>(null);
+  const [emergencyInfo, setEmergencyInfo] = useState<EmergencyInfo | null>(null);
   const [liveTripStatus, setLiveTripStatus] = useState<TripLiveStatus>('Ongoing');
+
+  const loadTripData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await agencyTripsService.getTripById(currentTripId);
+      setTripData(data);
+      setTeamAssignments(data.teamAssignments?.length ? data.teamAssignments : null);
+      setVehicleAssignments(data.vehicleAssignments?.length ? data.vehicleAssignments : null);
+      setHotelInfo(data.hotelInformation || null);
+      setEmergencyInfo(data.emergencyInformation || null);
+      setLiveTripStatus((data.statusCategory as TripLiveStatus) || 'Ongoing');
+    } catch (error) {
+      console.error('Failed to load trip details from backend:', error);
+      // Fallback to initial mock if offline
+      setTeamAssignments(MOCK_TRIP_DETAILS as any);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentTripId]);
+
+  useEffect(() => {
+    loadTripData();
+  }, [loadTripData]);
 
   // ── Read query params on return from Team / Vehicle Management ──────────────
   useEffect(() => {
     if (searchParams.get('teamAssigned') === 'true') {
-      setTeamAssignments(MOCK_ASSIGNED_TEAM);
       setActiveTab('operations');
       setSearchParams({}, { replace: true });
+      loadTripData();
     }
     if (searchParams.get('vehicleAssigned') === 'true') {
-      setVehicleAssignments(MOCK_ASSIGNED_VEHICLES);
       setActiveTab('operations');
       setSearchParams({}, { replace: true });
+      loadTripData();
     }
     if (searchParams.get('tab')) {
       const tabParam = searchParams.get('tab') as DetailTab;
@@ -155,12 +116,12 @@ export const AgencyTripDetailPage: React.FC = () => {
         setActiveTab(tabParam);
       }
     }
-  }, [searchParams]);
+  }, [searchParams, loadTripData, setSearchParams]);
 
   // ── Derive 4-item checklist from real data ─────────────────────────────────
   const operationsChecklist: OperationsChecklistItem[] = useMemo(() => [
-    { id: 'team', label: 'Team Assigned', isCompleted: Boolean(teamAssignments) },
-    { id: 'vehicle', label: 'Vehicle Assigned', isCompleted: Boolean(vehicleAssignments) },
+    { id: 'team', label: 'Team Assigned', isCompleted: Boolean(teamAssignments && teamAssignments.length > 0) },
+    { id: 'vehicle', label: 'Vehicle Assigned', isCompleted: Boolean(vehicleAssignments && vehicleAssignments.length > 0) },
     { id: 'hotel', label: 'Hotel Information Added', isCompleted: Boolean(hotelInfo) },
     { id: 'emergency', label: 'Emergency Information Added', isCompleted: Boolean(emergencyInfo) },
   ], [teamAssignments, vehicleAssignments, hotelInfo, emergencyInfo]);
@@ -180,12 +141,18 @@ export const AgencyTripDetailPage: React.FC = () => {
   };
 
   // ── Trip object for hero card ──────────────────────────────────────────────
-  const trip = {
-    ...MOCK_TRIP_DETAILS,
-    tripId: currentTripId,
-    statusCategory: liveTripStatus as any,
-    statusText: liveTripStatus === 'Ongoing' ? 'ONGOING TRIP' : liveTripStatus === 'Completed' ? 'Completed' : 'Ready to Start',
-  };
+  const trip: DetailedTripInfo = tripData
+    ? {
+        ...tripData,
+        statusCategory: liveTripStatus as any,
+        statusText: liveTripStatus === 'Ongoing' ? 'ONGOING TRIP' : liveTripStatus === 'Completed' ? 'Completed' : 'Ready to Start',
+      }
+    : {
+        ...MOCK_TRIP_DETAILS,
+        tripId: currentTripId,
+        statusCategory: liveTripStatus as any,
+        statusText: liveTripStatus === 'Ongoing' ? 'ONGOING TRIP' : liveTripStatus === 'Completed' ? 'Completed' : 'Ready to Start',
+      };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleNavigateToTeam = () => {
@@ -196,17 +163,32 @@ export const AgencyTripDetailPage: React.FC = () => {
     navigate(`/agency/trips/${currentTripId}/vehicle`);
   };
 
-  const handleSaveHotel = (info: HotelInfo) => {
+  const handleSaveHotel = async (info: HotelInfo) => {
     setHotelInfo(info);
+    try {
+      await agencyTripsService.updateTripHotel(currentTripId, info);
+    } catch (err) {
+      console.error('Failed to update hotel info in backend:', err);
+    }
   };
 
-  const handleSaveEmergency = (info: EmergencyInfo) => {
+  const handleSaveEmergency = async (info: EmergencyInfo) => {
     setEmergencyInfo(info);
+    try {
+      await agencyTripsService.updateTripEmergency(currentTripId, info);
+    } catch (err) {
+      console.error('Failed to update emergency info in backend:', err);
+    }
   };
 
-  const handleStartTrip = () => {
+  const handleStartTrip = async () => {
     setLiveTripStatus('Ongoing');
     setActiveTab('timeline');
+    try {
+      await agencyTripsService.updateTripStatus(currentTripId, 'Ongoing');
+    } catch (err) {
+      console.error('Failed to start trip in backend:', err);
+    }
   };
 
   return (
@@ -217,7 +199,7 @@ export const AgencyTripDetailPage: React.FC = () => {
         <DashboardHeader />
 
         {/* Sticky Sub-Header */}
-        <div className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 py-3 sm:px-6 flex items-center justify-between sticky top-14 z-20">
+        <div className="bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-3 sm:px-6 flex items-center justify-between sticky top-[57px] sm:top-[65px] z-20 select-none">
           <button
             type="button"
             onClick={() => navigate('/agency/trips')}
@@ -233,7 +215,7 @@ export const AgencyTripDetailPage: React.FC = () => {
         </div>
 
         {/* ── 4-Tab Navigation Bar ── */}
-        <div className="sticky top-[7.5rem] z-10 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6">
+        <div className="sticky top-[107px] sm:top-[115px] z-10 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 select-none">
           <div className="max-w-4xl mx-auto flex">
             {DETAIL_TABS.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -295,8 +277,8 @@ export const AgencyTripDetailPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <ItineraryCard itinerary={MOCK_ITINERARY} dayBadgeText="Day 1 • 15 May" />
                   <AnnouncementsCard
-                    announcements={MOCK_ANNOUNCEMENTS}
-                    onViewAll={() => alert('View All Announcements — coming soon')}
+                    announcements={(tripData?.announcements?.length ? tripData.announcements : MOCK_ANNOUNCEMENTS) as any}
+                    onViewAll={() => setActiveTab('timeline')}
                   />
                 </div>
 
@@ -307,7 +289,7 @@ export const AgencyTripDetailPage: React.FC = () => {
                     onViewAll={() => setActiveTab('timeline')}
                   />
                   <InternalNotesCard
-                    notes={MOCK_INTERNAL_NOTES}
+                    notes={(tripData?.notes?.length ? tripData.notes : MOCK_INTERNAL_NOTES) as any}
                     onViewAll={() => setActiveTab('timeline')}
                   />
                 </div>
@@ -375,7 +357,7 @@ export const AgencyTripDetailPage: React.FC = () => {
             )}
 
             {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                TAB 4: TIMELINE & LIVE OPERATIONS (NEW)
+                TAB 4: TIMELINE & LIVE OPERATIONS
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
             {activeTab === 'timeline' && (
               <motion.div

@@ -1,33 +1,31 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, Star, Award, MapPin, Grid, Camera, Users, X } from 'lucide-react';
-import { getUserReputation } from '../../../data/reputation';
+import { ArrowLeft, CheckCircle2, Award, MapPin, Grid, Camera } from 'lucide-react';
 import { TravelerPost } from '../../../components/community/TravelerPost';
+import { FullUserProfileResponse } from '../../../services/userAuth.service';
 
 interface PublicProfilePreviewModalProps {
   onClose: () => void;
+  profile: FullUserProfileResponse | null;
 }
 
-export const PublicProfilePreviewModal: React.FC<PublicProfilePreviewModalProps> = ({ onClose }) => {
-  const reputation = getUserReputation();
-
-  const publicPosts = [
-    {
-      id: 'preview-post-1',
-      authorName: 'Subham Das',
-      authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop',
-      isVerified: true,
-      timeAgo: '2 days ago',
-      location: 'Meghalaya',
-      imageUrl: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
-      caption: 'Chasing monsoon waterfalls in Cherrapunji! 🏔️✨',
-      likesCount: 142,
-      commentsCount: 28,
-      sharesCount: 12,
-      agencyName: 'Wander North Travel',
-      agencyVerified: true,
-    },
-  ];
+export const PublicProfilePreviewModal: React.FC<PublicProfilePreviewModalProps> = ({
+  onClose,
+  profile,
+}) => {
+  const name = profile?.fullName || 'ApnaTrip Traveler';
+  const avatar = profile?.avatar || profile?.profileImage || '';
+  const bio = profile?.bio || 'Passionate backpacker & nature explorer.';
+  const location = profile?.location || profile?.homeCity || 'India';
+  const isVerified = Boolean(profile?.isVerified || profile?.isEmailVerified);
+  const reputation = profile?.stats?.reputationScore ?? (isVerified ? 150 : 50);
+  const levelTitle = profile?.stats?.levelTitle || (isVerified ? 'Explorer Level 2' : 'Explorer Level 1');
+  const completedTrips = profile?.stats?.completedTrips ?? 0;
+  const postsCount = profile?.stats?.postsCount ?? 0;
+  const followersCount = profile?.stats?.followersCount ?? 0;
+  const followingCount = profile?.stats?.followingCount ?? 0;
+  const badges = profile?.achievements || [];
+  const posts = profile?.mediaPosts || [];
 
   return (
     <motion.div
@@ -69,56 +67,64 @@ export const PublicProfilePreviewModal: React.FC<PublicProfilePreviewModalProps>
         {/* Public Header Card */}
         <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-4">
           <div className="flex items-start gap-4">
-            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-[#6356E5]/20 shrink-0">
-              <img
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop"
-                alt="Subham Das"
-                className="w-full h-full object-cover"
-              />
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-[#6356E5]/20 shrink-0 flex items-center justify-center bg-slate-100">
+              {avatar ? (
+                <img
+                  src={avatar}
+                  alt={name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-tr from-[#6356E5] to-[#FF4D6D] flex items-center justify-center text-white font-black text-2xl">
+                  {name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-lg sm:text-xl font-black text-[#0F172A] truncate">Subham Das</h1>
-                <CheckCircle2 className="w-5 h-5 text-sky-500 fill-sky-500/10 shrink-0" />
+                <h1 className="text-lg sm:text-xl font-black text-[#0F172A] truncate">{name}</h1>
+                {isVerified && (
+                  <CheckCircle2 className="w-5 h-5 text-sky-500 fill-sky-500/10 shrink-0" />
+                )}
               </div>
 
               <p className="text-xs font-semibold text-slate-500 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-[#6356E5]" />
-                <span>Dibrugarh, Assam, India</span>
+                <span>{location}</span>
               </p>
 
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-black border border-amber-200">
-                  ⭐ {reputation.reputation} Reputation
+                  ⭐ {reputation} Reputation
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-[#6356E5] text-xs font-black border border-purple-200">
-                  {reputation.levelTitle}
+                  {levelTitle}
                 </span>
               </div>
             </div>
           </div>
 
           <p className="text-xs font-medium text-slate-600 leading-relaxed pt-1 border-t border-slate-100">
-            Passionate backpacker & mountain photographer. Exploring the raw beauty of Northeast India one trek at a time! 🏔️📸
+            {bio}
           </p>
 
           {/* Public Stats Bar */}
           <div className="grid grid-cols-4 gap-2 pt-2 text-center divide-x divide-slate-100">
             <div>
-              <p className="text-base sm:text-lg font-black text-[#0F172A]">{reputation.completedTrips}</p>
+              <p className="text-base sm:text-lg font-black text-[#0F172A]">{completedTrips}</p>
               <p className="text-[10px] font-bold text-slate-400">Trips</p>
             </div>
             <div>
-              <p className="text-base sm:text-lg font-black text-[#0F172A]">12</p>
+              <p className="text-base sm:text-lg font-black text-[#0F172A]">{postsCount}</p>
               <p className="text-[10px] font-bold text-slate-400">Posts</p>
             </div>
             <div>
-              <p className="text-base sm:text-lg font-black text-[#0F172A]">1.2K</p>
+              <p className="text-base sm:text-lg font-black text-[#0F172A]">{followersCount}</p>
               <p className="text-[10px] font-bold text-slate-400">Followers</p>
             </div>
             <div>
-              <p className="text-base sm:text-lg font-black text-[#0F172A]">340</p>
+              <p className="text-base sm:text-lg font-black text-[#0F172A]">{followingCount}</p>
               <p className="text-[10px] font-bold text-slate-400">Following</p>
             </div>
           </div>
@@ -132,28 +138,40 @@ export const PublicProfilePreviewModal: React.FC<PublicProfilePreviewModalProps>
           </h3>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {reputation.badges.filter((b) => b.unlocked).map((badge) => (
+            {badges.filter((b) => b.unlocked).map((badge) => (
               <div key={badge.id} className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-2">
-                <span className="text-lg">{badge.icon}</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shrink-0">
+                  🏆
+                </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-black text-[#0F172A] truncate">{badge.name}</p>
-                  <p className="text-[9px] font-bold text-slate-400">Unlocked</p>
+                  <p className="text-xs font-black text-[#0F172A] truncate">{badge.title}</p>
+                  <p className="text-[9px] font-bold text-slate-400">{badge.level}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Public Activity Stream (Reusing TravelerPost) */}
+        {/* Public Activity Stream */}
         <div className="space-y-3">
           <h3 className="text-xs font-black text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 px-1">
             <Grid className="w-4 h-4 text-[#6356E5]" />
             <span>Recent Community Posts</span>
           </h3>
 
-          {publicPosts.map((post) => (
-            <TravelerPost key={post.id} post={post} />
-          ))}
+          {posts.length > 0 ? (
+            posts.map((post: any) => (
+              <TravelerPost key={post.id} post={post} />
+            ))
+          ) : (
+            <div className="p-8 rounded-3xl bg-white border border-slate-100 text-center space-y-2">
+              <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#6356E5] flex items-center justify-center mx-auto">
+                <Camera className="w-5 h-5" />
+              </div>
+              <p className="text-xs font-bold text-[#0F172A]">No public posts shared yet</p>
+              <p className="text-[11px] text-slate-400">Trips and stories shared by this traveler will appear here.</p>
+            </div>
+          )}
         </div>
       </main>
     </motion.div>

@@ -71,32 +71,38 @@ export const AnalyticsDateBar: React.FC<AnalyticsDateBarProps> = ({
           </button>
 
           {isExportOpen && (
-            <div className="absolute right-0 mt-2 w-44 bg-white rounded-2xl border border-slate-100 shadow-xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
-              <button
-                type="button"
-                onClick={() => onExport('PDF')}
-                className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4 text-rose-500" />
-                <span>PDF Report</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onExport('Excel')}
-                className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
-              >
-                <Table className="w-4 h-4 text-emerald-600" />
-                <span>Excel Spreadsheet</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onExport('CSV')}
-                className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-sky-600" />
-                <span>CSV Data File</span>
-              </button>
-            </div>
+            <>
+              <div
+                className="fixed inset-0 z-20 bg-transparent"
+                onClick={onToggleExport}
+              />
+              <div className="absolute right-0 mt-2 w-44 bg-white rounded-2xl border border-slate-100 shadow-xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+                <button
+                  type="button"
+                  onClick={() => onExport('PDF')}
+                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4 text-rose-500" />
+                  <span>PDF Report</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onExport('Excel')}
+                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
+                >
+                  <Table className="w-4 h-4 text-emerald-600" />
+                  <span>Excel Spreadsheet</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onExport('CSV')}
+                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-sky-600" />
+                  <span>CSV Data File</span>
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>

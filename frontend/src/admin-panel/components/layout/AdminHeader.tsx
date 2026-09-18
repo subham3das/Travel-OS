@@ -24,6 +24,7 @@ import { LogoutConfirmModal } from '../super-admin/profile/LogoutConfirmModal';
 import { AdminNotificationDropdown } from '../super-admin/notifications/AdminNotificationDropdown';
 import { adminHeaderNotificationsService } from '../../services/adminHeaderNotifications.service';
 import { GlobalSearchModal } from '../super-admin/search/GlobalSearchModal';
+import { useSuperAdminTheme as useTheme } from '../../context/SuperAdminThemeContext';
 
 interface AdminHeaderProps {
   onSearchChange?: (q: string) => void;
@@ -52,8 +53,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Submenu states
-  const [activeTheme, setActiveTheme] = useState<'Light' | 'Dark' | 'System'>('Light');
+  // Theme & Submenu states
+  const { theme: activeTheme, setTheme } = useTheme();
   const [activeLanguage, setActiveLanguage] = useState<'English' | 'Hindi'>('English');
   const [isThemeSubmenuOpen, setIsThemeSubmenuOpen] = useState(false);
   const [isLanguageSubmenuOpen, setIsLanguageSubmenuOpen] = useState(false);
@@ -64,10 +65,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
 
   const defaultAvatar =
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop';
-  const currentAvatar = admin?.avatar || defaultAvatar;
-  const currentName = admin?.name || 'Super Admin';
-  const currentRole = 'Platform Owner';
-  const currentEmail = admin?.email || 'admin@travelos.com';
+  const currentAvatar = admin?.profileImage || admin?.avatar || defaultAvatar;
+  const currentName = admin?.fullName || admin?.name || 'Administrator';
+  const currentRole = admin?.isSuperAdmin ? 'Super Administrator' : (admin?.role || 'Admin');
+  const currentEmail = admin?.email || '';
 
   // Global Ctrl + K / Cmd + K Shortcut Listener
   useEffect(() => {
@@ -451,8 +452,9 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setActiveTheme(t);
+                                  setTheme(t);
                                   setIsThemeSubmenuOpen(false);
+                                  showToast(`Interface theme set to ${t}`, 'info');
                                 }}
                                 className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] transition-colors cursor-pointer ${
                                   activeTheme === t

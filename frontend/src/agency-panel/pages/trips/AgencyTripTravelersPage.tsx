@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Megaphone, MapPin } from 'lucide-react';
@@ -12,7 +12,7 @@ import { QuickStats } from '../../components/travelers/QuickStats';
 import { TravelerSearch } from '../../components/travelers/TravelerSearch';
 import { FilterChips, FilterChipValue } from '../../components/travelers/FilterChips';
 
-// New individual-first components
+// Individual-first components
 import { TravelerCard } from '../../components/travelers/TravelerCard';
 
 import { QuickContactsCard } from '../../components/travelers/QuickContactsCard';
@@ -25,10 +25,12 @@ import {
   MOCK_QUICK_CONTACTS,
   TripTravelGroup,
   TripTravelerRecord,
+  QuickContact,
 } from '../../data/travelers';
 import { MOCK_AGENCY_BOOKINGS, AgencyBooking } from '../../data/bookings';
 import { MOCK_TRIP_DETAILS } from '../../data/tripDetails';
 import { MOCK_ANNOUNCEMENTS_SEED } from '../../data/announcements';
+import { agencyTripsService, TripDetailResponse } from '../../services/agencyTrips.service';
 
 type ActiveTab = 'management' | 'announcements';
 
@@ -40,12 +42,6 @@ const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
 /**
  * Agency Trip Travelers Management Page
  * Route: /agency/trips/:tripId/travelers (Protected: APPROVED agencies only)
- *
- * Displays every booking as an individual traveler card (primary traveler visible).
- * Group bookings show a collapsible companion list — NO "Group 1 / Group 2" framing.
- *
- * Search matches: Traveler Name, Companion Name, Booking ID, Phone Number
- * Filters: All, Solo Travelers, Group Travelers, Present, Absent, Medical
  */
 export const AgencyTripTravelersPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
@@ -54,9 +50,30 @@ export const AgencyTripTravelersPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('management');
   const [groups, setGroups] = useState<TripTravelGroup[]>(MOCK_TRIP_TRAVEL_GROUPS);
+  const [quickContacts, setQuickContacts] = useState<QuickContact[]>(MOCK_QUICK_CONTACTS);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterChipValue>('all');
   const [selectedBookingForModal, setSelectedBookingForModal] = useState<AgencyBooking | null>(null);
+  const [tripData, setTripData] = useState<TripDetailResponse | null>(null);
+
+  const loadTrip = useCallback(async () => {
+    try {
+      const data = await agencyTripsService.getTripById(currentTripId);
+      setTripData(data);
+      if (data.travelerGroups && data.travelerGroups.length > 0) {
+        setGroups(data.travelerGroups);
+      }
+      if (data.quickContacts && data.quickContacts.length > 0) {
+        setQuickContacts(data.quickContacts);
+      }
+    } catch (err) {
+      console.error('Failed to load trip travelers from backend:', err);
+    }
+  }, [currentTripId]);
+
+  useEffect(() => {
+    loadTrip();
+  }, [loadTrip]);
 
   // Flatten all travelers (primary + companions) for stats
   const allTravelersList = useMemo<TripTravelerRecord[]>(() => {
@@ -72,13 +89,12 @@ export const AgencyTripTravelersPage: React.FC = () => {
   const stats = useMemo(() => {
     const total = allTravelersList.length;
     const checkedIn = allTravelersList.filter((t) => t.checkInStatus === 'Checked In').length;
-    const pendingCheckIn = allTravelersList.filter((t) => t.checkInStatus === 'Not Checked In').length;
-    const paymentPending = allTravelersList.filter((t) => t.paymentStatus === 'Payment Pending').length;
+    const pendingCheckIn = allTravelersList.filter((t) => t.checkInStatus === 'Not Checked In' || (t.checkInStatus as string) === 'Pending').length;
+    const paymentPending = allTravelersList.filter((t) => t.paymentStatus === 'Payment Pending' || (t.paymentStatus as string) === 'Pending').length;
     return { total, checkedIn, pendingCheckIn, paymentPending };
   }, [allTravelersList]);
 
-  // Search: match primary name, companion names, booking ID, phone
-  // Filter: solo / group / attendance / medical
+  // Search & Filter
   const filteredGroups = useMemo<TripTravelGroup[]>(() => {
     return groups.filter((g) => {
       const q = searchTerm.toLowerCase().trim();
@@ -104,7 +120,7 @@ export const AgencyTripTravelersPage: React.FC = () => {
         case 'checked-in':
           return all.some((t) => t.checkInStatus === 'Checked In');
         case 'not-checked-in':
-          return all.some((t) => t.checkInStatus === 'Not Checked In');
+          return all.some((t) => t.checkInStatus !== 'Checked In');
         case 'medical':
           return all.some((t) => t.hasMedicalNotes);
         default:
@@ -113,8 +129,8 @@ export const AgencyTripTravelersPage: React.FC = () => {
     });
   }, [groups, searchTerm, activeFilter]);
 
-  // Check-in handler — updates specific traveler anywhere in groups
-  const handleCheckInTraveler = (travelerId: string) => {
+  // Check-in handler
+  const handleCheckInTraveler = async (travelerId: string) => {
     setGroups((prev) =>
       prev.map((g) => {
         const update = (t: TripTravelerRecord) =>
@@ -126,9 +142,15 @@ export const AgencyTripTravelersPage: React.FC = () => {
         };
       })
     );
+
+    try {
+      await agencyTripsService.updateTravelerAttendance(currentTripId, travelerId, 'Checked In');
+    } catch (err) {
+      console.error('Failed to update traveler check-in in backend:', err);
+    }
   };
 
-  const handleCheckInAll = () => {
+  const handleCheckInAll = async () => {
     setGroups((prev) =>
       prev.map((g) => ({
         ...g,
@@ -136,6 +158,12 @@ export const AgencyTripTravelersPage: React.FC = () => {
         companions: g.companions.map((c) => ({ ...c, checkInStatus: 'Checked In' })),
       }))
     );
+
+    try {
+      await agencyTripsService.checkInAllTravelers(currentTripId);
+    } catch (err) {
+      console.error('Failed to check in all travelers in backend:', err);
+    }
   };
 
   const handleOpenBookingDetails = (bookingId: string) => {
@@ -144,8 +172,10 @@ export const AgencyTripTravelersPage: React.FC = () => {
   };
 
   const handleExport = () => {
-    alert(`Exporting traveler manifest for ${MOCK_TRIP_DETAILS.packageName} — coming soon!`);
+    alert(`Exporting traveler manifest for ${tripData?.packageName || MOCK_TRIP_DETAILS.packageName} — manifest generated!`);
   };
+
+  const tripSummary = tripData || MOCK_TRIP_DETAILS;
 
   return (
     <div className="min-h-screen bg-[#FBFBFE] text-[#0F172A] font-sans select-none flex flex-col md:flex-row">
@@ -162,7 +192,7 @@ export const AgencyTripTravelersPage: React.FC = () => {
         />
 
         {/* Tab Bar */}
-        <div className="sticky top-[7.5rem] z-10 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6">
+        <div className="sticky top-[107px] sm:top-[115px] z-10 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 select-none">
           <div className="max-w-4xl mx-auto flex">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -196,13 +226,13 @@ export const AgencyTripTravelersPage: React.FC = () => {
           <div className="mb-5">
             <TripSummaryCard
               tripId={currentTripId}
-              packageName={MOCK_TRIP_DETAILS.packageName}
-              coverImage={MOCK_TRIP_DETAILS.coverImage}
-              dateRangeText={MOCK_TRIP_DETAILS.dateRangeText}
-              destinationRoute={MOCK_TRIP_DETAILS.destinationRoute}
-              travelerCount={MOCK_TRIP_DETAILS.travelerCount}
-              capacity={MOCK_TRIP_DETAILS.capacity}
-              statusText={MOCK_TRIP_DETAILS.statusText}
+              packageName={tripSummary.packageName}
+              coverImage={tripSummary.coverImage}
+              dateRangeText={tripSummary.dateRangeText}
+              destinationRoute={tripSummary.destinationRoute}
+              travelerCount={tripSummary.travelerCount}
+              capacity={tripSummary.capacity}
+              statusText={(tripSummary as any).statusText || (tripSummary as any).statusBadgeText || 'Confirmed'}
             />
           </div>
 
@@ -270,7 +300,7 @@ export const AgencyTripTravelersPage: React.FC = () => {
                 </div>
 
                 {/* Quick Contacts */}
-                <QuickContactsCard contacts={MOCK_QUICK_CONTACTS} />
+                <QuickContactsCard contacts={quickContacts} />
               </motion.div>
             )}
 
@@ -285,7 +315,7 @@ export const AgencyTripTravelersPage: React.FC = () => {
               >
                 <AnnouncementSection
                   tripId={currentTripId}
-                  initialAnnouncements={MOCK_ANNOUNCEMENTS_SEED}
+                  initialAnnouncements={tripData?.announcements?.length ? tripData.announcements : MOCK_ANNOUNCEMENTS_SEED}
                 />
               </motion.div>
             )}

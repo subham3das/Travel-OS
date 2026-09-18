@@ -8,14 +8,14 @@ interface AgencyPerformanceCardProps {
 
 export const AgencyPerformanceCard: React.FC<AgencyPerformanceCardProps> = ({ agency }) => {
   const perf = agency.performance || {
-    bookings: agency.bookings || 1245,
-    bookingsGrowth: '12.4%',
-    trips: 98,
-    tripsGrowth: '6.1%',
-    revenue: agency.revenue || '₹48,75,230',
-    revenueGrowth: '8.2%',
-    reviews: agency.reviewCount || 128,
-    reviewsGrowth: '9.3%',
+    bookings: agency.bookings || 0,
+    bookingsGrowth: '0%',
+    trips: agency.bookings || 0,
+    tripsGrowth: '0%',
+    revenue: agency.revenue || '₹0',
+    revenueGrowth: '0%',
+    reviews: agency.reviewCount || 0,
+    reviewsGrowth: '0%',
   };
 
   return (

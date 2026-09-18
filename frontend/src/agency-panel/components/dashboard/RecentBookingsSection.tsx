@@ -79,9 +79,10 @@ export const RecentBookingsSection: React.FC<RecentBookingsSectionProps> = ({ bo
           })}
         </div>
       ) : (
-        <div className="py-8 text-center space-y-2">
+        <div className="py-8 text-center space-y-1.5">
           <Briefcase className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="text-xs font-bold text-slate-400">No bookings yet.</p>
+          <p className="text-xs font-bold text-slate-500">No bookings yet.</p>
+          <p className="text-[11px] text-slate-400 font-medium">Start creating packages to receive traveler bookings.</p>
         </div>
       )}
     </motion.div>

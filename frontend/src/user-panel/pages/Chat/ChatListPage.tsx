@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,6 +11,8 @@ import {
   MessageSquareOff,
 } from 'lucide-react';
 import { getChats, ChatConversation } from '../../data/chats';
+import { customerChatService } from '../../services/customerChat.service';
+import { userSocketService } from '../../services/userSocket.service';
 import { ChatCard } from './components/ChatCard';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 
@@ -21,6 +23,27 @@ export const ChatListPage: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSecurityBanner, setShowSecurityBanner] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    customerChatService.getConversations().then((liveList) => {
+      if (isMounted && liveList && liveList.length > 0) {
+        setChats(liveList);
+      }
+    });
+
+    const unsubscribe = userSocketService.subscribe('message:new', (data: any) => {
+      if (!isMounted) return;
+      customerChatService.getConversations().then((updated) => {
+        if (isMounted && updated.length > 0) setChats(updated);
+      });
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
 
   const filterChips: { id: 'all' | 'agencies' | 'support' | 'bookings'; label: string; icon: React.ReactNode }[] = [
     { id: 'all', label: 'All', icon: null },

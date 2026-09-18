@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { AppHeader } from '../../components/home/AppHeader';
@@ -15,6 +15,8 @@ import { TopTravelCategories } from '../../components/home/TopTravelCategories';
 import { AppDownloadBanner } from '../../components/home/AppDownloadBanner';
 import { FilterModal } from '../../components/common/FilterModal';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
+import { useAuth } from '../../hooks/useAuth';
+import { marketplaceService } from '../../services/marketplace.service';
 
 // Sample Mock Data matching reference designs (home.png & home extended.png)
 const featuredDestinationsData: Destination[] = [
@@ -136,8 +138,49 @@ const recentlyViewedData: Destination[] = [
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [destinations, setDestinations] = useState<Destination[]>(featuredDestinationsData);
+  const [trendingPackages, setTrendingPackages] = useState<TravelPackage[]>(trendingPackagesData);
+
+  useEffect(() => {
+    marketplaceService.getTrendingPackages(8).then((pkgs) => {
+      if (pkgs && pkgs.length > 0) {
+        const mapped: TravelPackage[] = pkgs.map((p) => ({
+          id: p.id,
+          badge: (p.badge as any) || 'Popular',
+          title: p.title,
+          price: p.price,
+          rating: p.rating,
+          reviewsCount: p.reviewCount,
+          duration: p.duration,
+          location: p.destinationName,
+          imageUrl: p.coverImage,
+        }));
+        setTrendingPackages(mapped);
+
+        const seenDests = new Set<string>();
+        const dests: Destination[] = [];
+        pkgs.forEach((p) => {
+          if (!seenDests.has(p.destinationId)) {
+            seenDests.add(p.destinationId);
+            dests.push({
+              id: p.destinationId,
+              name: p.destinationName,
+              location: p.agencyLocation || 'India',
+              rating: p.rating,
+              reviewsCount: p.reviewCount,
+              imageUrl: p.coverImage,
+            });
+          }
+        });
+        if (dests.length > 0) {
+          setDestinations(dests);
+        }
+      }
+    }).catch((err) => console.warn('Failed to fetch home packages:', err));
+  }, []);
 
   const handleDestinationExplore = (dest: Destination) => {
     navigate(`/explore?destination=${dest.id}`);
@@ -151,8 +194,8 @@ export const HomePage: React.FC = () => {
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#FF4D6D]/20 selection:text-[#FF4D6D]">
       {/* 1. App Header */}
       <AppHeader
-        unreadNotificationsCount={2}
-        unreadMessagesCount={1}
+        unreadNotificationsCount={0}
+        unreadMessagesCount={0}
         onNotificationClick={() => navigate('/notifications')}
         onMessageClick={() => navigate('/chat')}
       />
@@ -166,8 +209,8 @@ export const HomePage: React.FC = () => {
           transition={{ duration: 0.4 }}
         >
           <GreetingCard
-            userName="Subham Das"
-            location="Dibrugarh"
+            userName={user?.name || 'Traveler'}
+            location={user?.homeCity || 'India'}
             temperature="28°C"
           />
         </motion.div>
@@ -220,7 +263,7 @@ export const HomePage: React.FC = () => {
           />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {featuredDestinationsData.map((dest) => (
+            {destinations.map((dest) => (
               <DestinationCard
                 key={dest.id}
                 destination={dest}
@@ -257,7 +300,7 @@ export const HomePage: React.FC = () => {
           />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {trendingPackagesData.map((pkg) => (
+            {trendingPackages.map((pkg) => (
               <PackageCard
                 key={pkg.id}
                 packageData={pkg}

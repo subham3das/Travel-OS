@@ -7,12 +7,12 @@ import {
   SupportTicketStatus,
   SupportMessageSenderType,
 } from '../../types/supportManagement';
-import { adminSupportManagementService } from '../../services/adminSupportManagement.service';
 import {
+  adminSupportManagementService,
   initialSupportKPIStats,
   initialSupportTickets,
   initialSupportAnalytics,
-} from '../../data/supportData';
+} from '../../services/adminSupportManagement.service';
 import { AdminSupportHeader } from '../../components/super-admin/support/AdminSupportHeader';
 import { SupportKPIStatsCards } from '../../components/super-admin/support/SupportKPIStats';
 import { SupportTicketQueue } from '../../components/super-admin/support/SupportTicketQueue';

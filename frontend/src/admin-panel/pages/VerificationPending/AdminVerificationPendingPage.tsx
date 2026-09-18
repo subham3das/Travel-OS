@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../../../user-panel/context/ToastContext';
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -20,11 +20,12 @@ import { AgencyRequestsTable } from '../../components/super-admin/agency-request
 import { AgencyRequestPagination } from '../../components/super-admin/agency-requests/AgencyRequestPagination';
 import { AgencyRequestDrawer } from '../../components/super-admin/agency-requests/AgencyRequestDrawer';
 import { ConfirmationModal } from '../../components/super-admin/agency-requests/ConfirmationModal';
+import { RequestMissingDocumentsModal } from '../../components/super-admin/agency-requests/RequestMissingDocumentsModal';
 
 /**
  * Super Admin Agency Requests Page Component
  * Routes: /admin/verification-pending & /super-admin/agency-requests
- * Single Source of Truth matching super-agency-requests.png
+ * 100% Backend-Driven with Live MongoDB Data
  */
 export const AdminVerificationPendingPage: React.FC = () => {
   const { showToast } = useToast();
@@ -37,14 +38,20 @@ export const AdminVerificationPendingPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
   // Drawer State
   const [selectedRequest, setSelectedRequest] = useState<AgencyRequestItem | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Confirmation Modal State
+  // Confirmation Modal State (Approve / Reject)
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
-    type: 'approve' | 'reject' | 'request_docs';
+    type: 'approve' | 'reject';
     targetRequest: AgencyRequestItem | null;
   }>({
     isOpen: false,
@@ -52,9 +59,10 @@ export const AdminVerificationPendingPage: React.FC = () => {
     targetRequest: null,
   });
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  // Request Missing Documents Modal State
+  const [isRequestDocsModalOpen, setIsRequestDocsModalOpen] = useState(false);
+  const [targetRequestDocs, setTargetRequestDocs] = useState<AgencyRequestItem | null>(null);
+  const [isProcessingDocsRequest, setIsProcessingDocsRequest] = useState(false);
 
   // Filters State
   const [filters, setFilters] = useState<AgencyRequestFilters>({
@@ -66,38 +74,40 @@ export const AdminVerificationPendingPage: React.FC = () => {
     search: '',
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [statsData, requestsData] = await Promise.all([
+      const [statsData, requestsRes] = await Promise.all([
         adminAgencyRequestService.getSummaryStats(),
-        adminAgencyRequestService.getAgencyRequests(filters),
+        adminAgencyRequestService.getAgencyRequests(filters, currentPage, itemsPerPage),
       ]);
 
       setStats(statsData);
-      setRequests(requestsData);
+      setRequests(requestsRes.items || []);
+      setTotalPages(requestsRes.pagination?.totalPages || 1);
+      setTotalItems(requestsRes.pagination?.total || 0);
 
-      // Default select first item for drawer if available
-      if (requestsData.length > 0 && !selectedRequest) {
-        setSelectedRequest(requestsData[0]);
-        setIsDrawerOpen(true);
+      // Default select first item for drawer if available and none selected
+      if (requestsRes.items.length > 0 && !selectedRequest) {
+        setSelectedRequest(requestsRes.items[0]);
       }
       setLoading(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load agency requests', err);
       setError('Unable to load agency registration requests. Please check your network connection.');
       setLoading(false);
     }
-  };
+  }, [filters, currentPage, itemsPerPage]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   // Filter change handlers
   const handleFilterChange = (key: keyof AgencyRequestFilters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
   };
 
   const handleResetFilters = () => {
@@ -110,20 +120,18 @@ export const AdminVerificationPendingPage: React.FC = () => {
       search: '',
     };
     setFilters(initialFilters);
-    adminAgencyRequestService.getAgencyRequests(initialFilters).then(setRequests);
+    setCurrentPage(1);
     showToast('Filters reset to default', 'info');
   };
 
   const handleApplyFilters = () => {
-    adminAgencyRequestService.getAgencyRequests(filters).then((data) => {
-      setRequests(data);
-      showToast(`Found ${data.length} matching agency requests`, 'success');
-    });
+    setCurrentPage(1);
+    loadData();
+    showToast('Filters applied successfully', 'success');
   };
 
   const handleQuickSearch = (q: string) => {
     handleFilterChange('search', q);
-    adminAgencyRequestService.getAgencyRequests({ ...filters, search: q }).then(setRequests);
   };
 
   // Selection handlers
@@ -142,8 +150,14 @@ export const AdminVerificationPendingPage: React.FC = () => {
   };
 
   // Drawer / Action Handlers
-  const handleOpenDrawer = (request: AgencyRequestItem) => {
-    setSelectedRequest(request);
+  const handleOpenDrawer = async (request: AgencyRequestItem) => {
+    // Fetch fresh details with full audit activity from backend
+    try {
+      const fullDetails = await adminAgencyRequestService.getAgencyRequestById(request.id);
+      setSelectedRequest(fullDetails || request);
+    } catch {
+      setSelectedRequest(request);
+    }
     setIsDrawerOpen(true);
   };
 
@@ -156,7 +170,45 @@ export const AdminVerificationPendingPage: React.FC = () => {
   };
 
   const handleTriggerRequestDocs = (request: AgencyRequestItem) => {
-    setModalConfig({ isOpen: true, type: 'request_docs', targetRequest: request });
+    setTargetRequestDocs(request);
+    setIsRequestDocsModalOpen(true);
+  };
+
+  const handleSendDocumentRequest = async (payload: {
+    requestedDocuments: Array<{
+      documentId: string;
+      documentName: string;
+      documentType: string;
+      reason: string;
+      customReason?: string;
+      internalNote?: string;
+    }>;
+    agencyMessage?: string;
+  }) => {
+    if (!targetRequestDocs) return;
+    setIsProcessingDocsRequest(true);
+    try {
+      const res = await adminAgencyRequestService.requestMissingDocuments(
+        targetRequestDocs.id,
+        payload
+      );
+      if (res.success) {
+        showToast(`Document re-upload request sent to "${targetRequestDocs.agencyName}"`, 'success');
+        if (selectedRequest && selectedRequest.id === targetRequestDocs.id && res.agency) {
+          setSelectedRequest(res.agency);
+        }
+        if (res.updatedStats) setStats(res.updatedStats);
+        setIsRequestDocsModalOpen(false);
+        setTargetRequestDocs(null);
+        loadData();
+      } else {
+        showToast(res.message || 'Failed to send document request', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Error sending document request', 'error');
+    } finally {
+      setIsProcessingDocsRequest(false);
+    }
   };
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -170,42 +222,40 @@ export const AdminVerificationPendingPage: React.FC = () => {
       if (modalConfig.type === 'approve') {
         const res = await adminAgencyRequestService.approveRequest(req.id);
         if (res.success) {
-          const remaining = requests.filter((r) => r.id !== req.id);
-          setRequests(remaining);
-          if (res.updatedStats) setStats(res.updatedStats);
-
-          // Update selection in drawer: select next request or close drawer
-          if (selectedRequest?.id === req.id) {
-            if (remaining.length > 0) {
-              setSelectedRequest(remaining[0]);
-            } else {
-              setSelectedRequest(null);
-              setIsDrawerOpen(false);
-            }
-          }
-
+          showToast('Agency approved successfully. Moved to Agencies directory.', 'success');
+          setRequests((prev) => prev.filter((r) => r.id !== req.id));
           setSelectedIds((prev) => prev.filter((id) => id !== req.id));
-          showToast('Agency approved successfully.', 'success');
+          if (selectedRequest?.id === req.id) {
+            setIsDrawerOpen(false);
+            setSelectedRequest(null);
+          }
+          if (res.updatedStats) setStats(res.updatedStats);
+          loadData();
         } else {
           showToast(res.message || 'Failed to approve agency', 'error');
         }
       } else if (modalConfig.type === 'reject') {
-        const res = await adminAgencyRequestService.rejectRequest(req.id);
+        const res = await adminAgencyRequestService.rejectRequest(
+          req.id,
+          'Compliance and KYC verification criteria were not fulfilled.'
+        );
         if (res.success) {
-          if (res.updatedRequests) setRequests(res.updatedRequests);
+          showToast(`Agency "${req.agencyName}" request rejected.`, 'info');
+          setRequests((prev) => prev.filter((r) => r.id !== req.id));
+          setSelectedIds((prev) => prev.filter((id) => id !== req.id));
+          if (selectedRequest?.id === req.id) {
+            setIsDrawerOpen(false);
+            setSelectedRequest(null);
+          }
           if (res.updatedStats) setStats(res.updatedStats);
-          showToast(`Agency "${req.agencyName}" request rejected`, 'info');
+          loadData();
+        } else {
+          showToast(res.message || 'Failed to reject agency', 'error');
         }
-      } else if (modalConfig.type === 'request_docs') {
-        const res = await adminAgencyRequestService.requestMoreDocuments(req.id);
-        if (res.success && res.updatedRequests) {
-          setRequests(res.updatedRequests);
-        }
-        showToast(`Document request sent to "${req.agencyName}"`, 'info');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error in decision workflow', err);
-      showToast('An error occurred while processing the decision. Please try again.', 'error');
+      showToast(err.message || 'An error occurred while processing the decision.', 'error');
     } finally {
       setIsProcessing(false);
       setModalConfig({ isOpen: false, type: 'approve', targetRequest: null });
@@ -219,7 +269,7 @@ export const AdminVerificationPendingPage: React.FC = () => {
         showToast(`Reviewer assigned to ${request.agencyName}`, 'info');
         break;
       case 'download_docs':
-        showToast(`Downloading document bundle for ${request.agencyName}...`, 'info');
+        showToast(`Downloading document bundle for ${request.agencyName}`, 'info');
         break;
       case 'suspend_review':
         showToast(`Review suspended for ${request.agencyName}`, 'info');
@@ -227,7 +277,7 @@ export const AdminVerificationPendingPage: React.FC = () => {
       case 'delete':
         setRequests((prev) => prev.filter((r) => r.id !== request.id));
         setSelectedIds((prev) => prev.filter((id) => id !== request.id));
-        showToast(`Agency request ${request.applicationId} deleted`, 'info');
+        showToast(`Agency request ${request.applicationId} removed`, 'info');
         break;
       default:
         break;
@@ -235,25 +285,66 @@ export const AdminVerificationPendingPage: React.FC = () => {
   };
 
   // Bulk actions
-  const handleBulkApprove = () => {
-    setRequests((prev) =>
-      prev.map((r) => (selectedIds.includes(r.id) ? { ...r, reviewStatus: 'Approved' } : r))
-    );
-    showToast(`Approved ${selectedIds.length} selected agency requests`, 'success');
+  const handleBulkApprove = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      const res = await adminAgencyRequestService.bulkAction('approve', selectedIds);
+      if (res.success) {
+        showToast(`Approved ${res.successful || selectedIds.length} agencies. Moved to Agencies directory.`, 'success');
+        const approvedIds = [...selectedIds];
+        setRequests((prev) => prev.filter((r) => !approvedIds.includes(r.id)));
+        setSelectedIds([]);
+        if (selectedRequest && approvedIds.includes(selectedRequest.id)) {
+          setIsDrawerOpen(false);
+          setSelectedRequest(null);
+        }
+        if (res.updatedStats) setStats(res.updatedStats);
+        loadData();
+      } else {
+        showToast('Failed to bulk approve agencies', 'error');
+      }
+    } catch (err: any) {
+      console.error('Error during bulk approve', err);
+      showToast(err.message || 'An error occurred during bulk approval', 'error');
+    }
   };
 
-  const handleBulkReject = () => {
-    setRequests((prev) =>
-      prev.map((r) => (selectedIds.includes(r.id) ? { ...r, reviewStatus: 'Rejected' } : r))
-    );
-    showToast(`Rejected ${selectedIds.length} selected agency requests`, 'info');
+  const handleBulkReject = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      const res = await adminAgencyRequestService.bulkAction('reject', selectedIds, {
+        reason: 'Compliance requirements not fulfilled',
+      });
+      showToast(`Rejected ${res.successful} agency requests`, 'info');
+      setSelectedIds([]);
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Bulk reject failed', 'error');
+    }
   };
 
-  const handleBulkRequestDocs = () => {
-    setRequests((prev) =>
-      prev.map((r) => (selectedIds.includes(r.id) ? { ...r, verificationStatus: 'Missing Docs' } : r))
-    );
-    showToast(`Requested documents for ${selectedIds.length} agencies`, 'info');
+  const handleBulkRequestDocs = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      const res = await adminAgencyRequestService.bulkAction('request_docs', selectedIds, {
+        missingDocuments: ['Updated GST / PAN Documents', 'Bank Account Verification Proof'],
+      });
+      showToast(`Requested documents from ${res.successful} agencies`, 'info');
+      setSelectedIds([]);
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Bulk document request failed', 'error');
+    }
+  };
+
+  const handleExportCsv = async () => {
+    showToast('Exporting agency registration requests to CSV...', 'info');
+    try {
+      await adminAgencyRequestService.exportCsv(filters);
+      showToast('CSV Export generated successfully', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to export CSV', 'error');
+    }
   };
 
   // Loading Skeletons State
@@ -307,7 +398,7 @@ export const AdminVerificationPendingPage: React.FC = () => {
         onSearchChange={handleQuickSearch}
         onToggleFilter={() => setIsFilterOpen((prev) => !prev)}
         isFilterOpen={isFilterOpen}
-        onExport={() => showToast('Exporting agency registration requests to CSV...', 'info')}
+        onExport={handleExportCsv}
       />
 
       {/* ── 2. SUMMARY KPI CARDS (6 CARDS) ── */}
@@ -315,9 +406,6 @@ export const AdminVerificationPendingPage: React.FC = () => {
         stats={stats}
         onFilterByStatus={(statusVal) => {
           handleFilterChange('status', statusVal);
-          adminAgencyRequestService
-            .getAgencyRequests({ ...filters, status: statusVal })
-            .then(setRequests);
         }}
       />
 
@@ -342,11 +430,9 @@ export const AdminVerificationPendingPage: React.FC = () => {
             onApproveSelected={handleBulkApprove}
             onRejectSelected={handleBulkReject}
             onRequestDocuments={handleBulkRequestDocs}
-            onExportSelected={() =>
-              showToast(`Exported ${selectedIds.length} requests to CSV`, 'info')
-            }
+            onExportSelected={handleExportCsv}
             onMoreActions={() =>
-              showToast(`Bulk options opened for ${selectedIds.length} requests`, 'info')
+              showToast(`Bulk actions menu active for ${selectedIds.length} requests`, 'info')
             }
           />
         )}
@@ -366,11 +452,14 @@ export const AdminVerificationPendingPage: React.FC = () => {
       {/* ── 6. PAGINATION FOOTER ── */}
       <AgencyRequestPagination
         currentPage={currentPage}
-        totalPages={4}
-        totalItems={34}
+        totalPages={totalPages}
+        totalItems={totalItems}
         itemsPerPage={itemsPerPage}
         onPageChange={setCurrentPage}
-        onItemsPerPageChange={setItemsPerPage}
+        onItemsPerPageChange={(newLimit) => {
+          setItemsPerPage(newLimit);
+          setCurrentPage(1);
+        }}
       />
 
       {/* ── 7. RIGHT DETAILS DRAWER ── */}
@@ -381,9 +470,16 @@ export const AdminVerificationPendingPage: React.FC = () => {
         onApprove={handleTriggerApprove}
         onReject={handleTriggerReject}
         onRequestDocs={handleTriggerRequestDocs}
+        onUpdateRequest={(updatedRequest) => {
+          setSelectedRequest(updatedRequest);
+          setRequests((prev) =>
+            prev.map((r) => (r.id === updatedRequest.id ? updatedRequest : r))
+          );
+          adminAgencyRequestService.getSummaryStats().then(setStats);
+        }}
       />
 
-      {/* ── 8. CONFIRMATION MODAL ── */}
+      {/* ── 8. CONFIRMATION MODAL (Approve / Reject) ── */}
       <ConfirmationModal
         isOpen={modalConfig.isOpen}
         type={modalConfig.type}
@@ -391,6 +487,18 @@ export const AdminVerificationPendingPage: React.FC = () => {
         isProcessing={isProcessing}
         onConfirm={handleConfirmDecision}
         onCancel={() => setModalConfig({ isOpen: false, type: 'approve', targetRequest: null })}
+      />
+
+      {/* ── 9. REQUEST MISSING DOCUMENTS MODAL ── */}
+      <RequestMissingDocumentsModal
+        isOpen={isRequestDocsModalOpen}
+        request={targetRequestDocs}
+        isProcessing={isProcessingDocsRequest}
+        onClose={() => {
+          setIsRequestDocsModalOpen(false);
+          setTargetRequestDocs(null);
+        }}
+        onSubmit={handleSendDocumentRequest}
       />
     </motion.div>
   );

@@ -14,21 +14,10 @@ import {
   RecentExportItem,
   QuickStatisticsData,
 } from '../../types/reportsManagement';
-import { adminReportsManagementService } from '../../services/adminReportsManagement.service';
 import {
-  initialReportKPIStats,
-  initialReportLibraryData,
-  initialRevenueTrend,
-  initialBookingHeatmapMatrix,
-  initialGeographicData,
-  initialTopDestinations,
-  initialAgencyMatrixBubbles,
-  initialCategoryPerformance,
-  initialAIInsights,
-  initialQuickStatistics,
-  initialScheduledReports,
-  initialRecentExports,
-} from '../../data/reportsData';
+  adminReportsManagementService,
+  emptyReportKPIStats,
+} from '../../services/adminReportsManagement.service';
 import { AdminReportsHeader } from '../../components/super-admin/reports/AdminReportsHeader';
 import { ReportKPIStatsCards } from '../../components/super-admin/reports/ReportKPIStats';
 import { ReportLibrary } from '../../components/super-admin/reports/ReportLibrary';
@@ -44,20 +33,25 @@ export const AdminReportsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Data States
-  const [kpiStats, setKpiStats] = useState<ReportKPIStats>(initialReportKPIStats);
-  const [reports, setReports] = useState<ReportItem[]>(initialReportLibraryData);
-  const [selectedReport, setSelectedReport] = useState<ReportItem>(initialReportLibraryData[0]);
-  const [revenueTrend, setRevenueTrend] = useState<RevenueTrendDataPoint[]>(initialRevenueTrend);
-  const [heatmapMatrix, setHeatmapMatrix] = useState<number[][]>(initialBookingHeatmapMatrix);
-  const [geographicData, setGeographicData] = useState<GeographicRegionData[]>(initialGeographicData);
-  const [topDestinations, setTopDestinations] = useState<TopDestinationReportItem[]>(initialTopDestinations);
-  const [agencyBubbles, setAgencyBubbles] = useState<AgencyMatrixBubble[]>(initialAgencyMatrixBubbles);
-  const [categoryPerformance, setCategoryPerformance] = useState<CategoryPerformanceItem[]>(initialCategoryPerformance);
-  const [aiInsights, setAiInsights] = useState<AIInsightItem[]>(initialAIInsights);
-  const [quickStats, setQuickStats] = useState<QuickStatisticsData>(initialQuickStatistics);
-  const [scheduledReports, setScheduledReports] = useState<ScheduledReportItem[]>(initialScheduledReports);
-  const [recentExports, setRecentExports] = useState<RecentExportItem[]>(initialRecentExports);
+  // Data States — empty defaults (no dummy data)
+  const [kpiStats, setKpiStats] = useState<ReportKPIStats>(emptyReportKPIStats);
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+  const [revenueTrend, setRevenueTrend] = useState<RevenueTrendDataPoint[]>([]);
+  const [heatmapMatrix, setHeatmapMatrix] = useState<number[][]>(Array.from({ length: 7 }, () => Array(7).fill(0)));
+  const [geographicData, setGeographicData] = useState<GeographicRegionData[]>([]);
+  const [topDestinations, setTopDestinations] = useState<TopDestinationReportItem[]>([]);
+  const [agencyBubbles, setAgencyBubbles] = useState<AgencyMatrixBubble[]>([]);
+  const [categoryPerformance, setCategoryPerformance] = useState<CategoryPerformanceItem[]>([]);
+  const [aiInsights, setAiInsights] = useState<AIInsightItem[]>([]);
+  const [quickStats, setQuickStats] = useState<QuickStatisticsData>({
+    cancellationRate: { value: '0%', change: '0%', isPositive: true },
+    refundsProcessed: { value: '₹0', change: '0%', isPositive: true },
+    successfulPayments: { value: '0%', change: '0%', isPositive: true },
+    chargebackRate: { value: '0%', change: '0%', isPositive: true },
+  });
+  const [scheduledReports, setScheduledReports] = useState<ScheduledReportItem[]>([]);
+  const [recentExports, setRecentExports] = useState<RecentExportItem[]>([]);
 
   // Toast Notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -141,10 +135,9 @@ export const AdminReportsPage: React.FC = () => {
     // Trigger dummy download
     const headers = ['Metric', 'Value', 'Growth', 'Date Range'];
     const rows = [
-      ['Gross Revenue', '₹12,48,75,890', '+18.6%', 'Jun 1 - Jun 12, 2024'],
-      ['Total Bookings', '24,875', '+15.3%', 'Jun 1 - Jun 12, 2024'],
-      ['Active Users', '1,24,856', '+11.2%', 'Jun 1 - Jun 12, 2024'],
-      ['Top Destination', 'Ladakh (₹2.48 Cr)', '+22.4%', 'Jun 1 - Jun 12, 2024'],
+      ['Gross Revenue', kpiStats.grossRevenue.value, kpiStats.grossRevenue.growth, kpiStats.grossRevenue.comparison],
+      ['Total Bookings', kpiStats.totalBookings.value, kpiStats.totalBookings.growth, kpiStats.totalBookings.comparison],
+      ['Active Users', kpiStats.activeUsers.value, kpiStats.activeUsers.growth, kpiStats.activeUsers.comparison],
     ];
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
@@ -215,7 +208,7 @@ export const AdminReportsPage: React.FC = () => {
         <div className="lg:col-span-3">
           <ReportLibrary
             reports={reports}
-            selectedReportId={selectedReport?.id}
+            selectedReportId={selectedReport?.id || ''}
             onSelectReport={(r) => {
               setSelectedReport(r);
               showToast(`Loaded ${r.name} analytics workspace`, 'info');

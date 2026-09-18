@@ -5,16 +5,18 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
 
+import { userAuthService } from '../../services/userAuth.service';
+
 export const EditProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { user, completeProfile } = useAuth();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState(user?.name || 'Subham Das');
+  const [name, setName] = useState(user?.name || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar || '');
-  const [bio, setBio] = useState(user?.bio || 'Passionate about mountain treks & hidden beaches');
-  const [location, setLocation] = useState(user?.location || 'Dibrugarh, Assam');
+  const [bio, setBio] = useState(user?.bio || '');
+  const [location, setLocation] = useState(user?.homeCity || user?.location || '');
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -37,6 +39,7 @@ export const EditProfilePage: React.FC = () => {
     try {
       const res = await cloudinaryUploadService.uploadProfileAvatar(file);
       setAvatarUrl(res.avatarUrl);
+      await userAuthService.updateProfile({ avatar: res.avatarUrl });
       completeProfile({ avatar: res.avatarUrl });
       showToast('Profile photo updated in Cloudinary successfully!', 'success');
     } catch (err: any) {
@@ -54,7 +57,13 @@ export const EditProfilePage: React.FC = () => {
     }
     setIsSaving(true);
     try {
-      await completeProfile({ name, bio, location, avatar: avatarUrl });
+      await userAuthService.updateProfile({
+        fullName: name,
+        bio,
+        homeCity: location,
+        avatar: avatarUrl || undefined,
+      });
+      await completeProfile({ name, bio, homeCity: location, location, avatar: avatarUrl });
       showToast('Profile updated successfully!', 'success');
       navigate('/profile');
     } catch (err: any) {

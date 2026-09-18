@@ -6,6 +6,7 @@ interface ProfileQuickActionsProps {
   onExportActivity: () => void;
   onViewAuditLogs: () => void;
   onManageSessions: () => void;
+  activeSessionsCount?: number;
 }
 
 export const ProfileQuickActions: React.FC<ProfileQuickActionsProps> = ({
@@ -13,6 +14,7 @@ export const ProfileQuickActions: React.FC<ProfileQuickActionsProps> = ({
   onExportActivity,
   onViewAuditLogs,
   onManageSessions,
+  activeSessionsCount = 1,
 }) => {
   return (
     <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-3 select-none">
@@ -27,9 +29,9 @@ export const ProfileQuickActions: React.FC<ProfileQuickActionsProps> = ({
         >
           <div className="flex items-center gap-2">
             <Download className="w-4 h-4 text-slate-400" />
-            <span>Download Profile PDF</span>
+            <span>Download Credentials Dossier</span>
           </div>
-          <span className="text-[10px] text-slate-400">PDF</span>
+          <span className="text-[10px] text-slate-400 font-mono">PDF</span>
         </button>
 
         <button
@@ -40,7 +42,7 @@ export const ProfileQuickActions: React.FC<ProfileQuickActionsProps> = ({
             <FileText className="w-4 h-4 text-slate-400" />
             <span>Export Activity Log</span>
           </div>
-          <span className="text-[10px] text-slate-400">CSV</span>
+          <span className="text-[10px] text-slate-400 font-mono">CSV</span>
         </button>
 
         <button
@@ -62,7 +64,7 @@ export const ProfileQuickActions: React.FC<ProfileQuickActionsProps> = ({
             <Laptop className="w-4 h-4 text-slate-400" />
             <span>Manage All Sessions</span>
           </div>
-          <span className="text-[10px] text-slate-400">3 Active</span>
+          <span className="text-[10px] text-slate-400 font-mono">{activeSessionsCount} Active</span>
         </button>
       </div>
     </div>

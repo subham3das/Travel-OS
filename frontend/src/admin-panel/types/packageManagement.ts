@@ -97,9 +97,12 @@ export interface PackageFilters {
   departureMonth: string;
   rating: string;
   search: string;
+  approvalStatus?: string;
+  destinationRegion?: string;
+  destinationCountry?: string;
 }
 
 export interface PackageSortConfig {
-  key: 'name' | 'price' | 'duration' | 'bookings' | 'rating' | 'lastUpdated' | 'seats';
+  key: 'name' | 'price' | 'duration' | 'bookings' | 'rating' | 'lastUpdated' | 'seats' | 'createdAt';
   direction: 'asc' | 'desc';
 }

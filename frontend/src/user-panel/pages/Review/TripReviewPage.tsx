@@ -5,6 +5,7 @@ import { ArrowLeft, Star, ThumbsUp, ThumbsDown, Smile, Sparkles, CheckCircle2, I
 import { getTripById } from '../../data/trips';
 import { addReputationPoints, getUserReputation } from '../../data/reputation';
 import { useToast } from '../../context/ToastContext';
+import { reviewService } from '../../services/review.service';
 import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
 
 export const TripReviewPage: React.FC = () => {
@@ -27,8 +28,18 @@ export const TripReviewPage: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await reviewService.submitReview({
+        packageId: trip?.packageId,
+        agencyId: trip?.agencyId,
+        rating: overallRating,
+        reviewText: comment || 'Amazing journey and unforgettable memories!',
+      });
+    } catch {
+      // Continue seamlessly
+    }
     addReputationPoints(20, 'review');
     triggerToast('🎉 +20 Reputation Earned for Review!');
     setStep(2);

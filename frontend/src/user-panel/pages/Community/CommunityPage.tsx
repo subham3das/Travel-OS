@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,6 +13,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { getCommunityPosts } from '../../data/posts';
+import { communityService } from '../../services/community.service';
 
 import { AppHeader } from '../../components/home/AppHeader';
 import { SectionHeader } from '../../components/common/SectionHeader';
@@ -240,13 +241,38 @@ const suggestedPeople = [
 export const CommunityPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('for-you');
+  const [livePosts, setLivePosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    communityService.getPosts().then((posts) => {
+      if (isMounted && posts && posts.length > 0) {
+        setLivePosts(posts);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  const displayPosts = livePosts.length > 0 ? livePosts : getCommunityPosts().map((dynPost) => ({
+    id: dynPost.id,
+    author: {
+      name: dynPost.userName,
+      avatar: dynPost.userAvatar,
+    },
+    title: dynPost.caption,
+    content: dynPost.caption,
+    destination: dynPost.destinationName || 'Himalayan Trails',
+    media: dynPost.images,
+    likesCount: dynPost.likes,
+    commentsCount: dynPost.comments,
+    timestamp: dynPost.createdAt,
+    agencyName: dynPost.agencyName,
+  }));
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#FF4D6D]/20 selection:text-[#FF4D6D]">
       {/* 1. App Header */}
       <AppHeader
-        unreadNotificationsCount={2}
-        unreadMessagesCount={1}
         onNotificationClick={() => navigate('/notifications')}
         onMessageClick={() => navigate('/chat')}
       />
@@ -287,26 +313,26 @@ export const CommunityPage: React.FC = () => {
         </motion.div>
 
         {/* Dynamic Community Posts */}
-        {getCommunityPosts().map((dynPost) => (
+        {displayPosts.map((dynPost) => (
           <TravelerPost
             key={dynPost.id}
             post={{
               id: dynPost.id,
-              authorName: dynPost.userName,
-              authorAvatar: dynPost.userAvatar,
+              authorName: dynPost.author?.name || dynPost.userName || 'Traveler',
+              authorAvatar: dynPost.author?.avatar || dynPost.userAvatar || samplePost.authorAvatar,
               isVerified: true,
-              timeAgo: dynPost.createdAt,
-              location: dynPost.destinationName || 'Himalayan Trails',
-              imageUrl: dynPost.images[0] || samplePost.imageUrl,
-              slideCount: dynPost.images.length > 1 ? `1/${dynPost.images.length}` : undefined,
-              caption: dynPost.caption,
-              likesCount: dynPost.likes,
-              commentsCount: dynPost.comments,
-              sharesCount: 12,
-              agencyName: dynPost.agencyName,
+              timeAgo: dynPost.timestamp || dynPost.createdAt || 'Recently',
+              location: dynPost.destination || dynPost.destinationName || 'Himalayan Trails',
+              imageUrl: dynPost.media?.[0] || dynPost.images?.[0] || samplePost.imageUrl,
+              slideCount: (dynPost.media?.length || dynPost.images?.length || 0) > 1 ? `1/${dynPost.media?.length || dynPost.images?.length}` : undefined,
+              caption: dynPost.content || dynPost.caption || dynPost.title,
+              likesCount: dynPost.likesCount || dynPost.likes || 42,
+              commentsCount: dynPost.commentsCount || dynPost.comments || 5,
+              sharesCount: dynPost.sharesCount || 12,
+              agencyName: dynPost.agencyName || 'ApnaTrip Community',
               agencyVerified: true,
             }}
-            onAgencyClick={() => navigate('/agencies/agency-001')}
+            onAgencyClick={() => navigate('/agencies')}
           />
         ))}
 

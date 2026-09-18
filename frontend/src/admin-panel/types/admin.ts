@@ -2,20 +2,40 @@
 
 import { AgencyVerificationStatus } from '../../agency-panel/types/agency';
 
-export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'REVIEWER';
+export type AdminRole =
+  | 'SUPER_ADMIN'
+  | 'ADMIN'
+  | 'FINANCE_MANAGER'
+  | 'OPERATIONS_MANAGER'
+  | 'SUPPORT_MANAGER'
+  | 'CONTENT_MANAGER'
+  | 'REVIEWER';
 
 export interface Admin {
   id: string;
   name: string;
+  fullName?: string;
   email: string;
   role: AdminRole;
+  permissions?: string[];
   avatar?: string;
+  profileImage?: string;
   lastLogin?: string;
   isActive: boolean;
+  isSuperAdmin?: boolean;
+  authProvider?: 'credentials' | 'google' | 'both';
+  preferences?: {
+    theme?: 'Light' | 'Dark' | 'System';
+    language?: string;
+    emailNotifications?: boolean;
+    smsNotifications?: boolean;
+    desktopNotifications?: boolean;
+  };
 }
 
 export interface AdminAuthState {
   isAuthenticated: boolean;
+  isLoading: boolean;
   admin: Admin | null;
   token: string | null;
   refreshToken?: string | null;

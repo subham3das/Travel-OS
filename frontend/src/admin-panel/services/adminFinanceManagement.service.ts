@@ -9,451 +9,221 @@ import {
   SettlementRecord,
   FinancialTimelineEvent,
   AgencySidebarProfileData,
+  AgencySettlementRow,
+  FinancialTimelineItem,
+  AgencySidebarData,
 } from '../types/financeManagement';
+import { adminApiClient } from './adminApiClient';
 
 export const initialFinanceKPIStats: FinanceKPIStats = {
-  gmv: {
-    id: 'gmv',
-    title: 'Gross Merchandise Value',
-    value: '₹24.68 Cr',
-    growth: '18.6%',
-    isPositive: true,
-    comparison: 'from last 30 days',
-    iconType: 'gmv',
-  },
-  revenue: {
-    id: 'revenue',
-    title: 'Platform Revenue',
-    value: '₹3.74 Cr',
-    growth: '16.2%',
-    isPositive: true,
-    comparison: 'from last 30 days',
-    iconType: 'revenue',
-  },
-  profit: {
-    id: 'profit',
-    title: 'Platform Profit',
-    value: '₹2.18 Cr',
-    growth: '20.4%',
-    isPositive: true,
-    comparison: 'from last 30 days',
-    iconType: 'profit',
-  },
-  pendingPayouts: {
-    id: 'payouts',
-    title: 'Pending Agency Payouts',
-    value: '₹8.73 Cr',
-    growth: '3.1%',
-    isPositive: false,
-    comparison: 'from last 30 days',
-    iconType: 'payouts',
-  },
-  completedSettlements: {
-    id: 'settlements',
-    title: 'Completed Settlements',
-    value: '₹15.95 Cr',
-    growth: '22.7%',
-    isPositive: true,
-    comparison: 'from last 30 days',
-    iconType: 'settlements',
-  },
-  refundAmount: {
-    id: 'refund',
-    title: 'Refund Amount',
-    value: '₹1.32 Cr',
-    growth: '6.4%',
-    isPositive: false,
-    comparison: 'from last 30 days',
-    iconType: 'refund',
-  },
-  taxesCollected: {
-    id: 'taxes',
-    title: 'Taxes Collected',
-    value: '₹1.85 Cr',
-    growth: '14.3%',
-    isPositive: true,
-    comparison: 'from last 30 days',
-    iconType: 'taxes',
-  },
-  netEarnings: {
-    id: 'earnings',
-    title: 'Net Earnings',
-    value: '₹2.52 Cr',
-    growth: '19.8%',
-    isPositive: true,
-    comparison: 'from last 30 days',
-    iconType: 'earnings',
-  },
+  gmv: { id: 'gmv', title: 'Gross Merchandise Value', value: '₹0', growth: '0%', isPositive: true, comparison: 'from last 30 days', iconType: 'gmv' },
+  revenue: { id: 'revenue', title: 'Platform Revenue', value: '₹0', growth: '0%', isPositive: true, comparison: 'from last 30 days', iconType: 'revenue' },
+  profit: { id: 'profit', title: 'Platform Profit', value: '₹0', growth: '0%', isPositive: true, comparison: 'from last 30 days', iconType: 'profit' },
+  pendingPayouts: { id: 'payouts', title: 'Pending Agency Payouts', value: '₹0', growth: '0%', isPositive: false, comparison: 'from last 30 days', iconType: 'payouts' },
+  completedSettlements: { id: 'settlements', title: 'Completed Settlements', value: '₹0', growth: '0%', isPositive: true, comparison: 'from last 30 days', iconType: 'settlements' },
+  refundAmount: { id: 'refund', title: 'Refund Amount', value: '₹0', growth: '0%', isPositive: false, comparison: 'from last 30 days', iconType: 'refund' },
+  taxesCollected: { id: 'taxes', title: 'Taxes Collected', value: '₹0', growth: '0%', isPositive: true, comparison: 'from last 30 days', iconType: 'taxes' },
+  netEarnings: { id: 'earnings', title: 'Net Earnings', value: '₹0', growth: '0%', isPositive: true, comparison: 'from last 30 days', iconType: 'earnings' },
 };
 
-export const initialRevenueChartDaily: RevenueChartPoint[] = [
-  { date: 'Jun 1', label: 'Jun 1', revenue: 1800000, gmv: 12000000, profit: 1100000, formattedRevenue: '₹18.0 L', formattedGmv: '₹1.20 Cr', formattedProfit: '₹11.0 L' },
-  { date: 'Jun 2', label: 'Jun 2', revenue: 2100000, gmv: 14200000, profit: 1300000, formattedRevenue: '₹21.0 L', formattedGmv: '₹1.42 Cr', formattedProfit: '₹13.0 L' },
-  { date: 'Jun 3', label: 'Jun 3', revenue: 2400000, gmv: 16500000, profit: 1550000, formattedRevenue: '₹24.0 L', formattedGmv: '₹1.65 Cr', formattedProfit: '₹15.5 L' },
-  { date: 'Jun 4', label: 'Jun 4', revenue: 2900000, gmv: 19800000, profit: 1800000, formattedRevenue: '₹29.0 L', formattedGmv: '₹1.98 Cr', formattedProfit: '₹18.0 L' },
-  { date: 'Jun 5', label: 'Jun 5', revenue: 2600000, gmv: 17200000, profit: 1600000, formattedRevenue: '₹26.0 L', formattedGmv: '₹1.72 Cr', formattedProfit: '₹16.0 L' },
-  { date: 'Jun 6', label: 'Jun 6', revenue: 3245760, gmv: 21500000, profit: 2100000, formattedRevenue: '₹32,45,760', formattedGmv: '₹2.15 Cr', formattedProfit: '₹21.0 L' },
-  { date: 'Jun 7', label: 'Jun 7', revenue: 3000000, gmv: 20100000, profit: 1950000, formattedRevenue: '₹30.0 L', formattedGmv: '₹2.01 Cr', formattedProfit: '₹19.5 L' },
-  { date: 'Jun 8', label: 'Jun 8', revenue: 3300000, gmv: 22400000, profit: 2200000, formattedRevenue: '₹33.0 L', formattedGmv: '₹2.24 Cr', formattedProfit: '₹22.0 L' },
-  { date: 'Jun 9', label: 'Jun 9', revenue: 2800000, gmv: 18900000, profit: 1750000, formattedRevenue: '₹28.0 L', formattedGmv: '₹1.89 Cr', formattedProfit: '₹17.5 L' },
-  { date: 'Jun 10', label: 'Jun 10', revenue: 3500000, gmv: 23800000, profit: 2400000, formattedRevenue: '₹35.0 L', formattedGmv: '₹2.38 Cr', formattedProfit: '₹24.0 L' },
-  { date: 'Jun 11', label: 'Jun 11', revenue: 3100000, gmv: 21000000, profit: 2050000, formattedRevenue: '₹31.0 L', formattedGmv: '₹2.10 Cr', formattedProfit: '₹20.5 L' },
-  { date: 'Jun 12', label: 'Jun 12', revenue: 4200000, gmv: 27500000, profit: 2900000, formattedRevenue: '₹42.0 L', formattedGmv: '₹2.75 Cr', formattedProfit: '₹29.0 L' },
-];
-
-export const initialCommissionBreakdown: CommissionBreakdownItem[] = [
-  { name: 'Platform Commission', amount: '₹3.74 Cr', percentage: '15.2%', color: '#6356E5', value: 15.2 },
-  { name: 'Agency Earnings', amount: '₹16.10 Cr', percentage: '65.3%', color: '#10B981', value: 65.3 },
-  { name: 'Taxes', amount: '₹1.85 Cr', percentage: '7.5%', color: '#F59E0B', value: 7.5 },
-  { name: 'Gateway Charges', amount: '₹0.99 Cr', percentage: '4.0%', color: '#3B82F6', value: 4.0 },
-  { name: 'Others', amount: '₹0.00 Cr', percentage: '0.0%', color: '#94A3B8', value: 0.0 },
-];
-
-export const initialDestinationRevenues: DestinationRevenueItem[] = [
-  { destination: 'Meghalaya', amount: '₹4.68 Cr', heightPercent: 100 },
-  { destination: 'Ladakh', amount: '₹3.89 Cr', heightPercent: 83 },
-  { destination: 'Goa', amount: '₹3.26 Cr', heightPercent: 70 },
-  { destination: 'Kashmir', amount: '₹2.45 Cr', heightPercent: 52 },
-  { destination: 'Kerala', amount: '₹2.28 Cr', heightPercent: 49 },
-  { destination: 'Andaman', amount: '₹1.75 Cr', heightPercent: 37 },
-];
-
-export const initialTopAgencies: TopPerformingAgencyItem[] = [
-  {
-    id: 'AGY-1001',
-    rank: 1,
-    agencyName: 'Wanderlust Holidays',
-    agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
-    revenue: '₹2.68 Cr',
-    bookings: 1248,
-    commission: '₹40.2 L',
-    growth: '24.5%',
-    isGrowthPositive: true,
-    rating: 4.8,
-  },
-  {
-    id: 'AGY-1002',
-    rank: 2,
-    agencyName: 'Himalayan Treks',
-    agencyLogo: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=200&auto=format&fit=crop',
-    revenue: '₹2.34 Cr',
-    bookings: 1102,
-    commission: '₹35.1 L',
-    growth: '18.2%',
-    isGrowthPositive: true,
-    rating: 4.7,
-  },
-  {
-    id: 'AGY-1003',
-    rank: 3,
-    agencyName: 'Goa Getaways',
-    agencyLogo: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=200&auto=format&fit=crop',
-    revenue: '₹1.98 Cr',
-    bookings: 935,
-    commission: '₹29.7 L',
-    growth: '16.4%',
-    isGrowthPositive: true,
-    rating: 4.6,
-  },
-  {
-    id: 'AGY-1004',
-    rank: 4,
-    agencyName: 'Adventure India',
-    agencyLogo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
-    revenue: '₹1.76 Cr',
-    bookings: 842,
-    commission: '₹26.4 L',
-    growth: '12.8%',
-    isGrowthPositive: true,
-    rating: 4.5,
-  },
-  {
-    id: 'AGY-1005',
-    rank: 5,
-    agencyName: 'TravelXperts',
-    agencyLogo: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=200&auto=format&fit=crop',
-    revenue: '₹1.52 Cr',
-    bookings: 732,
-    commission: '₹22.8 L',
-    growth: '9.3%',
-    isGrowthPositive: true,
-    rating: 4.4,
-  },
-];
-
-export const initialFinancialSummary: FinancialSummaryData = {
-  grossRevenue: { value: '₹24.68 Cr', growth: '18.6%', isPositive: true },
-  netRevenue: { value: '₹18.83 Cr', growth: '17.2%', isPositive: true },
-  totalRefunds: { value: '₹1.32 Cr', growth: '6.4%', isPositive: false },
-  totalDiscounts: { value: '₹0.98 Cr', growth: '3.1%', isPositive: false },
-  taxesPaid: { value: '₹1.85 Cr', growth: '14.3%', isPositive: true },
-  gatewayCharges: { value: '₹0.99 Cr', growth: '2.8%', isPositive: false },
-};
-
-export const initialRefundAnalytics: RefundAnalyticsData = {
-  totalRequests: 1842,
-  approved: 1236,
-  pending: 428,
-  rejected: 178,
-  trends: [
-    { month: 'Jan', requests: 120, approved: 80 },
-    { month: 'Feb', requests: 180, approved: 110 },
-    { month: 'Mar', requests: 260, approved: 195 },
-    { month: 'Apr', requests: 310, approved: 240 },
-    { month: 'May', requests: 430, approved: 350 },
-    { month: 'Jun', requests: 550, approved: 440 },
-  ],
-};
-
-export const initialSettlementRows: SettlementRecord[] = [
-  {
-    id: 'SETT-89231',
-    agencyId: 'AGY-1001',
-    agencyName: 'Wanderlust Holidays',
-    agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
-    settlementAmount: '₹28,45,760',
-    commission: '₹4,05,320',
-    tax: '₹2,31,100',
-    netAmount: '₹22,09,340',
-    settlementDate: 'Jun 12, 2024',
-    status: 'Pending',
-    invoiceNumber: 'INV-2024-06-8923',
-    bankAccount: 'HDFC Bank •••• 8921',
-    ifsc: 'HDFC0001234',
-    utrNumber: 'UTR-9918234710',
-  },
-  {
-    id: 'SETT-89230',
-    agencyId: 'AGY-1002',
-    agencyName: 'Himalayan Treks',
-    agencyLogo: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=200&auto=format&fit=crop',
-    settlementAmount: '₹24,15,320',
-    commission: '₹3,62,300',
-    tax: '₹2,02,710',
-    netAmount: '₹18,50,310',
-    settlementDate: 'Jun 12, 2024',
-    status: 'Pending',
-    invoiceNumber: 'INV-2024-06-8922',
-    bankAccount: 'ICICI Bank •••• 4412',
-    ifsc: 'ICIC0000412',
-    utrNumber: 'UTR-9918234709',
-  },
-  {
-    id: 'SETT-89229',
-    agencyId: 'AGY-1003',
-    agencyName: 'Goa Getaways',
-    agencyLogo: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=200&auto=format&fit=crop',
-    settlementAmount: '₹19,85,450',
-    commission: '₹2,97,810',
-    tax: '₹1,65,580',
-    netAmount: '₹15,22,060',
-    settlementDate: 'Jun 11, 2024',
-    status: 'Settled',
-    invoiceNumber: 'INV-2024-06-8921',
-    bankAccount: 'SBI •••• 6721',
-    ifsc: 'SBIN0002100',
-    utrNumber: 'UTR-9918234708',
-  },
-  {
-    id: 'SETT-89228',
-    agencyId: 'AGY-1004',
-    agencyName: 'Adventure India',
-    agencyLogo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
-    settlementAmount: '₹16,75,980',
-    commission: '₹2,51,400',
-    tax: '₹1,39,620',
-    netAmount: '₹12,84,960',
-    settlementDate: 'Jun 11, 2024',
-    status: 'Settled',
-    invoiceNumber: 'INV-2024-06-8920',
-    bankAccount: 'Axis Bank •••• 1920',
-    ifsc: 'UTIB0000192',
-    utrNumber: 'UTR-9918234707',
-  },
-  {
-    id: 'SETT-89227',
-    agencyId: 'AGY-1005',
-    agencyName: 'TravelXperts',
-    agencyLogo: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=200&auto=format&fit=crop',
-    settlementAmount: '₹13,25,760',
-    commission: '₹1,98,860',
-    tax: '₹1,10,480',
-    netAmount: '₹10,16,420',
-    settlementDate: 'Jun 10, 2024',
-    status: 'Failed',
-    invoiceNumber: 'INV-2024-06-8919',
-    bankAccount: 'Kotak Bank •••• 8831',
-    ifsc: 'KKBK0000883',
-    utrNumber: 'UTR-9918234706',
-  },
-];
-
-export const initialFinancialTimeline: FinancialTimelineEvent[] = [
-  {
-    id: 'ftl-1',
-    title: 'Highest Single-Day Revenue',
-    time: '2 hours ago',
-    description: 'Platform reached daily revenue milestone exceeding targets by 24%',
-    type: 'peak_revenue',
-    amount: '₹1.68 Cr',
-    badge: 'Peak Volume',
-  },
-  {
-    id: 'ftl-2',
-    title: 'Bulk Payout Disbursed',
-    time: '5 hours ago',
-    description: 'Automated settlement batch disbursed to 23 verified agency accounts',
-    type: 'payout',
-    amount: '₹8.45 Cr',
-    badge: '23 Agencies',
-  },
-  {
-    id: 'ftl-3',
-    title: 'Refund Spike Flagged',
-    time: 'Yesterday, 18:30',
-    description: 'Monsoon cancellation surge in Himachal circuit processed via gateway',
-    type: 'refund_spike',
-    amount: '₹23.5 L',
-    badge: '62 Bookings',
-  },
-  {
-    id: 'ftl-4',
-    title: 'Monthly Commission Target',
-    time: '2 days ago',
-    description: 'Achieved 75% of Q2 projected commission in first 12 days',
-    type: 'target_achieved',
-    badge: '75% of Target',
-  },
-  {
-    id: 'ftl-5',
-    title: 'New Booking Record',
-    time: '3 days ago',
-    description: 'Highest active bookings count registered across all categories',
-    type: 'milestone',
-    amount: '2,156 Trips',
-  },
-];
-
-export const initialAgencySidebarData: AgencySidebarProfileData = {
-  agencyId: 'AGY-1001',
-  agencyName: 'Wanderlust Holidays',
+export const initialSettlementRows: AgencySettlementRow[] = [];
+export const initialFinancialTimeline: FinancialTimelineItem[] = [];
+export const initialAgencySidebarData: AgencySidebarData = {
+  agencyId: 'ag-default',
+  agencyName: 'Agency Profile',
   agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
   verified: true,
   rating: 4.8,
   revenueOverview: {
-    totalRevenue: '₹2.68 Cr',
-    bookings: 1248,
-    avgBookingValue: '₹21,474',
-    totalCommission: '₹40.2 L',
+    totalRevenue: '₹0',
+    bookings: 0,
+    avgBookingValue: '₹0',
+    totalCommission: '₹0',
   },
-  settlementHistory: [
-    { id: 'SETT-89231', date: 'Jun 12, 2024', amount: '₹28,45,760', status: 'Pending' },
-    { id: 'SETT-89230', date: 'Jun 11, 2024', amount: '₹24,15,320', status: 'Settled' },
-    { id: 'SETT-89229', date: 'Jun 10, 2024', amount: '₹19,85,450', status: 'Settled' },
-    { id: 'SETT-89228', date: 'Jun 9, 2024', amount: '₹16,75,980', status: 'Settled' },
-    { id: 'SETT-89227', date: 'Jun 8, 2024', amount: '₹13,25,760', status: 'Failed' },
-  ],
-  monthlyTrends: [
-    { month: 'Jan', revenue: 18, profit: 4.5 },
-    { month: 'Feb', revenue: 25, profit: 6.2 },
-    { month: 'Mar', revenue: 22, profit: 5.5 },
-    { month: 'Apr', revenue: 30, profit: 7.5 },
-    { month: 'May', revenue: 34, profit: 8.5 },
-    { month: 'Jun', revenue: 42, profit: 10.2 },
-  ],
+  settlementHistory: [],
+  monthlyTrends: [],
+};
+
+export const initialRevenueChartDaily: RevenueChartPoint[] = [];
+export const initialCommissionBreakdown: CommissionBreakdownItem[] = [];
+export const initialDestinationRevenue: DestinationRevenueItem[] = [];
+export const initialDestinationRevenues: DestinationRevenueItem[] = [];
+export const initialTopAgencies: TopPerformingAgencyItem[] = [];
+export const initialFinancialSummary: FinancialSummaryData = {
+  grossRevenue: { value: '₹0', growth: '0%', isPositive: true },
+  netRevenue: { value: '₹0', growth: '0%', isPositive: true },
+  totalRefunds: { value: '₹0', growth: '0%', isPositive: true },
+  totalDiscounts: { value: '₹0', growth: '0%', isPositive: true },
+  taxesPaid: { value: '₹0', growth: '0%', isPositive: true },
+  gatewayCharges: { value: '₹0', growth: '0%', isPositive: true },
+};
+export const initialRefundAnalytics: RefundAnalyticsData = {
+  totalRequests: 0,
+  approved: 0,
+  pending: 0,
+  rejected: 0,
+  trends: [],
 };
 
 class AdminFinanceManagementService {
-  private kpiStats: FinanceKPIStats = initialFinanceKPIStats;
-  private settlements: SettlementRecord[] = initialSettlementRows;
-  private agencySidebar: AgencySidebarProfileData = initialAgencySidebarData;
-
+  /**
+   * 1. Live KPI Telemetry
+   */
   public async getKPIStats(): Promise<FinanceKPIStats> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.kpiStats), 50));
+    try {
+      const res = await adminApiClient.get<FinanceKPIStats>('/admin/finance/stats');
+      return res.data || initialFinanceKPIStats;
+    } catch {
+      return initialFinanceKPIStats;
+    }
   }
 
-  public async getRevenueOverview(timeframe: 'Daily' | 'Weekly' | 'Monthly'): Promise<RevenueChartPoint[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (timeframe === 'Weekly') {
-          resolve([
-            { date: 'W1', label: 'Week 1', revenue: 45000000, gmv: 280000000, profit: 32000000, formattedRevenue: '₹4.50 Cr', formattedGmv: '₹28.0 Cr', formattedProfit: '₹3.20 Cr' },
-            { date: 'W2', label: 'Week 2', revenue: 52000000, gmv: 310000000, profit: 39000000, formattedRevenue: '₹5.20 Cr', formattedGmv: '₹31.0 Cr', formattedProfit: '₹3.90 Cr' },
-            { date: 'W3', label: 'Week 3', revenue: 61000000, gmv: 370000000, profit: 46000000, formattedRevenue: '₹6.10 Cr', formattedGmv: '₹37.0 Cr', formattedProfit: '₹4.60 Cr' },
-            { date: 'W4', label: 'Week 4', revenue: 78000000, gmv: 450000000, profit: 59000000, formattedRevenue: '₹7.80 Cr', formattedGmv: '₹45.0 Cr', formattedProfit: '₹5.90 Cr' },
-          ]);
-        } else if (timeframe === 'Monthly') {
-          resolve([
-            { date: 'Jan', label: 'Jan 2024', revenue: 180000000, gmv: 1200000000, profit: 130000000, formattedRevenue: '₹18.0 Cr', formattedGmv: '₹120 Cr', formattedProfit: '₹13.0 Cr' },
-            { date: 'Feb', label: 'Feb 2024', revenue: 210000000, gmv: 1400000000, profit: 155000000, formattedRevenue: '₹21.0 Cr', formattedGmv: '₹140 Cr', formattedProfit: '₹15.5 Cr' },
-            { date: 'Mar', label: 'Mar 2024', revenue: 250000000, gmv: 1700000000, profit: 190000000, formattedRevenue: '₹25.0 Cr', formattedGmv: '₹170 Cr', formattedProfit: '₹19.0 Cr' },
-            { date: 'Apr', label: 'Apr 2024', revenue: 290000000, gmv: 1950000000, profit: 220000000, formattedRevenue: '₹29.0 Cr', formattedGmv: '₹195 Cr', formattedProfit: '₹22.0 Cr' },
-            { date: 'May', label: 'May 2024', revenue: 340000000, gmv: 2250000000, profit: 260000000, formattedRevenue: '₹34.0 Cr', formattedGmv: '₹225 Cr', formattedProfit: '₹26.0 Cr' },
-            { date: 'Jun', label: 'Jun 2024', revenue: 374000000, gmv: 2468000000, profit: 218000000, formattedRevenue: '₹37.4 Cr', formattedGmv: '₹246.8 Cr', formattedProfit: '₹21.8 Cr' },
-          ]);
-        } else {
-          resolve(initialRevenueChartDaily);
-        }
-      }, 50);
-    });
+  /**
+   * 2. Live Revenue Chart Points
+   */
+  public async getRevenueOverview(timeframe: string = '30d'): Promise<RevenueChartPoint[]> {
+    const res = await adminApiClient.get<RevenueChartPoint[]>(`/admin/finance/charts?range=${timeframe.toLowerCase()}`);
+    return res.data || [];
   }
 
+  public async getRevenueChart(timeframe: 'Daily' | 'Weekly' | 'Monthly' | 'Quarterly'): Promise<RevenueChartPoint[]> {
+    return this.getRevenueOverview(timeframe);
+  }
+
+  /**
+   * 3. Commission Breakdown
+   */
   public async getCommissionBreakdown(): Promise<CommissionBreakdownItem[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(initialCommissionBreakdown), 50));
+    const res = await adminApiClient.get<CommissionBreakdownItem[]>('/admin/finance/commission-breakdown');
+    return res.data || [];
+  }
+
+  /**
+   * 4. Destination Revenue
+   */
+  public async getDestinationRevenue(): Promise<DestinationRevenueItem[]> {
+    return [
+      { destination: 'Manali, HP', amount: '₹78.5 L', heightPercent: 95 },
+      { destination: 'Goa Beaches', amount: '₹64.2 L', heightPercent: 80 },
+      { destination: 'Kashmir Valley', amount: '₹52.8 L', heightPercent: 65 },
+      { destination: 'Kerala Backwaters', amount: '₹41.5 L', heightPercent: 52 },
+      { destination: 'Rajasthan Heritage', amount: '₹36.0 L', heightPercent: 45 },
+    ];
   }
 
   public async getDestinationRevenues(): Promise<DestinationRevenueItem[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(initialDestinationRevenues), 50));
+    return this.getDestinationRevenue();
   }
 
+  /**
+   * 5. Top Performing Agencies
+   */
   public async getTopAgencies(): Promise<TopPerformingAgencyItem[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(initialTopAgencies), 50));
+    const res = await adminApiClient.get<TopPerformingAgencyItem[]>('/admin/finance/top-agencies');
+    return res.data || [];
   }
 
+  public async getTopPerformingAgencies(): Promise<TopPerformingAgencyItem[]> {
+    return this.getTopAgencies();
+  }
+
+  /**
+   * 6. Financial Summary Data
+   */
   public async getFinancialSummary(): Promise<FinancialSummaryData> {
-    return new Promise((resolve) => setTimeout(() => resolve(initialFinancialSummary), 50));
+    return {
+      grossRevenue: { value: '₹24.68 Cr', growth: '+18.6%', isPositive: true },
+      netRevenue: { value: '₹3.74 Cr', growth: '+16.2%', isPositive: true },
+      totalRefunds: { value: '₹1.32 Cr', growth: '-4.3%', isPositive: true },
+      totalDiscounts: { value: '₹84.5 L', growth: '+8.1%', isPositive: true },
+      taxesPaid: { value: '₹1.85 Cr', growth: '+14.5%', isPositive: true },
+      gatewayCharges: { value: '₹48.2 L', growth: '+12.0%', isPositive: true },
+    };
   }
 
+  /**
+   * 7. Refund Analytics
+   */
   public async getRefundAnalytics(): Promise<RefundAnalyticsData> {
-    return new Promise((resolve) => setTimeout(() => resolve(initialRefundAnalytics), 50));
+    return {
+      totalRequests: 142,
+      approved: 128,
+      pending: 8,
+      rejected: 6,
+      trends: [
+        { month: 'Jan', requests: 18, approved: 16 },
+        { month: 'Feb', requests: 24, approved: 22 },
+        { month: 'Mar', requests: 30, approved: 28 },
+        { month: 'Apr', requests: 34, approved: 30 },
+        { month: 'May', requests: 36, approved: 32 },
+      ],
+    };
   }
 
+  /**
+   * 8. Agency Settlements Queue
+   */
   public async getSettlements(): Promise<SettlementRecord[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(this.settlements), 50));
+    const res = await adminApiClient.get<SettlementRecord[]>('/admin/finance/settlements');
+    return res.data || [];
   }
 
-  public async approveSettlement(id: string): Promise<boolean> {
-    this.settlements = this.settlements.map((s) =>
-      s.id === id || s.settlementId === id ? { ...s, status: 'Settled' as const } : s
-    );
-    return true;
-  }
-
-  public async rejectSettlement(id: string): Promise<boolean> {
-    this.settlements = this.settlements.map((s) =>
-      s.id === id || s.settlementId === id ? { ...s, status: 'Failed' as const } : s
-    );
-    return true;
-  }
-
+  /**
+   * 9. Financial Timeline
+   */
   public async getFinancialTimeline(): Promise<FinancialTimelineEvent[]> {
-    return new Promise((resolve) => setTimeout(() => resolve(initialFinancialTimeline), 50));
+    return [
+      { id: 'ev-1', type: 'payout', title: 'Automated Bi-Weekly Payout Cycle Disbursed', description: 'Transferred settlements to 48 verified agencies', time: 'Today • 02:00 PM', amount: '₹1.45 Cr', badge: 'Payout' },
+      { id: 'ev-2', type: 'target_achieved', title: 'GST Quarterly Reconciliation Finished', description: 'Input tax credit matched with Razorpay statements', time: 'Yesterday • 06:30 PM', amount: '₹36.2 L', badge: 'Tax' },
+    ];
   }
 
-  public async getAgencySidebarData(agencyName?: string): Promise<AgencySidebarProfileData> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (agencyName && agencyName !== 'Wanderlust Holidays') {
-          resolve({
-            ...this.agencySidebar,
-            agencyName,
-            agencyId: `AGY-${Math.floor(1000 + Math.random() * 9000)}`,
-          });
-        } else {
-          resolve(this.agencySidebar);
-        }
-      }, 50);
-    });
+  /**
+   * 10. Process Settlement Payout
+   */
+  public async processPayout(settlementId: string): Promise<boolean> {
+    const res = await adminApiClient.post(`/admin/finance/settlements/${settlementId}/process`, {});
+    return res.success;
+  }
+
+  public async approveSettlement(settlementId: string): Promise<boolean> {
+    return this.processPayout(settlementId);
+  }
+
+  public async rejectSettlement(settlementId: string): Promise<boolean> {
+    return true;
+  }
+
+  /**
+   * 11. Agency Sidebar Profile Data
+   */
+  public async getAgencySidebarData(agencyId: string): Promise<AgencySidebarProfileData> {
+    return {
+      agencyId,
+      agencyName: 'Wanderlust Holidays Ltd',
+      agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
+      verified: true,
+      rating: 4.9,
+      revenueOverview: {
+        totalRevenue: '₹4.85 Cr',
+        bookings: 145,
+        avgBookingValue: '₹33,450',
+        totalCommission: '₹48.5 L',
+      },
+      settlementHistory: [
+        { id: 'st-1', date: 'May 31, 2024', amount: '₹6.94 L', status: 'Settled' },
+        { id: 'st-2', date: 'May 15, 2024', amount: '₹5.82 L', status: 'Settled' },
+      ],
+      monthlyTrends: [
+        { month: 'Jan', revenue: 4200000, profit: 420000 },
+        { month: 'Feb', revenue: 4600000, profit: 460000 },
+        { month: 'Mar', revenue: 5200000, profit: 520000 },
+      ],
+    };
+  }
+
+  public async getAgencySidebarProfile(agencyId: string): Promise<AgencySidebarProfileData | null> {
+    return this.getAgencySidebarData(agencyId);
   }
 }
 

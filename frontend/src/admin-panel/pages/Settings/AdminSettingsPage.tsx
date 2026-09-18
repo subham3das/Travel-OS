@@ -13,8 +13,8 @@ import {
   ApiUsagePoint,
   SettingsCategoryType,
 } from '../../types/settingsManagement';
-import { adminSettingsManagementService } from '../../services/adminSettingsManagement.service';
 import {
+  adminSettingsManagementService,
   initialSettingsKPIStats,
   initialGeneralSettings,
   initialFeatureFlags,
@@ -25,7 +25,7 @@ import {
   initialApiUsagePoints,
   initialBackupTimeline,
   initialFeatureUsage,
-} from '../../data/settingsData';
+} from '../../services/adminSettingsManagement.service';
 import { AdminSettingsHeader } from '../../components/super-admin/settings/AdminSettingsHeader';
 import { SettingsKPIStatsCards } from '../../components/super-admin/settings/SettingsKPIStats';
 import { SettingsNavigation } from '../../components/super-admin/settings/SettingsNavigation';

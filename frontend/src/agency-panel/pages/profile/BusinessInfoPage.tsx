@@ -1,21 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Building, Save, CheckCircle2 } from 'lucide-react';
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
 import { DesktopSidebar } from '../../components/dashboard/DesktopSidebar';
 import { BottomNavigation } from '../../components/dashboard/BottomNavigation';
-import { MOCK_AGENCY_PROFILE } from '../../data/profile';
+import { useAgencyProfile } from '../../hooks/useAgencyProfile';
 
 export const BusinessInfoPage: React.FC = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState(MOCK_AGENCY_PROFILE.business);
+  const { profile, isLoading, updateProfile } = useAgencyProfile();
+  const [data, setData] = useState(profile.business);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (profile.business) {
+      setData(profile.business);
+    }
+  }, [profile.business]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+    setIsSaving(true);
+    try {
+      await updateProfile({ business: data });
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to save business information.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -26,7 +42,7 @@ export const BusinessInfoPage: React.FC = () => {
         <DashboardHeader />
 
         {/* Header Bar */}
-        <div className="bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-[3.5rem] z-20">
+        <div className="bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-[57px] sm:top-[65px] z-20 select-none">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -43,150 +59,164 @@ export const BusinessInfoPage: React.FC = () => {
         </div>
 
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 max-w-3xl mx-auto w-full">
-          <motion.form
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            onSubmit={handleSave}
-            className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-2xs space-y-5 text-xs font-bold"
-          >
-            {isSaved && (
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2 font-extrabold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Business Information saved successfully!</span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-slate-700 block mb-1">Business Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={data.businessName}
-                  onChange={(e) => setData({ ...data, businessName: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-extrabold"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1">Legal Business Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={data.legalBusinessName}
-                  onChange={(e) => setData({ ...data, legalBusinessName: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-extrabold"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1">GST Number *</label>
-                <input
-                  type="text"
-                  required
-                  value={data.gstNumber}
-                  onChange={(e) => setData({ ...data, gstNumber: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-mono font-black uppercase"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1">PAN Number *</label>
-                <input
-                  type="text"
-                  required
-                  value={data.panNumber}
-                  onChange={(e) => setData({ ...data, panNumber: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-mono font-black uppercase"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1">Registration Number *</label>
-                <input
-                  type="text"
-                  required
-                  value={data.registrationNumber}
-                  onChange={(e) => setData({ ...data, registrationNumber: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1">Business License Number *</label>
-                <input
-                  type="text"
-                  required
-                  value={data.businessLicenseNumber}
-                  onChange={(e) => setData({ ...data, businessLicenseNumber: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="text-slate-700 block mb-1">Agency Type / Classification</label>
-                <input
-                  type="text"
-                  value={data.agencyType}
-                  onChange={(e) => setData({ ...data, agencyType: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="text-slate-700 block mb-1">Business Description</label>
-                <textarea
-                  rows={4}
-                  value={data.businessDescription}
-                  onChange={(e) => setData({ ...data, businessDescription: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-slate-800 font-semibold leading-relaxed"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="text-slate-700 block mb-1">Supported Languages (Comma separated)</label>
-                <input
-                  type="text"
-                  value={data.languages.join(', ')}
-                  onChange={(e) =>
-                    setData({
-                      ...data,
-                      languages: e.target.value.split(',').map((s) => s.trim()),
-                    })
-                  }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="text-slate-700 block mb-1">Official Website</label>
-                <input
-                  type="text"
-                  value={data.website}
-                  onChange={(e) => setData({ ...data, website: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
+          {isLoading && !data.businessName ? (
+            <div className="flex flex-col items-center justify-center py-24 space-y-3">
+              <div className="w-8 h-8 border-3 border-[#583BE8] border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs font-bold text-slate-400">Loading business information...</p>
             </div>
+          ) : (
+            <motion.form
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              onSubmit={handleSave}
+              className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-2xs space-y-5 text-xs font-bold"
+            >
+              {isSaved && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2 font-extrabold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Business Information saved successfully!</span>
+                </div>
+              )}
 
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => navigate('/agency/profile')}
-                className="px-5 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-black transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-slate-700 block mb-1">Business Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={data.businessName}
+                    onChange={(e) => setData({ ...data, businessName: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-extrabold"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="px-6 py-2.5 rounded-2xl bg-[#583BE8] hover:bg-[#472dbf] text-white text-xs font-black flex items-center gap-2 shadow-md shadow-[#583BE8]/20 transition-all cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save Changes</span>
-              </button>
-            </div>
-          </motion.form>
+                <div>
+                  <label className="text-slate-700 block mb-1">Legal Business Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={data.legalBusinessName}
+                    onChange={(e) => setData({ ...data, legalBusinessName: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-extrabold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 block mb-1">GST Number *</label>
+                  <input
+                    type="text"
+                    required
+                    value={data.gstNumber}
+                    onChange={(e) => setData({ ...data, gstNumber: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-mono font-black uppercase"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 block mb-1">PAN Number *</label>
+                  <input
+                    type="text"
+                    required
+                    value={data.panNumber}
+                    onChange={(e) => setData({ ...data, panNumber: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-mono font-black uppercase"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 block mb-1">Registration Number *</label>
+                  <input
+                    type="text"
+                    required
+                    value={data.registrationNumber}
+                    onChange={(e) => setData({ ...data, registrationNumber: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 block mb-1">Business License Number *</label>
+                  <input
+                    type="text"
+                    required
+                    value={data.businessLicenseNumber}
+                    onChange={(e) => setData({ ...data, businessLicenseNumber: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="text-slate-700 block mb-1">Agency Type / Classification</label>
+                  <input
+                    type="text"
+                    value={data.agencyType}
+                    onChange={(e) => setData({ ...data, agencyType: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="text-slate-700 block mb-1">Business Description</label>
+                  <textarea
+                    rows={4}
+                    value={data.businessDescription}
+                    onChange={(e) => setData({ ...data, businessDescription: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-slate-800 font-semibold leading-relaxed"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="text-slate-700 block mb-1">Supported Languages (Comma separated)</label>
+                  <input
+                    type="text"
+                    value={(data.languages || []).join(', ')}
+                    onChange={(e) =>
+                      setData({
+                        ...data,
+                        languages: e.target.value.split(',').map((s) => s.trim()),
+                      })
+                    }
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="text-slate-700 block mb-1">Official Website</label>
+                  <input
+                    type="text"
+                    value={data.website}
+                    onChange={(e) => setData({ ...data, website: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate('/agency/profile')}
+                  className="px-5 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-black transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-6 py-2.5 rounded-2xl bg-[#583BE8] hover:bg-[#472dbf] text-white text-xs font-black flex items-center gap-2 shadow-md shadow-[#583BE8]/20 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.form>
+          )}
         </main>
       </div>
 

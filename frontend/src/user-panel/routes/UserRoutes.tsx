@@ -1,7 +1,9 @@
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Outlet } from 'react-router-dom';
 import { ProtectedRoute } from '../../routes/ProtectedRoute';
 import { PublicRoute } from '../../routes/PublicRoute';
+import { OnboardingRoute } from '../../routes/OnboardingRoute';
+import { WebsiteThemeProvider } from '../context/WebsiteThemeContext';
 
 import { SplashPage } from '../pages/Splash/SplashPage';
 import { OnboardingPage } from '../pages/Onboarding/OnboardingPage';
@@ -44,84 +46,95 @@ import { SettingsPage } from '../pages/Settings/SettingsPage';
 import { ChatListPage } from '../pages/Chat/ChatListPage';
 import { ChatRoomPage } from '../pages/Chat/ChatRoomPage';
 
+/**
+ * Isolated Website Theme Wrapper
+ */
+const WebsiteThemeWrapper: React.FC = () => (
+  <WebsiteThemeProvider>
+    <Outlet />
+  </WebsiteThemeProvider>
+);
+
 export const UserRoutes = () => (
-  <>
-      {/* Splash Screen */}
-      <Route path="/" element={<SplashPage />} />
+  <Route element={<WebsiteThemeWrapper />}>
+    {/* Splash Screen */}
+    <Route path="/" element={<SplashPage />} />
 
-      {/* Public / Unauthenticated Routes */}
-      <Route element={<PublicRoute />}>
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      </Route>
+    {/* Public / Unauthenticated Routes */}
+    <Route element={<PublicRoute />}>
+      <Route path="/onboarding" element={<OnboardingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    </Route>
 
-      {/* Setup / Onboarding Steps (LoggedIn required) */}
+    {/* Setup / Onboarding Steps (LoggedIn required) */}
+    <Route element={<OnboardingRoute />}>
       <Route path="/profile-setup" element={<ProfileSetupPage />} />
       <Route path="/travel-preferences" element={<TravelPreferencesPage />} />
       <Route path="/welcome" element={<WelcomePage />} />
+    </Route>
 
-      {/* Fully Protected Main & Detail Routes */}
-      <Route element={<ProtectedRoute />}>
-        {/* Core Bottom Nav Pages */}
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/my-trips" element={<MyTripsPage />} />
-        <Route path="/trips" element={<MyTripsPage />} />
-        <Route path="/trips/:tripId" element={<TripDetailsPage />} />
-        <Route path="/trips/:id" element={<TripDetailsPage />} />
-        <Route path="/trips/:tripId/documents" element={<TravelDocumentsPage />} />
-        <Route path="/trips/:id/documents" element={<TravelDocumentsPage />} />
-        <Route path="/trips/:tripId/review" element={<TripReviewPage />} />
-        <Route path="/trips/:id/review" element={<TripReviewPage />} />
-        <Route path="/community" element={<CommunityPage />} />
-        <Route path="/community/create" element={<CreatePostPage />} />
-        <Route path="/community/post/:postId" element={<PostCommentsPage />} />
-        <Route path="/community/user/:userId" element={<TravelerProfilePage />} />
-        <Route path="/community/user/:id" element={<TravelerProfilePage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/chat" element={<ChatListPage />} />
-        <Route path="/chat/:chatId" element={<ChatRoomPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+    {/* Fully Protected Main & Detail Routes */}
+    <Route element={<ProtectedRoute />}>
+      {/* Core Bottom Nav Pages */}
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/explore" element={<ExplorePage />} />
+      <Route path="/my-trips" element={<MyTripsPage />} />
+      <Route path="/trips" element={<MyTripsPage />} />
+      <Route path="/trips/:tripId" element={<TripDetailsPage />} />
+      <Route path="/trips/:id" element={<TripDetailsPage />} />
+      <Route path="/trips/:tripId/documents" element={<TravelDocumentsPage />} />
+      <Route path="/trips/:id/documents" element={<TravelDocumentsPage />} />
+      <Route path="/trips/:tripId/review" element={<TripReviewPage />} />
+      <Route path="/trips/:id/review" element={<TripReviewPage />} />
+      <Route path="/community" element={<CommunityPage />} />
+      <Route path="/community/create" element={<CreatePostPage />} />
+      <Route path="/community/post/:postId" element={<PostCommentsPage />} />
+      <Route path="/community/user/:userId" element={<TravelerProfilePage />} />
+      <Route path="/community/user/:id" element={<TravelerProfilePage />} />
+      <Route path="/notifications" element={<NotificationsPage />} />
+      <Route path="/chat" element={<ChatListPage />} />
+      <Route path="/chat/:chatId" element={<ChatRoomPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
 
-        {/* Search & Marketplace Detail Routes */}
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/destination/:id" element={<DestinationDetailsPage />} />
-        <Route path="/destination/:destinationId" element={<DestinationDetailsPage />} />
-        <Route path="/agencies" element={<AgencyListingPage />} />
-        <Route path="/agencies/:id" element={<AgencyDetailsPage />} />
-        <Route path="/agencies/:agencyId" element={<AgencyDetailsPage />} />
-        <Route path="/agency/:agencyId" element={<AgencyDetailsPage />} />
-        <Route path="/package/:id" element={<PackageDetailsPage />} />
-        <Route path="/package/:packageId" element={<PackageDetailsPage />} />
-        <Route path="/booking/checkout/:packageId" element={<BookingCheckoutPage />} />
-        <Route path="/booking/checkout/:id" element={<BookingCheckoutPage />} />
-        <Route path="/booking/success/:bookingId" element={<BookingSuccessPage />} />
-        <Route path="/booking/success" element={<BookingSuccessPage />} />
-        <Route path="/booking/:packageId" element={<BookingCheckoutPage />} />
-        <Route path="/booking/*" element={<BookingCheckoutPage />} />
+      {/* Search & Marketplace Detail Routes */}
+      <Route path="/search" element={<SearchPage />} />
+      <Route path="/destination/:id" element={<DestinationDetailsPage />} />
+      <Route path="/destination/:destinationId" element={<DestinationDetailsPage />} />
+      <Route path="/agencies" element={<AgencyListingPage />} />
+      <Route path="/agencies/:id" element={<AgencyDetailsPage />} />
+      <Route path="/agencies/:agencyId" element={<AgencyDetailsPage />} />
+      <Route path="/agency/:agencyId" element={<AgencyDetailsPage />} />
+      <Route path="/package/:id" element={<PackageDetailsPage />} />
+      <Route path="/package/:packageId" element={<PackageDetailsPage />} />
+      <Route path="/booking/checkout/:packageId" element={<BookingCheckoutPage />} />
+      <Route path="/booking/checkout/:id" element={<BookingCheckoutPage />} />
+      <Route path="/booking/success/:bookingId" element={<BookingSuccessPage />} />
+      <Route path="/booking/success" element={<BookingSuccessPage />} />
+      <Route path="/booking/:packageId" element={<BookingCheckoutPage />} />
+      <Route path="/booking/*" element={<BookingCheckoutPage />} />
 
-        {/* Community Routes */}
-        <Route path="/create-post" element={<CreatePostPage />} />
-        <Route path="/story/:id" element={<StoryDetailsPage />} />
-        <Route path="/traveler/:id" element={<TravelerProfilePage />} />
-        <Route path="/passport" element={<PassportPage />} />
-        <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/circle/:id" element={<TravelCircleDetailsPage />} />
+      {/* Community Routes */}
+      <Route path="/create-post" element={<CreatePostPage />} />
+      <Route path="/story/:id" element={<StoryDetailsPage />} />
+      <Route path="/traveler/:id" element={<TravelerProfilePage />} />
+      <Route path="/passport" element={<PassportPage />} />
+      <Route path="/leaderboard" element={<LeaderboardPage />} />
+      <Route path="/circle/:id" element={<TravelCircleDetailsPage />} />
 
-        {/* Profile Detail Routes */}
-        <Route path="/edit-profile" element={<EditProfilePage />} />
-        <Route path="/saved-destinations" element={<SavedDestinationsPage />} />
-        <Route path="/saved-packages" element={<SavedDestinationsPage />} />
-        <Route path="/wishlist" element={<SavedDestinationsPage />} />
-        <Route path="/followers" element={<TravelerProfilePage />} />
-        <Route path="/following" element={<TravelerProfilePage />} />
-        <Route path="/my-reviews" element={<StoryDetailsPage />} />
-        <Route path="/my-stories" element={<StoryDetailsPage />} />
+      {/* Profile Detail Routes */}
+      <Route path="/edit-profile" element={<EditProfilePage />} />
+      <Route path="/saved-destinations" element={<SavedDestinationsPage />} />
+      <Route path="/saved-packages" element={<SavedDestinationsPage />} />
+      <Route path="/wishlist" element={<SavedDestinationsPage />} />
+      <Route path="/followers" element={<TravelerProfilePage />} />
+      <Route path="/following" element={<TravelerProfilePage />} />
+      <Route path="/my-reviews" element={<StoryDetailsPage />} />
+      <Route path="/my-stories" element={<StoryDetailsPage />} />
 
-        {/* Utility Routes */}
-        <Route path="/settings" element={<SettingsPage />} />
-      </Route>
-    </>
+      {/* Utility Routes */}
+      <Route path="/settings" element={<SettingsPage />} />
+    </Route>
+  </Route>
 );

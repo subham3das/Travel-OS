@@ -1,14 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Bell, LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export const DashboardHeader: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { admin, logoutAdmin } = useAdminAuth();
   const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown]);
+
+  // Close dropdown on Escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowDropdown(false);
+      }
+    };
+    if (showDropdown) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showDropdown]);
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setShowDropdown(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
+    setShowDropdown(false);
     logoutAdmin();
     navigate('/admin/login');
   };
@@ -24,7 +58,7 @@ export const DashboardHeader: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between shadow-2xs select-none">
+    <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between shadow-2xs select-none sticky top-0 z-30">
       {/* Left Greeting */}
       <div className="space-y-0.5">
         <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] tracking-tight">
@@ -63,11 +97,12 @@ export const DashboardHeader: React.FC = () => {
         </button>
 
         {/* Profile Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setShowDropdown(!showDropdown)}
             className="flex items-center gap-2 p-1.5 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
+            aria-expanded={showDropdown}
           >
             {admin?.avatar ? (
               <img
@@ -80,40 +115,44 @@ export const DashboardHeader: React.FC = () => {
                 {getInitials(admin?.name)}
               </div>
             )}
-            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-150 ${showDropdown ? 'rotate-180 text-[#583BE8]' : ''}`} />
           </button>
 
           {showDropdown && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl border border-slate-100 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-4 py-2 border-b border-slate-100">
-                <p className="text-xs font-bold text-[#0F172A] truncate">{admin?.name || 'Super Admin'}</p>
-                <p className="text-[10px] font-semibold text-slate-400 truncate">{admin?.email || 'admin@apnatrip.com'}</p>
+            <>
+              {/* Backdrop overlay */}
+              <div
+                className="fixed inset-0 z-40 bg-transparent"
+                onClick={() => setShowDropdown(false)}
+              />
+              <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl border border-slate-100 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-4 py-2 border-b border-slate-100">
+                  <p className="text-xs font-bold text-[#0F172A] truncate">{admin?.name || 'Super Admin'}</p>
+                  <p className="text-[10px] font-semibold text-slate-400 truncate">{admin?.email || 'admin@apnatrip.com'}</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDropdown(false);
+                    navigate('/admin/settings');
+                  }}
+                  className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  <span>Admin Profile</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full px-4 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Logout</span>
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDropdown(false);
-                  navigate('/admin/settings');
-                }}
-                className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <UserIcon className="w-3.5 h-3.5" />
-                <span>Admin Profile</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDropdown(false);
-                  handleLogout();
-                }}
-                className="w-full px-4 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Logout</span>
-              </button>
-            </div>
+            </>
           )}
         </div>
       </div>

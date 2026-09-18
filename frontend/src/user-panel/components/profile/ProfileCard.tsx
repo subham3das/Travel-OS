@@ -25,8 +25,14 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       {/* Left: Avatar + Name Info */}
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
         {/* Large Profile Picture with Green Online Status Dot */}
-        <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white shadow-md bg-slate-100 shrink-0">
-          <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
+        <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white shadow-md bg-slate-100 shrink-0 flex items-center justify-center">
+          {profile.avatarUrl ? (
+            <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-tr from-[#6356E5] to-[#FF4D6D] flex items-center justify-center text-white font-black text-2xl">
+              {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'TR'}
+            </div>
+          )}
           <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white shadow-2xs" />
         </div>
 

@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Bus,
-  Plus,
   CheckCircle2,
   Hash,
   Users,
@@ -16,9 +15,10 @@ import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
 import { DesktopSidebar } from '../../components/dashboard/DesktopSidebar';
 import { BottomNavigation } from '../../components/dashboard/BottomNavigation';
 import { AssignedVehicle } from '../../data/tripDetails';
+import { agencyTripsService } from '../../services/agencyTrips.service';
 
-// ── Mock Fleet Data ────────────────────────────────────────────────────────────
-const MOCK_FLEET: AssignedVehicle[] = [
+// ── Fleet Data ────────────────────────────────────────────────────────────
+const FLEET_OPTIONS: AssignedVehicle[] = [
   {
     id: 'v-1',
     name: 'Tempo Traveller Deluxe',
@@ -70,7 +70,6 @@ const STATUS_STYLES: Record<AssignedVehicle['status'], string> = {
 /**
  * Agency Manage Vehicle Assignment Page
  * Route: /agency/trips/:tripId/vehicle (Protected: APPROVED agencies only)
- * Mirrors AgencyManageTeamPage pattern — navigate back with ?vehicleAssigned=true
  */
 export const AgencyManageVehiclePage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
@@ -79,8 +78,16 @@ export const AgencyManageVehiclePage: React.FC = () => {
 
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<Set<string>>(new Set());
 
+  useEffect(() => {
+    agencyTripsService.getTripById(currentTripId).then((trip) => {
+      if (trip.vehicleAssignments && trip.vehicleAssignments.length > 0) {
+        setSelectedVehicleIds(new Set(trip.vehicleAssignments.map((v) => v.id)));
+      }
+    }).catch((err) => console.error('Failed to load assigned vehicles:', err));
+  }, [currentTripId]);
+
   const handleToggleVehicle = (vehicleId: string, status: AssignedVehicle['status']) => {
-    if (status === 'Maintenance') return; // Can't assign vehicles under maintenance
+    if (status === 'Maintenance') return;
     setSelectedVehicleIds((prev) => {
       const next = new Set(prev);
       if (next.has(vehicleId)) {
@@ -92,7 +99,17 @@ export const AgencyManageVehiclePage: React.FC = () => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    const assigned = FLEET_OPTIONS.filter((v) => selectedVehicleIds.has(v.id)).map((v) => ({
+      ...v,
+      status: 'Assigned' as const,
+    }));
+
+    try {
+      await agencyTripsService.updateTripVehicle(currentTripId, assigned);
+    } catch (err) {
+      console.error('Failed to save vehicle assignments in backend:', err);
+    }
     // Navigate back with vehicleAssigned=true signal
     navigate(`/agency/trips/${currentTripId}?vehicleAssigned=true`);
   };
@@ -107,7 +124,7 @@ export const AgencyManageVehiclePage: React.FC = () => {
         <DashboardHeader />
 
         {/* Sticky Header */}
-        <div className="bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 sm:px-6 flex items-center justify-between sticky top-14 z-20">
+        <div className="bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-3 sm:px-6 flex items-center justify-between sticky top-[57px] sm:top-[65px] z-20 select-none">
           <button
             type="button"
             onClick={() => navigate(`/agency/trips/${currentTripId}`)}
@@ -137,11 +154,11 @@ export const AgencyManageVehiclePage: React.FC = () => {
           <div className="space-y-3">
             <h3 className="text-sm font-black text-[#0F172A] flex items-center gap-2">
               <Bus className="w-4 h-4 text-sky-600" />
-              Available Fleet ({MOCK_FLEET.filter(v => v.status !== 'Maintenance').length} vehicles)
+              Available Fleet ({FLEET_OPTIONS.filter((v) => v.status !== 'Maintenance').length} vehicles)
             </h3>
 
             <AnimatePresence>
-              {MOCK_FLEET.map((vehicle, i) => {
+              {FLEET_OPTIONS.map((vehicle, i) => {
                 const isSelected = selectedVehicleIds.has(vehicle.id);
                 const isDisabled = vehicle.status === 'Maintenance';
 

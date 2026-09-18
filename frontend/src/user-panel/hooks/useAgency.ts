@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Agency } from '../types/agency';
+import { marketplaceService } from '../services/marketplace.service';
 import { agenciesData } from '../data/agencies';
 
 interface UseAgencyResult {
@@ -14,45 +15,56 @@ export const useAgency = (agencyId?: string): UseAgencyResult => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
     setError(null);
 
-    // Simulate async API endpoint (GET /api/agencies/:agencyId)
-    const timer = setTimeout(() => {
-      if (!agencyId) {
-        setAgency(null);
-        setError('No agency ID provided');
-        setLoading(false);
-        return;
-      }
+    if (!agencyId) {
+      setAgency(null);
+      setError('No agency ID provided');
+      setLoading(false);
+      return;
+    }
 
-      const normalized = agencyId.toLowerCase().trim();
-
-      const found = agenciesData.find((a) => {
-        const idLower = a.id.toLowerCase();
-        const nameSlug = a.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-        // Match agency-001, agency-1, mountain-trails, etc.
-        return (
-          idLower === normalized ||
-          nameSlug === normalized ||
-          idLower.replace('agency-00', 'agency-') === normalized ||
-          idLower.replace('agency-0', 'agency-') === normalized ||
-          normalized.endsWith(idLower.replace('agency-', ''))
-        );
+    marketplaceService
+      .getAgencyById(agencyId)
+      .then((data) => {
+        if (!isMounted) return;
+        if (data) {
+          setAgency(data);
+          setError(null);
+        } else {
+          // Fallback if legacy demo ID
+          const normalized = agencyId.toLowerCase().trim();
+          const fallback = agenciesData.find((a) => a.id.toLowerCase() === normalized);
+          if (fallback) {
+            setAgency(fallback);
+            setError(null);
+          } else {
+            setAgency(null);
+            setError(`Agency "${agencyId}" not found`);
+          }
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        const normalized = agencyId.toLowerCase().trim();
+        const fallback = agenciesData.find((a) => a.id.toLowerCase() === normalized);
+        if (fallback) {
+          setAgency(fallback);
+          setError(null);
+        } else {
+          setAgency(null);
+          setError(err?.message || `Agency "${agencyId}" not found`);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
       });
 
-      if (found) {
-        setAgency(found);
-        setError(null);
-      } else {
-        setAgency(null);
-        setError(`Agency "${agencyId}" not found`);
-      }
-      setLoading(false);
-    }, 80);
-
-    return () => clearTimeout(timer);
+    return () => {
+      isMounted = false;
+    };
   }, [agencyId]);
 
   return { agency, loading, error };

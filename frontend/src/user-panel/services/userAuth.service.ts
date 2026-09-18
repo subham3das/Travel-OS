@@ -7,6 +7,13 @@ export interface UserAuthResponse {
   phone: string;
   avatar?: string;
   profileImage?: string;
+  gender?: string;
+  preferredLanguage?: string;
+  foodPreference?: string;
+  accessibilityRequirements?: string;
+  bio?: string;
+  homeCity?: string;
+  dateOfBirth?: string;
   status: string;
   isEmailVerified: boolean;
   profileCompleted: boolean;
@@ -16,104 +23,83 @@ export interface UserAuthResponse {
   onboardingCompleted: boolean;
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn?: string;
+export interface FullUserProfileResponse extends UserAuthResponse {
+  coverImage?: string;
+  username?: string;
+  location?: string;
+  country?: string;
+  isVerified?: boolean;
+  badgeTitle?: string;
+  memberSince?: string;
+  stats?: {
+    totalTrips: number;
+    upcomingTrips: number;
+    completedTrips: number;
+    countriesVisited: number;
+    lifetimeSpend: string;
+    avgRatingGiven: number;
+    postsCount: number;
+    followersCount: number;
+    followingCount: number;
+    reputationScore: number;
+    levelTitle: string;
+  };
+  currentTrip?: {
+    id: string;
+    title: string;
+    dates: string;
+    agencyName: string;
+    imageUrl: string;
+    status: string;
+  } | null;
+  achievements?: Array<{
+    id: string;
+    title: string;
+    level: string;
+    unlocked: boolean;
+    icon: string;
+    bgColor: string;
+    borderColor: string;
+    iconColor: string;
+  }>;
+  mediaPosts?: Array<{
+    id: string;
+    title: string;
+    location: string;
+    imageUrl: string;
+  }>;
 }
 
+import { apiClient, AuthTokens } from '../../services/apiClient';
+
+export type { AuthTokens };
+
 class UserAuthService {
-  private getAccessToken(): string | null {
-    return localStorage.getItem('apnatrip_access_token');
+  public getAccessToken(): string | null {
+    return apiClient.getAccessToken();
   }
 
-  private getRefreshToken(): string | null {
-    return localStorage.getItem('apnatrip_refresh_token');
+  public getRefreshToken(): string | null {
+    return apiClient.getRefreshToken();
   }
 
   public setTokens(tokens: AuthTokens) {
-    if (tokens.accessToken) {
-      localStorage.setItem('apnatrip_access_token', tokens.accessToken);
-    }
-    if (tokens.refreshToken) {
-      localStorage.setItem('apnatrip_refresh_token', tokens.refreshToken);
-    }
+    apiClient.setTokens(tokens);
   }
 
   public clearTokens() {
-    localStorage.removeItem('apnatrip_access_token');
-    localStorage.removeItem('apnatrip_refresh_token');
+    apiClient.clearTokens();
   }
 
   public async request<T>(
     endpoint: string,
     options: RequestInit = {},
     requiresAuth = false
-  ): Promise<{ success: boolean; data: T; message?: string; errors?: any[] }> {
-    const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...((options.headers as Record<string, string>) || {}),
-    };
-
-    if (requiresAuth) {
-      const token = this.getAccessToken();
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
-
-    let response = await fetch(url, {
+  ) {
+    return apiClient.request<T>(endpoint, {
       ...options,
-      headers,
+      requiresAuth,
     });
-
-    // Handle token expiration & automatic refresh
-    if (response.status === 401 && requiresAuth) {
-      const refreshToken = this.getRefreshToken();
-      if (refreshToken) {
-        try {
-          const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-          });
-          const refreshData = await refreshRes.json();
-          if (refreshData.success && refreshData.data?.accessToken) {
-            this.setTokens({
-              accessToken: refreshData.data.accessToken,
-              refreshToken: refreshData.data.refreshToken || refreshToken,
-            });
-            headers['Authorization'] = `Bearer ${refreshData.data.accessToken}`;
-            response = await fetch(url, {
-              ...options,
-              headers,
-            });
-          } else {
-            this.clearTokens();
-          }
-        } catch {
-          this.clearTokens();
-        }
-      }
-    }
-
-    const data = await response.json().catch(() => ({
-      success: false,
-      message: 'Network response was not valid JSON',
-    }));
-
-    if (!response.ok) {
-      const errorMessage =
-        data.message ||
-        (data.errors && data.errors.length > 0 ? data.errors[0].message : 'Request failed');
-      const error: any = new Error(errorMessage);
-      error.status = response.status;
-      error.data = data;
-      throw error;
-    }
-
-    return data;
   }
 
   // 1. Sign Up / Registration
@@ -134,7 +120,10 @@ class UserAuthService {
       body: JSON.stringify(payload),
     });
 
-    if (res.data?.tokens) {
+    if (!res.data) {
+      throw new Error(res.message || 'Registration failed');
+    }
+    if (res.data.tokens) {
       this.setTokens(res.data.tokens);
     }
     return res.data;
@@ -150,7 +139,10 @@ class UserAuthService {
       body: JSON.stringify(payload),
     });
 
-    if (res.data?.tokens) {
+    if (!res.data) {
+      throw new Error(res.message || 'Login failed');
+    }
+    if (res.data.tokens) {
       this.setTokens(res.data.tokens);
     }
     return res.data;
@@ -165,12 +157,16 @@ class UserAuthService {
     const res = await this.request<{
       user: UserAuthResponse;
       tokens: AuthTokens;
+      isNewUser?: boolean;
     }>('/auth/google', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    if (res.data?.tokens) {
+    if (!res.data) {
+      throw new Error(res.message || 'Google login failed');
+    }
+    if (res.data.tokens) {
       this.setTokens(res.data.tokens);
     }
     return res.data;
@@ -221,6 +217,16 @@ class UserAuthService {
     return res.data?.onboarding;
   }
 
+  // 6.5. Get Full Authenticated Profile
+  public async getProfile(): Promise<FullUserProfileResponse | null> {
+    const res = await this.request<{ profile: FullUserProfileResponse }>(
+      '/profile',
+      { method: 'GET' },
+      true
+    );
+    return res.data?.profile || null;
+  }
+
   // 7. Update Profile
   public async updateProfile(payload: {
     fullName?: string;
@@ -230,6 +236,10 @@ class UserAuthService {
     homeCity?: string;
     dateOfBirth?: string;
     gender?: string;
+    preferredLanguage?: string;
+    foodPreference?: string;
+    accessibilityRequirements?: string;
+    country?: string;
     avatar?: string;
   }) {
     const res = await this.request<{ profile: UserAuthResponse }>(
@@ -248,6 +258,8 @@ class UserAuthService {
     travelInterests?: string[];
     travelStyle?: string[];
     budgetPreference?: string;
+    preferredBudgetAmount?: number;
+    preferredBudgetTier?: string;
     preferredTripDuration?: string[];
     preferredTransportation?: string[];
     foodPreference?: string;

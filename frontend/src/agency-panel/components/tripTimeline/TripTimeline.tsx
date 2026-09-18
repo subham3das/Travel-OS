@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PlayCircle,
   CheckCircle2,
   Calendar,
-  Clock,
   Sparkles,
-  ShieldCheck,
-  Send,
 } from 'lucide-react';
 import {
   TimelineDay,
@@ -30,6 +27,7 @@ import { TripNoteCard } from './TripNoteCard';
 import { PhotoTimeline } from './PhotoTimeline';
 import { TripChatPlaceholder } from './TripChatPlaceholder';
 import { CompleteTripModal } from './CompleteTripModal';
+import { agencyTripsService } from '../../services/agencyTrips.service';
 
 interface TripTimelineProps {
   tripId: string;
@@ -60,6 +58,16 @@ export const TripTimeline: React.FC<TripTimelineProps> = ({
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  useEffect(() => {
+    agencyTripsService.getTripById(tripId).then((data) => {
+      if (data.timelineDays && data.timelineDays.length > 0) setDays(data.timelineDays);
+      if (data.incidents && data.incidents.length > 0) setIncidents(data.incidents);
+      if (data.notes && data.notes.length > 0) setNotes(data.notes);
+      if (data.photos && data.photos.length > 0) setPhotos(data.photos);
+      if (data.statusCategory) setTripStatus(data.statusCategory as TripLiveStatus);
+    }).catch((err) => console.error('Failed to load trip timeline details:', err));
+  }, [tripId]);
+
   // ── Calculate Live Stats ────────────────────────────────────────────────────
   const currentDayNumber = days.find((d) => d.status === 'In Progress')?.dayNumber || 2;
   const completedDaysCount = days.filter((d) => d.status === 'Completed').length;
@@ -80,18 +88,28 @@ export const TripTimeline: React.FC<TripTimelineProps> = ({
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   // Start Trip (Upcoming -> Ongoing)
-  const handleStartTrip = () => {
+  const handleStartTrip = async () => {
     setTripStatus('Ongoing');
     if (onTripStatusChange) onTripStatusChange('Ongoing');
     showToast('🚀 Trip officially started! Status updated to ONGOING.');
+    try {
+      await agencyTripsService.updateTripStatus(tripId, 'Ongoing');
+    } catch (err) {
+      console.error('Failed to update trip status in backend:', err);
+    }
   };
 
   // Complete Day Status Update
-  const handleUpdateDayStatus = (dayNumber: number, newStatus: DayLiveStatus) => {
+  const handleUpdateDayStatus = async (dayNumber: number, newStatus: DayLiveStatus) => {
     setDays((prev) =>
       prev.map((d) => (d.dayNumber === dayNumber ? { ...d, status: newStatus } : d))
     );
     showToast(`Day ${dayNumber} status updated to "${newStatus}"`);
+    try {
+      await agencyTripsService.updateTimelineDayStatus(tripId, dayNumber, newStatus);
+    } catch (err) {
+      console.error('Failed to update day status in backend:', err);
+    }
   };
 
   // Toggle Daily Checklist Item
@@ -125,45 +143,65 @@ export const TripTimeline: React.FC<TripTimelineProps> = ({
   };
 
   // Add Incident
-  const handleAddIncident = (newInc: Omit<TripIncident, 'id'>) => {
+  const handleAddIncident = async (newInc: Omit<TripIncident, 'id'>) => {
     const incObj: TripIncident = {
       ...newInc,
       id: `inc-${Date.now()}`,
     };
     setIncidents((prev) => [incObj, ...prev]);
     showToast(`⚠️ New incident recorded: ${newInc.category}`);
+    try {
+      await agencyTripsService.addIncident(tripId, newInc);
+    } catch (err) {
+      console.error('Failed to save incident in backend:', err);
+    }
   };
 
   // Toggle Incident Resolved
-  const handleToggleResolveIncident = (incidentId: string) => {
+  const handleToggleResolveIncident = async (incidentId: string) => {
     setIncidents((prev) =>
       prev.map((i) => (i.id === incidentId ? { ...i, isResolved: !i.isResolved } : i))
     );
     showToast('Incident status updated');
+    try {
+      await agencyTripsService.toggleResolveIncident(tripId, incidentId);
+    } catch (err) {
+      console.error('Failed to toggle incident resolution in backend:', err);
+    }
   };
 
   // Add Note
-  const handleAddNote = (newNote: Omit<TripNote, 'id'>) => {
+  const handleAddNote = async (newNote: Omit<TripNote, 'id'>) => {
     const noteObj: TripNote = {
       ...newNote,
       id: `note-${Date.now()}`,
     };
     setNotes((prev) => [noteObj, ...prev]);
     showToast('Operational note posted');
+    try {
+      await agencyTripsService.addNote(tripId, newNote);
+    } catch (err) {
+      console.error('Failed to save note in backend:', err);
+    }
   };
 
   // Add Photo
-  const handleAddPhoto = (newPhoto: Omit<TripPhoto, 'id'>) => {
+  const handleAddPhoto = async (newPhoto: Omit<TripPhoto, 'id'>) => {
     const photoObj: TripPhoto = {
       ...newPhoto,
       id: `ph-${Date.now()}`,
     };
     setPhotos((prev) => [photoObj, ...prev]);
     showToast('📷 Photo added to timeline gallery');
+    try {
+      await agencyTripsService.addPhoto(tripId, newPhoto);
+    } catch (err) {
+      console.error('Failed to save photo in backend:', err);
+    }
   };
 
   // Confirm Complete Trip
-  const handleConfirmCompleteTrip = () => {
+  const handleConfirmCompleteTrip = async () => {
     setIsCompleteModalOpen(false);
     setTripStatus('Completed');
     if (onTripStatusChange) onTripStatusChange('Completed');
@@ -172,6 +210,11 @@ export const TripTimeline: React.FC<TripTimelineProps> = ({
     setDays((prev) => prev.map((d) => ({ ...d, status: 'Completed' as const })));
 
     showToast('🎉 Trip completed! Review & Rating requests sent to all 18 travelers.');
+    try {
+      await agencyTripsService.updateTripStatus(tripId, 'Completed');
+    } catch (err) {
+      console.error('Failed to complete trip in backend:', err);
+    }
   };
 
   return (
@@ -189,7 +232,7 @@ export const TripTimeline: React.FC<TripTimelineProps> = ({
             <button
               type="button"
               onClick={() => setToastMessage(null)}
-              className="text-slate-400 hover:text-white text-xs font-bold"
+              className="text-slate-400 hover:text-white text-xs font-bold cursor-pointer"
             >
               Dismiss
             </button>

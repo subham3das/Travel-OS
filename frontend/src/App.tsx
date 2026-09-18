@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
 
 // ── Agency Panel ────────────────────────────────────────────────────────────
 import { AgencyAuthProvider } from './agency-panel/services/agencyAuth.service';
@@ -17,14 +16,21 @@ import { AdminAuthProvider } from './admin-panel/context/AdminAuthContext';
 import { AdminRoutes } from './admin-panel/routes/AdminRoutes';
 
 export const App: React.FC = () => {
+  useEffect(() => {
+    // Purge any stale legacy global dark class or attributes on document elements
+    document.documentElement.classList.remove('dark');
+    document.documentElement.removeAttribute('data-theme');
+    document.body.classList.remove('dark');
+    document.body.removeAttribute('data-theme');
+  }, []);
+
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <UserToastProvider>
-          <AgencyAuthProvider>
-            <PermissionProvider>
-              <ToastProvider>
-                <AdminAuthProvider>
+    <AuthProvider>
+      <UserToastProvider>
+        <AgencyAuthProvider>
+          <PermissionProvider>
+            <ToastProvider>
+              <AdminAuthProvider>
                 <BrowserRouter>
                   <Routes>
                     {/* ── Agency Panel Routes (/agency/...) ─────────────────────── */}
@@ -46,7 +52,6 @@ export const App: React.FC = () => {
         </AgencyAuthProvider>
       </UserToastProvider>
     </AuthProvider>
-  </ThemeProvider>
   );
 };
 

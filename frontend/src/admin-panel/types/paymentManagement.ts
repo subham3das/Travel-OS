@@ -77,6 +77,17 @@ export interface AdminPaymentItem {
   scheduledSettlementDate?: string; // e.g. Jun 15, 2024
   settlementRemarks?: string;
 
+  // Optional calculation & display fields
+  date?: string;
+  time?: string;
+  commissionRate?: string;
+  taxRate?: string;
+  taxAmount?: string;
+  gatewayFee?: string;
+  agencyPayout?: string;
+  settlementDate?: string;
+  bankAccount?: string;
+
   // Timeline & Activity
   timeline: PaymentTimelineStep[];
   activities: PaymentActivityLog[];

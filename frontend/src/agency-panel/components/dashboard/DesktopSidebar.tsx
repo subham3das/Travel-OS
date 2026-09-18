@@ -7,14 +7,13 @@ import {
   MapPin,
   Bell,
   Users,
-  Star,
   MessageSquare,
   BarChart2,
-  Settings,
   LogOut,
   User,
 } from 'lucide-react';
 import { useAgencyAuth } from '../../hooks/useAgencyAuth';
+import { AgencyVerificationStatus } from '../../types/agency';
 
 export const DesktopSidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -38,11 +37,22 @@ export const DesktopSidebar: React.FC = () => {
     { id: 'analytics', label: 'Analytics', path: '/agency/analytics', icon: <BarChart2 className="w-4.5 h-4.5" /> },
   ];
 
+  const rawName = agency?.agencyDisplayName || agency?.name || 'Agency Partner';
+  const nameWords = rawName.trim().split(/\s+/);
+  const initials =
+    nameWords.length >= 2
+      ? `${nameWords[0][0]}${nameWords[1][0]}`.toUpperCase()
+      : rawName.slice(0, 2).toUpperCase();
+
+  const isVerified =
+    agency?.verificationStatus === AgencyVerificationStatus.APPROVED ||
+    (agency?.verificationStatus as any) === 'VERIFIED';
+
   return (
     <aside className="hidden md:flex sticky top-0 h-screen w-64 bg-white border-r border-slate-100 flex-col justify-between p-5 shrink-0 shadow-xs select-none z-30 overflow-y-auto scrollbar-none">
       <div className="space-y-6">
         {/* Brand Logo Header */}
-        <div className="flex items-center gap-2.5 px-2">
+        <div className="flex items-center gap-2.5 px-2 cursor-pointer" onClick={() => navigate('/agency/dashboard')}>
           <div className="w-9 h-9 rounded-2xl bg-[#583BE8] text-white flex items-center justify-center shadow-md shadow-[#583BE8]/25 shrink-0">
             <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none">
               <path
@@ -67,7 +77,7 @@ export const DesktopSidebar: React.FC = () => {
         {/* Navigation Items */}
         <nav className="space-y-1">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path);
+            const isActive = location.pathname === item.path || (item.path !== '/agency/dashboard' && location.pathname.startsWith(item.path));
 
             return (
               <button
@@ -97,12 +107,14 @@ export const DesktopSidebar: React.FC = () => {
             <img src={agency.logo} alt="Logo" className="w-9 h-9 rounded-full object-cover border border-slate-200" />
           ) : (
             <div className="w-9 h-9 rounded-full bg-[#583BE8] text-white font-black text-xs flex items-center justify-center">
-              WH
+              {initials}
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-black text-[#0F172A] truncate">{agency?.name || 'Wander Horizons'}</p>
-            <p className="text-[10px] font-semibold text-emerald-600">✓ Verified Partner</p>
+            <p className="text-xs font-black text-[#0F172A] truncate">{rawName}</p>
+            <p className={`text-[10px] font-semibold ${isVerified ? 'text-emerald-600' : 'text-amber-600'}`}>
+              {isVerified ? '✓ Verified Partner' : 'Verification Under Review'}
+            </p>
           </div>
         </div>
 

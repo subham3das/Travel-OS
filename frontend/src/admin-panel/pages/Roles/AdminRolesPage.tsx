@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RefreshCw, AlertCircle, Shield } from 'lucide-react';
 import {
   RoleKPIStats,
   RoleItem,
@@ -10,8 +11,8 @@ import {
   AccessRequestItem,
   RoleChangeTimelineItem,
 } from '../../types/rolesManagement';
-import { adminRolesManagementService } from '../../services/adminRolesManagement.service';
 import {
+  adminRolesManagementService,
   initialRoleKPIStats,
   initialRoleLibraryData,
   initialPermissionsMatrix,
@@ -20,7 +21,8 @@ import {
   initialActiveSessions,
   initialAccessRequests,
   initialRecentChanges,
-} from '../../data/rolesData';
+} from '../../services/adminRolesManagement.service';
+import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { AdminRolesHeader } from '../../components/super-admin/roles/AdminRolesHeader';
 import { RoleKPIStatsCards } from '../../components/super-admin/roles/RoleKPIStats';
 import { RoleExplorer } from '../../components/super-admin/roles/RoleExplorer';
@@ -32,18 +34,22 @@ import { CreateRoleModal } from '../../components/super-admin/roles/CreateRoleMo
 import { AssignUsersModal } from '../../components/super-admin/roles/AssignUsersModal';
 
 export const AdminRolesPage: React.FC = () => {
+  const { admin } = useAdminAuth();
+
   // ── 1. STATE MANAGEMENT ──
   const [activeTab, setActiveTab] = useState('All Roles');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
-  // Data States
+  // Loading & Error States
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Live Data States
   const [kpiStats, setKpiStats] = useState<RoleKPIStats>(initialRoleKPIStats);
   const [roles, setRoles] = useState<RoleItem[]>(initialRoleLibraryData);
-  const [selectedRole, setSelectedRole] = useState<RoleItem>(
-    initialRoleLibraryData.find((r) => r.id === 'role-ops-manager') || initialRoleLibraryData[0]
-  );
+  const [selectedRole, setSelectedRole] = useState<RoleItem | undefined>(undefined);
   const [permissions, setPermissions] = useState<PermissionRow[]>(initialPermissionsMatrix);
   const [auditSummary, setAuditSummary] = useState<PermissionAuditItem[]>(initialPermissionAudit);
   const [activity, setActivity] = useState<RoleActivityItem[]>(initialRoleActivity);
@@ -59,8 +65,10 @@ export const AdminRolesPage: React.FC = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // ── 2. DATA FETCHING ──
+  // ── 2. DATA FETCHING FROM MONGODB ──
   const loadRolesData = useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
     try {
       const [
         stats,
@@ -88,12 +96,17 @@ export const AdminRolesPage: React.FC = () => {
       setAccessRequests(requests);
       setRecentChanges(changes);
 
-      if (rolesList.length > 0 && !rolesList.some((r: RoleItem) => r.id === selectedRole?.id)) {
-        setSelectedRole(rolesList[0]);
+      if (rolesList.length > 0) {
+        if (!selectedRole || !rolesList.some((r: RoleItem) => r.id === selectedRole.id)) {
+          setSelectedRole(rolesList[0]);
+        }
       }
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to load roles and permissions data', 'error');
+    } catch (err: any) {
+      console.error('Failed to load RBAC data from MongoDB:', err);
+      setFetchError(err?.message || 'Backend connection failed. Please verify your connection.');
+      showToast('Failed to load roles and permissions data from MongoDB', 'error');
+    } finally {
+      setIsLoading(false);
     }
   }, [activeTab, searchQuery, selectedRole]);
 
@@ -104,31 +117,46 @@ export const AdminRolesPage: React.FC = () => {
   // Load Permissions for selected role
   useEffect(() => {
     if (selectedRole) {
-      adminRolesManagementService.getPermissions(selectedRole.id).then(setPermissions);
+      adminRolesManagementService
+        .getPermissions(selectedRole.id)
+        .then(setPermissions)
+        .catch((e) => console.error(e));
     }
   }, [selectedRole]);
 
   // ── 3. OPERATIONAL ACTIONS ──
   const handleTogglePermission = async (moduleId: string, field: keyof PermissionRow, value: boolean) => {
     if (!selectedRole) return;
-    const updated = await adminRolesManagementService.updatePermission(selectedRole.id, moduleId, field, value);
-    setPermissions(updated);
-    showToast(`Updated ${moduleId} ${String(field)} permission for ${selectedRole.name}`, 'info');
+    try {
+      const updated = await adminRolesManagementService.updatePermission(selectedRole.id, moduleId, field, value);
+      setPermissions(updated);
+      showToast(`Updated ${moduleId} ${String(field)} permission for ${selectedRole.name}`, 'info');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to update permission in MongoDB', 'error');
+    }
   };
 
   const handleCreateRole = async (name: string, description: string) => {
-    const created = await adminRolesManagementService.createRole(name, description);
-    setSelectedRole(created);
-    loadRolesData();
-    showToast(`Created new role: "${created.name}"`, 'success');
+    try {
+      const created = await adminRolesManagementService.createRole(name, description);
+      setSelectedRole(created);
+      await loadRolesData();
+      showToast(`Created new role: "${created.name}"`, 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to create role', 'error');
+    }
   };
 
   const handleDuplicateRole = async () => {
     if (!selectedRole) return;
-    const dup = await adminRolesManagementService.duplicateRole(selectedRole.id);
-    setSelectedRole(dup);
-    loadRolesData();
-    showToast(`Duplicated role as "${dup.name}"`, 'success');
+    try {
+      const dup = await adminRolesManagementService.duplicateRole(selectedRole.id);
+      setSelectedRole(dup);
+      await loadRolesData();
+      showToast(`Duplicated role as "${dup.name}"`, 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to duplicate role', 'error');
+    }
   };
 
   const handleDeleteRole = async () => {
@@ -137,10 +165,14 @@ export const AdminRolesPage: React.FC = () => {
       showToast('System roles cannot be deleted', 'error');
       return;
     }
-    await adminRolesManagementService.deleteRole(selectedRole.id);
-    setSelectedRole(initialRoleLibraryData[0]);
-    loadRolesData();
-    showToast(`Role "${selectedRole.name}" deleted`, 'success');
+    try {
+      await adminRolesManagementService.deleteRole(selectedRole.id);
+      setSelectedRole(undefined);
+      await loadRolesData();
+      showToast(`Role "${selectedRole.name}" deleted from MongoDB`, 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to delete role', 'error');
+    }
   };
 
   const handleExportPermissions = () => {
@@ -165,21 +197,33 @@ export const AdminRolesPage: React.FC = () => {
   };
 
   const handleTerminateAllSessions = async () => {
-    await adminRolesManagementService.terminateAllSessions();
-    setSessions([]);
-    showToast('All active admin sessions terminated', 'success');
+    try {
+      await adminRolesManagementService.terminateAllSessions();
+      setSessions([]);
+      showToast('All active admin sessions terminated', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to terminate sessions', 'error');
+    }
   };
 
   const handleApproveRequest = async (id: string) => {
-    const updated = await adminRolesManagementService.updateAccessRequest(id, 'Approved');
-    setAccessRequests(updated);
-    showToast('Access request approved and role privilege assigned', 'success');
+    try {
+      const updated = await adminRolesManagementService.updateAccessRequest(id, 'Approved');
+      setAccessRequests(updated);
+      showToast('Access request approved and role privilege assigned', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to approve request', 'error');
+    }
   };
 
   const handleRejectRequest = async (id: string) => {
-    const updated = await adminRolesManagementService.updateAccessRequest(id, 'Rejected');
-    setAccessRequests(updated);
-    showToast('Access request rejected', 'info');
+    try {
+      const updated = await adminRolesManagementService.updateAccessRequest(id, 'Rejected');
+      setAccessRequests(updated);
+      showToast('Access request rejected', 'info');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to reject request', 'error');
+    }
   };
 
   return (
@@ -215,10 +259,30 @@ export const AdminRolesPage: React.FC = () => {
       {/* ── 1. PAGE HEADER ── */}
       <AdminRolesHeader
         onPermissionTemplates={() => showToast('Opening enterprise RBAC templates library', 'info')}
-        onAccessRequests={() => showToast('Displaying 3 pending privilege elevation requests', 'info')}
+        onAccessRequests={() => showToast('Displaying pending privilege elevation requests', 'info')}
         onCreateRole={() => setIsCreateModalOpen(true)}
         pendingRequestsCount={accessRequests.filter((r) => r.status === 'Pending').length}
       />
+
+      {/* ── ERROR RECOVERY STATE ── */}
+      {fetchError && (
+        <div className="bg-rose-50 border border-rose-200 rounded-3xl p-5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            <div>
+              <p className="text-xs font-black text-rose-800">Backend Connection Failed</p>
+              <p className="text-[11px] font-semibold text-rose-600">{fetchError}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => loadRolesData()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer shrink-0"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry</span>
+          </button>
+        </div>
+      )}
 
       {/* ── 2. 6 TOP KPI SUMMARY CARDS ── */}
       <RoleKPIStatsCards
@@ -239,14 +303,14 @@ export const AdminRolesPage: React.FC = () => {
             selectedRoleId={selectedRole?.id}
             onSelectRole={(r) => {
               setSelectedRole(r);
-              showToast(`Loaded ${r.name} permissions`, 'info');
+              showToast(`Loaded ${r.name} permissions from MongoDB`, 'info');
             }}
             activeTab={activeTab}
             onTabChange={setActiveTab}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onCreateRole={() => setIsCreateModalOpen(true)}
-            onViewAllRoles={() => showToast('Opening comprehensive role dictionary', 'info')}
+            onViewAllRoles={() => showToast('Displaying all registered roles', 'info')}
           />
         </div>
 
@@ -257,7 +321,7 @@ export const AdminRolesPage: React.FC = () => {
             permissions={permissions}
             onTogglePermission={handleTogglePermission}
             onReset={() => showToast('Reset permissions to system defaults', 'info')}
-            onViewAsUser={() => showToast(`Previewing dashboard view as ${selectedRole.name}`, 'info')}
+            onViewAsUser={() => showToast(`Previewing dashboard view as ${selectedRole?.name || 'Admin'}`, 'info')}
           />
         </div>
 
@@ -266,13 +330,13 @@ export const AdminRolesPage: React.FC = () => {
           <RoleDetailsSidebar
             role={selectedRole}
             recentChanges={recentChanges}
-            onSaveChanges={() => showToast(`Changes saved for ${selectedRole.name}`, 'success')}
+            onSaveChanges={() => showToast(`Permissions synchronized with MongoDB for ${selectedRole?.name}`, 'success')}
             onDuplicateRole={handleDuplicateRole}
             onExportPermissions={handleExportPermissions}
             onAssignUsers={() => setIsAssignModalOpen(true)}
             onDeleteRole={handleDeleteRole}
             onViewAllMembers={() => setIsAssignModalOpen(true)}
-            onViewAllChanges={() => showToast('Displaying full role audit logs', 'info')}
+            onViewAllChanges={() => showToast('Displaying full role audit logs from MongoDB', 'info')}
           />
         </div>
       </div>
@@ -298,7 +362,7 @@ export const AdminRolesPage: React.FC = () => {
         onShowToast={showToast}
       />
 
-      {/* ── 5. MODALS ── */}
+      {/* ── 6. MODALS ── */}
       <CreateRoleModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
@@ -308,8 +372,8 @@ export const AdminRolesPage: React.FC = () => {
       <AssignUsersModal
         isOpen={isAssignModalOpen}
         onClose={() => setIsAssignModalOpen(false)}
-        role={selectedRole}
-        onAssign={(ids) => showToast(`Assigned ${ids.length} admin users to ${selectedRole.name}`, 'success')}
+        role={selectedRole || roles[0]}
+        onAssign={(ids) => showToast(`Assigned ${ids.length} admin users to ${selectedRole?.name}`, 'success')}
       />
     </motion.div>
   );

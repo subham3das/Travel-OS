@@ -9,13 +9,17 @@ export enum AgencyVerificationStatus {
 
 export interface Agency {
   id: string;
+  agencyId?: string;
   name: string;
+  agencyDisplayName?: string;
+  legalBusinessName?: string;
   slug: string;
   logo?: string;
   coverImage?: string;
   tagline?: string;
   description?: string;
   email: string;
+  loginEmail?: string;
   phone: string;
   website?: string;
   address?: string;
@@ -25,6 +29,8 @@ export interface Agency {
   gstin?: string;
   licenseNumber?: string;
   verificationStatus: AgencyVerificationStatus;
+  status?: string;
+  passwordChanged?: boolean;
   applicationId?: string;
   applicationSubmittedAt?: string;
   approvedAt?: string;
@@ -41,6 +47,7 @@ export interface Agency {
 export interface AgencyUser {
   id: string;
   agencyId: string;
+  customAgencyId?: string;
   name: string;
   email: string;
   phone: string;

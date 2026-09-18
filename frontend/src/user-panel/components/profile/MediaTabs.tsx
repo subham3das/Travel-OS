@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Play, Star, Image, MapPin } from 'lucide-react';
+import { LayoutGrid, Play, Star, Image, MapPin, Camera, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export interface UserMediaPost {
   id: string;
@@ -9,34 +10,12 @@ export interface UserMediaPost {
   imageUrl: string;
 }
 
-const defaultUserPosts: UserMediaPost[] = [
-  {
-    id: 'p-1',
-    title: 'Ladakh Road Trip',
-    location: 'Ladakh',
-    imageUrl: 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    id: 'p-2',
-    title: 'Meghalaya Waterfalls',
-    location: 'Meghalaya',
-    imageUrl: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    id: 'p-3',
-    title: 'Goa Sunset',
-    location: 'Goa',
-    imageUrl: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    id: 'p-4',
-    title: 'Spiti Monastery',
-    location: 'Spiti Valley',
-    imageUrl: 'https://images.unsplash.com/photo-1568849676085-51415703900f?q=80&w=600&auto=format&fit=crop',
-  },
-];
+interface MediaTabsSectionProps {
+  posts?: UserMediaPost[];
+}
 
-export const MediaTabsSection: React.FC = () => {
+export const MediaTabsSection: React.FC<MediaTabsSectionProps> = ({ posts = [] }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('posts');
 
   const tabs = [
@@ -73,28 +52,49 @@ export const MediaTabsSection: React.FC = () => {
         })}
       </div>
 
-      {/* Posts Media Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        {defaultUserPosts.map((post) => (
-          <motion.div
-            key={post.id}
-            whileHover={{ y: -3 }}
-            className="relative h-44 rounded-2xl overflow-hidden border border-slate-100 shadow-2xs group cursor-pointer"
+      {/* Posts Media Grid or Empty State */}
+      {posts.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {posts.map((post) => (
+            <motion.div
+              key={post.id}
+              whileHover={{ y: -3 }}
+              className="relative h-44 rounded-2xl overflow-hidden border border-slate-100 shadow-2xs group cursor-pointer"
+            >
+              <img
+                src={post.imageUrl}
+                alt={post.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent p-3 flex flex-col justify-end text-white">
+                <p className="text-xs font-bold flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-[#FF4D6D]" />
+                  {post.location}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <div className="py-10 text-center flex flex-col items-center justify-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-[#FF4D6D] flex items-center justify-center border border-rose-100">
+            <Camera className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h5 className="text-sm font-black text-[#0F172A]">No travel moments shared yet</h5>
+            <p className="text-xs font-semibold text-slate-400 max-w-xs mx-auto">
+              Share your journeys, photos, and stories with the ApnaTrip traveler community!
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/create-post')}
+            className="px-4 py-2 rounded-2xl bg-[#FF4D6D] hover:bg-[#ff3358] text-white text-xs font-extrabold shadow-md shadow-[#FF4D6D]/20 transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <img
-              src={post.imageUrl}
-              alt={post.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent p-3 flex flex-col justify-end text-white">
-              <p className="text-xs font-bold flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-[#FF4D6D]" />
-                {post.location}
-              </p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span>Create Travel Post</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

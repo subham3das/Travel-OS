@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar } from 'lucide-react';
+import { Calendar, AlertCircle, RefreshCw, X } from 'lucide-react';
 import { useAgencyAuth } from '../../hooks/useAgencyAuth';
 import { useDashboardInsights } from '../../hooks/useDashboardInsights';
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
@@ -13,7 +13,6 @@ import { QuickActionsSection } from '../../components/dashboard/QuickActionsSect
 import { DashboardInsightsSkeleton } from '../../components/dashboard/DashboardInsightsSkeleton';
 import { BottomNavigation } from '../../components/dashboard/BottomNavigation';
 import { DesktopSidebar } from '../../components/dashboard/DesktopSidebar';
-import { MOCK_AGENCY_KPI_STATS } from '../../data/dashboard';
 
 /**
  * Agency Dashboard Component
@@ -24,8 +23,11 @@ export const AgencyDashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { agency } = useAgencyAuth();
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [isDismissedTemporarily, setIsDismissedTemporarily] = useState(false);
 
   const {
+    agencyProfile,
+    kpiStats,
     revenue,
     bookingOverview,
     occupancy,
@@ -37,9 +39,25 @@ export const AgencyDashboardPage: React.FC = () => {
     selectedRange,
     setSelectedRange,
     isLoading,
+    isError,
+    errorMessage,
+    refetch,
   } = useDashboardInsights();
 
-  const agencyDisplayName = agency?.name || 'Himalayan Trails';
+  // The welcome notification banner displays until the agency creates and publishes their first package
+  const hasPublishedPackages =
+    (agencyProfile?.publishedPackagesCount !== undefined && agencyProfile.publishedPackagesCount > 0) ||
+    (agencyProfile?.totalPackages !== undefined && agencyProfile.totalPackages > 0);
+
+  const showWelcomeBanner = !isLoading && !hasPublishedPackages && !isDismissedTemporarily;
+
+  const handleDismissWelcome = () => {
+    setIsDismissedTemporarily(true);
+  };
+
+  const agencyDisplayName =
+    agencyProfile?.displayName || agency?.name || 'Agency Partner';
+
   const currentDateFormatted = new Date().toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
@@ -54,10 +72,83 @@ export const AgencyDashboardPage: React.FC = () => {
       {/* ── MAIN CONTENT WRAPPER ── */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-20 md:pb-8">
         {/* 1. Dashboard Header */}
-        <DashboardHeader onToggleSidebar={() => setShowMobileSidebar(!showMobileSidebar)} />
+        <DashboardHeader
+          unreadCount={agencyProfile?.unreadMessagesCount}
+          notificationsCount={agencyProfile?.notificationsCount}
+          onToggleSidebar={() => setShowMobileSidebar(!showMobileSidebar)}
+        />
 
         {/* ── DASHBOARD BODY CONTAINER ── */}
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 space-y-6 max-w-5xl mx-auto w-full">
+          {/* Welcome Notification Banner */}
+          {showWelcomeBanner && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-[#583BE8] text-white shadow-lg shadow-purple-500/15 flex items-start justify-between gap-4 select-none relative overflow-hidden"
+            >
+              <div className="space-y-1.5 min-w-0 z-10">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🎉</span>
+                  <h3 className="text-sm sm:text-base font-black tracking-tight">
+                    Welcome to ApnaTrip Partner Portal!
+                  </h3>
+                </div>
+                <p className="text-xs sm:text-sm text-purple-100 font-medium leading-relaxed">
+                  Your agency has been successfully verified. Start by creating your first travel package and begin receiving bookings from travelers across India.
+                </p>
+                <div className="pt-1 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDismissWelcome();
+                      navigate('/agency/packages/create');
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-white text-[#583BE8] text-xs font-black hover:bg-purple-50 transition-colors shadow-xs cursor-pointer"
+                  >
+                    Create First Package →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDismissWelcome}
+                    className="text-xs font-bold text-purple-200 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDismissWelcome}
+                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer shrink-0 z-10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+
+          {/* Error Banner with Retry */}
+          {isError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-between gap-3 text-xs font-semibold text-rose-700"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                <span>{errorMessage || 'Failed to load latest dashboard metrics.'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={refetch}
+                className="px-3 py-1 rounded-xl bg-white border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-100 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Retry</span>
+              </button>
+            </motion.div>
+          )}
+
           {/* Welcome Greeting Banner */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -84,12 +175,12 @@ export const AgencyDashboardPage: React.FC = () => {
 
           {/* 2. KPI Cards */}
           <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
-            {MOCK_AGENCY_KPI_STATS.map((stat, idx) => (
+            {kpiStats.map((stat, idx) => (
               <StatCard key={stat.id} stat={stat} delay={idx * 0.05} />
             ))}
           </div>
 
-          {/* 3. Business Insights Section (NEW) */}
+          {/* 3. Business Insights Section */}
           {isLoading ? (
             <DashboardInsightsSkeleton />
           ) : (

@@ -58,6 +58,39 @@ const activitiesList = [
   'Nightlife',
 ];
 
+const tripDurationOptions = [
+  { id: '1-3 Days', label: 'Weekend (1-3 Days)', icon: '⚡' },
+  { id: '3-5 Days', label: 'Short Trip (3-5 Days)', icon: '🗓️' },
+  { id: '1-2 Weeks', label: '1-2 Weeks', icon: '✈️' },
+  { id: '2+ Weeks', label: 'Long Stay (2+ Weeks)', icon: '🗺️' },
+];
+
+const transportationOptions = [
+  { id: 'Flight', label: 'Flight', icon: '✈️' },
+  { id: 'Train', label: 'Train', icon: '🚆' },
+  { id: 'Road Trip', label: 'Road Trip', icon: '🚗' },
+  { id: 'Bus / Coach', label: 'Bus / Coach', icon: '🚌' },
+  { id: 'Cruise', label: 'Cruise / Ferry', icon: '🚢' },
+];
+
+const foodOptions = [
+  { id: 'All Cuisines', label: 'All Cuisines', icon: '🍽️' },
+  { id: 'Local Street Food & Cafes', label: 'Street Food & Cafes', icon: '🍜' },
+  { id: 'Vegetarian', label: 'Vegetarian', icon: '🥗' },
+  { id: 'Non-Veg', label: 'Non-Veg', icon: '🍗' },
+  { id: 'Vegan', label: 'Vegan', icon: '🥑' },
+  { id: 'Halal', label: 'Halal', icon: '🍖' },
+  { id: 'Jain', label: 'Jain Food', icon: '🍲' },
+];
+
+const accessibilityChips = [
+  'Standard / None',
+  'Wheelchair Accessible',
+  'Ground Floor Rooms',
+  'Elderly Friendly Pace',
+  'Visual / Hearing Support',
+];
+
 export const TravelPreferencesPage: React.FC = () => {
   const navigate = useNavigate();
   const { completePreferences } = useAuth();
@@ -66,6 +99,10 @@ export const TravelPreferencesPage: React.FC = () => {
   const [selectedStyles, setSelectedStyles] = useState<string[]>(['adventure', 'nature', 'road-trip']);
   const [selectedCompanion, setSelectedCompanion] = useState<string>('Solo');
   const [budget, setBudget] = useState<number>(35000);
+  const [selectedDurations, setSelectedDurations] = useState<string[]>(['3-5 Days', '1-2 Weeks']);
+  const [selectedTransportation, setSelectedTransportation] = useState<string[]>(['Flight', 'Train', 'Road Trip']);
+  const [foodPreference, setFoodPreference] = useState<string>('All Cuisines');
+  const [accessibility, setAccessibility] = useState<string>('');
   const [selectedDestinations, setSelectedDestinations] = useState<string[]>(['Meghalaya', 'Spiti', 'Ladakh']);
   const [selectedActivities, setSelectedActivities] = useState<string[]>(['Trekking', 'Photography', 'Food']);
   const [dreamDestination, setDreamDestination] = useState<string>('');
@@ -93,6 +130,18 @@ export const TravelPreferencesPage: React.FC = () => {
     );
   };
 
+  const toggleDuration = (d: string) => {
+    setSelectedDurations((prev) =>
+      prev.includes(d) ? (prev.length > 1 ? prev.filter((x) => x !== d) : prev) : [...prev, d]
+    );
+  };
+
+  const toggleTransportation = (t: string) => {
+    setSelectedTransportation((prev) =>
+      prev.includes(t) ? (prev.length > 1 ? prev.filter((x) => x !== t) : prev) : [...prev, t]
+    );
+  };
+
   const toggleDestination = (dest: string) => {
     setSelectedDestinations((prev) =>
       prev.includes(dest) ? prev.filter((d) => d !== dest) : [...prev, dest]
@@ -110,16 +159,21 @@ export const TravelPreferencesPage: React.FC = () => {
 
   const handleContinue = async () => {
     setIsSubmitting(true);
-    const budgetCategory = budget <= 20000 ? 'Budget' : budget <= 60000 ? 'Mid Range' : 'Luxury';
+    const budgetCategory: 'Budget' | 'Comfort' | 'Luxury' =
+      budget <= 20000 ? 'Budget' : budget <= 60000 ? 'Comfort' : 'Luxury';
+    const formattedBudget = `₹${budget.toLocaleString('en-IN')} / trip`;
 
     try {
       await userAuthService.updateTravelPreferences({
         travelInterests: [...selectedDestinations, ...selectedActivities],
         travelStyle: selectedStyles,
-        budgetPreference: budgetCategory,
-        preferredTripDuration: ['3-5 Days', '1-2 Weeks'],
-        preferredTransportation: ['Flight', 'Train', 'Road Trip'],
-        foodPreference: selectedActivities.includes('Food') ? 'Local Street Food & Cafes' : 'All Cuisines',
+        budgetPreference: formattedBudget,
+        preferredBudgetAmount: budget,
+        preferredBudgetTier: budgetCategory,
+        preferredTripDuration: selectedDurations,
+        preferredTransportation: selectedTransportation,
+        foodPreference: foodPreference,
+        accessibilityRequirements: accessibility,
       });
 
       await userAuthService.updateNotificationPreferences({
@@ -284,6 +338,140 @@ export const TravelPreferencesPage: React.FC = () => {
             <span>₹50K (Comfort)</span>
             <span>₹2L+ (Luxury)</span>
           </div>
+        </motion.section>
+
+        {/* Section 3.1: Preferred Trip Duration */}
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.17 }}
+          className="space-y-3"
+        >
+          <h3 className="text-base sm:text-lg font-extrabold text-[#0F172A] tracking-tight">
+            Preferred Trip Duration <span className="text-xs font-semibold text-slate-400">(Select multiple)</span>
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+            {tripDurationOptions.map((opt) => {
+              const isSelected = selectedDurations.includes(opt.id);
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => toggleDuration(opt.id)}
+                  className={`p-3.5 rounded-2xl text-xs font-bold transition-all focus:outline-none cursor-pointer flex flex-col items-center justify-center gap-1.5 border text-center ${
+                    isSelected
+                      ? 'bg-[#FF4D6D] text-white border-[#FF4D6D] shadow-md shadow-[#FF4D6D]/20 scale-[1.02]'
+                      : 'bg-white text-slate-700 border-slate-100 hover:border-slate-200 shadow-2xs'
+                  }`}
+                >
+                  <span className="text-lg">{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </motion.section>
+
+        {/* Section 3.2: Preferred Transportation */}
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.19 }}
+          className="space-y-3"
+        >
+          <h3 className="text-base sm:text-lg font-extrabold text-[#0F172A] tracking-tight">
+            Preferred Transportation <span className="text-xs font-semibold text-slate-400">(Select multiple)</span>
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3">
+            {transportationOptions.map((opt) => {
+              const isSelected = selectedTransportation.includes(opt.id);
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => toggleTransportation(opt.id)}
+                  className={`p-3.5 rounded-2xl text-xs font-bold transition-all focus:outline-none cursor-pointer flex flex-col items-center justify-center gap-1.5 border text-center ${
+                    isSelected
+                      ? 'bg-[#FF4D6D] text-white border-[#FF4D6D] shadow-md shadow-[#FF4D6D]/20 scale-[1.02]'
+                      : 'bg-white text-slate-700 border-slate-100 hover:border-slate-200 shadow-2xs'
+                  }`}
+                >
+                  <span className="text-lg">{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </motion.section>
+
+        {/* Section 3.3: Food & Dining Preference */}
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.21 }}
+          className="space-y-3"
+        >
+          <h3 className="text-base sm:text-lg font-extrabold text-[#0F172A] tracking-tight">
+            Food & Dining Preference
+          </h3>
+          <div className="flex flex-wrap gap-2.5">
+            {foodOptions.map((opt) => {
+              const isSelected = foodPreference === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setFoodPreference(opt.id)}
+                  className={`px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all focus:outline-none cursor-pointer flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-[#FF4D6D] text-white shadow-md shadow-[#FF4D6D]/20'
+                      : 'bg-white text-slate-700 border border-slate-100 hover:border-slate-200 shadow-2xs'
+                  }`}
+                >
+                  <span>{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </motion.section>
+
+        {/* Section 3.4: Accessibility & Special Requirements */}
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.23 }}
+          className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100 shadow-2xs space-y-3"
+        >
+          <h3 className="text-base sm:text-lg font-extrabold text-[#0F172A] tracking-tight">
+            Accessibility & Assistance Requirements <span className="text-xs font-semibold text-slate-400">(Optional)</span>
+          </h3>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {accessibilityChips.map((chip) => {
+              const isSelected = accessibility === chip || (chip === 'Standard / None' && !accessibility);
+              return (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => setAccessibility(chip === 'Standard / None' ? '' : chip)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none cursor-pointer border ${
+                    isSelected
+                      ? 'bg-rose-50 text-[#FF4D6D] border-[#FF4D6D]'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {chip}
+                </button>
+              );
+            })}
+          </div>
+          <input
+            type="text"
+            value={accessibility}
+            onChange={(e) => setAccessibility(e.target.value)}
+            placeholder="Or specify any personal accessibility / assistance requirements..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm font-semibold text-[#0F172A] placeholder-slate-400 focus:outline-none focus:border-[#FF4D6D]/60 focus:bg-white transition-all"
+          />
         </motion.section>
 
         {/* Section 4: Favorite Destinations */}

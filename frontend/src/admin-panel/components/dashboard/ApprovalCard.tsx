@@ -45,42 +45,48 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({
       </div>
 
       {/* Approvals List */}
-      <div className="space-y-3.5">
-        {approvals.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors border border-slate-100/60 shadow-2xs group"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-2xl bg-slate-100/80 flex items-center justify-center shrink-0 border border-slate-200/50 group-hover:bg-purple-50 transition-colors">
-                {getIcon(item.iconType)}
+      {approvals.length === 0 ? (
+        <div className="py-8 text-center text-xs font-semibold text-slate-400">
+          No pending agency or package approvals awaiting review.
+        </div>
+      ) : (
+        <div className="space-y-3.5">
+          {approvals.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors border border-slate-100/60 shadow-2xs group"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-slate-100/80 flex items-center justify-center shrink-0 border border-slate-200/50 group-hover:bg-purple-50 transition-colors">
+                  {getIcon(item.iconType)}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-xs font-extrabold text-[#0F172A] truncate leading-tight group-hover:text-[#6356E5] transition-colors">
+                    {item.name}
+                  </p>
+                  <p className="text-[11px] font-semibold text-slate-400 leading-tight mt-0.5">
+                    {item.type}
+                  </p>
+                </div>
               </div>
 
-              <div className="min-w-0">
-                <p className="text-xs font-extrabold text-[#0F172A] truncate leading-tight group-hover:text-[#6356E5] transition-colors">
-                  {item.name}
-                </p>
-                <p className="text-[11px] font-semibold text-slate-400 leading-tight mt-0.5">
-                  {item.type}
-                </p>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap hidden sm:inline">
+                  {item.timeAgo}
+                </span>
+
+                <button
+                  onClick={() => onReview && onReview(item.id)}
+                  className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-[#6356E5] text-[#6356E5] hover:bg-[#EEF2FF] text-xs font-extrabold transition-all cursor-pointer shadow-2xs"
+                >
+                  Review
+                </button>
               </div>
             </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap hidden sm:inline">
-                {item.timeAgo}
-              </span>
-
-              <button
-                onClick={() => onReview && onReview(item.id)}
-                className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-[#6356E5] text-[#6356E5] hover:bg-[#EEF2FF] text-xs font-extrabold transition-all cursor-pointer shadow-2xs"
-              >
-                Review
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

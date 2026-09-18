@@ -119,3 +119,16 @@ export interface UserSortConfig {
   key: 'name' | 'trips' | 'bookings' | 'totalSpend' | 'joinDate' | 'status' | 'membership';
   direction: 'asc' | 'desc';
 }
+
+export interface UserPaginationData {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface GetUsersResponse {
+  users: TravelerUser[];
+  pagination: UserPaginationData;
+}
+

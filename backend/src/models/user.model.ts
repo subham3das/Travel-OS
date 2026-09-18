@@ -4,6 +4,8 @@ export interface ITravelPreferences {
   travelInterests: string[];
   travelStyle: string[];
   budgetPreference: string;
+  preferredBudgetAmount?: number;
+  preferredBudgetTier?: 'Budget' | 'Comfort' | 'Luxury' | 'Mid Range';
   preferredTripDuration: string[];
   preferredTransportation: string[];
   foodPreference: string;
@@ -52,6 +54,18 @@ export interface IUser extends Document {
   status: 'Active' | 'Suspended' | 'Disabled' | 'Pending';
   isEmailVerified: boolean;
   emailVerifiedAt?: Date;
+  isPhoneVerified?: boolean;
+  phoneVerifiedAt?: Date;
+  isKycVerified?: boolean;
+  kycStatus?: 'Verified' | 'Pending' | 'Rejected' | 'None';
+  passportStatus?: 'Verified' | 'Pending' | 'Not Provided';
+  emergencyContact?: string;
+  state?: string;
+
+  // Membership Tier
+  membership?: 'Free' | 'Silver' | 'Gold' | 'Platinum';
+  membershipSince?: Date;
+  membershipValidTill?: Date;
 
   // OAuth Provider Integration
   authProvider: 'local' | 'google';
@@ -81,6 +95,7 @@ export interface IUser extends Document {
   // Soft Delete & Timestamps
   isDeleted: boolean;
   deletedAt?: Date;
+  deletedBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,6 +110,7 @@ const UserSchema = new Schema<IUser>(
     username: { type: String, unique: true, sparse: true, trim: true, lowercase: true, maxlength: 30 },
     bio: { type: String, trim: true, maxlength: 500, default: '' },
     homeCity: { type: String, trim: true, default: '' },
+    state: { type: String, trim: true, default: '' },
     dateOfBirth: { type: Date },
     gender: {
       type: String,
@@ -112,6 +128,29 @@ const UserSchema = new Schema<IUser>(
     },
     isEmailVerified: { type: Boolean, default: false },
     emailVerifiedAt: { type: Date },
+    isPhoneVerified: { type: Boolean, default: false },
+    phoneVerifiedAt: { type: Date },
+    isKycVerified: { type: Boolean, default: false },
+    kycStatus: {
+      type: String,
+      enum: ['Verified', 'Pending', 'Rejected', 'None'],
+      default: 'None',
+    },
+    passportStatus: {
+      type: String,
+      enum: ['Verified', 'Pending', 'Not Provided'],
+      default: 'Not Provided',
+    },
+    emergencyContact: { type: String, default: '' },
+
+    membership: {
+      type: String,
+      enum: ['Free', 'Silver', 'Gold', 'Platinum'],
+      default: 'Free',
+      index: true,
+    },
+    membershipSince: { type: Date },
+    membershipValidTill: { type: Date },
 
     authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
     googleId: { type: String, sparse: true },
@@ -133,7 +172,13 @@ const UserSchema = new Schema<IUser>(
     travelPreferences: {
       travelInterests: { type: [String], default: [] },
       travelStyle: { type: [String], default: [] },
-      budgetPreference: { type: String, default: 'Mid Range' },
+      budgetPreference: { type: String, default: '₹35,000 / trip' },
+      preferredBudgetAmount: { type: Number, default: 35000 },
+      preferredBudgetTier: {
+        type: String,
+        enum: ['Budget', 'Comfort', 'Luxury', 'Mid Range'],
+        default: 'Comfort',
+      },
       preferredTripDuration: { type: [String], default: [] },
       preferredTransportation: { type: [String], default: [] },
       foodPreference: { type: String, default: 'Non-Veg' },
@@ -166,6 +211,7 @@ const UserSchema = new Schema<IUser>(
 
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date },
+    deletedBy: { type: String },
   },
   {
     timestamps: true,
@@ -182,6 +228,9 @@ const UserSchema = new Schema<IUser>(
 
 // Compound indexes
 UserSchema.index({ status: 1, isDeleted: 1 });
+UserSchema.index({ email: 1, isDeleted: 1 });
 UserSchema.index({ createdAt: -1 });
 
-export const UserModel = mongoose.model<IUser>('User', UserSchema);
+export const UserModel =
+  mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+

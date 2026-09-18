@@ -47,4 +47,6 @@ const SavedTravelerSchema = new Schema<ISavedTraveler>(
   }
 );
 
-export const SavedTravelerModel = mongoose.model<ISavedTraveler>('SavedTraveler', SavedTravelerSchema);
+export const SavedTravelerModel =
+  mongoose.models.SavedTraveler ||
+  mongoose.model<ISavedTraveler>('SavedTraveler', SavedTravelerSchema);

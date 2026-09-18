@@ -11,16 +11,9 @@ import {
 import {
   adminAuditLogsManagementService,
   AuditLogFilters,
-} from '../../services/adminAuditLogsManagement.service';
-import {
   initialAuditKPIStats,
-  initialAuditLogsData,
-  initialEventCategories,
-  initialEventDistribution,
   initialLoginHeatmapMatrix,
-  initialTopAdmins,
-  initialSecurityAlerts,
-} from '../../data/auditLogsData';
+} from '../../services/adminAuditLogsManagement.service';
 import { AdminAuditLogsHeader } from '../../components/super-admin/audit/AdminAuditLogsHeader';
 import { AuditKPIStatsCards } from '../../components/super-admin/audit/AuditKPIStats';
 import { EventExplorer } from '../../components/super-admin/audit/EventExplorer';
@@ -28,6 +21,7 @@ import { AuditTimeline } from '../../components/super-admin/audit/AuditTimeline'
 import { EventInspectorSidebar } from '../../components/super-admin/audit/EventInspectorSidebar';
 import { AuditBottomWidgets } from '../../components/super-admin/audit/AuditBottomWidgets';
 import { AdvancedSearchModal } from '../../components/super-admin/audit/AdvancedSearchModal';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 export const AdminAuditLogsPage: React.FC = () => {
   // ── 1. STATE MANAGEMENT ──
@@ -38,18 +32,27 @@ export const AdminAuditLogsPage: React.FC = () => {
     severity: 'All Severities',
     module: 'All Modules',
     status: 'All Statuses',
+    page: 1,
+    limit: 20,
   });
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Data States
   const [kpiStats, setKpiStats] = useState<AuditLogKPIStats>(initialAuditKPIStats);
-  const [logs, setLogs] = useState<AuditLogItem[]>(initialAuditLogsData);
-  const [selectedLog, setSelectedLog] = useState<AuditLogItem>(initialAuditLogsData[0]);
-  const [categories, setCategories] = useState<EventCategoryCount[]>(initialEventCategories);
-  const [distribution, setDistribution] = useState<EventDistributionItem[]>(initialEventDistribution);
+  const [logs, setLogs] = useState<AuditLogItem[]>([]);
+  const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
+  const [categories, setCategories] = useState<EventCategoryCount[]>([]);
+  const [distribution, setDistribution] = useState<EventDistributionItem[]>([]);
   const [heatmapMatrix, setHeatmapMatrix] = useState<number[][]>(initialLoginHeatmapMatrix);
-  const [topAdmins, setTopAdmins] = useState<TopActiveAdminItem[]>(initialTopAdmins);
-  const [securityAlerts, setSecurityAlerts] = useState<SecurityAlertItem[]>(initialSecurityAlerts);
+  const [topAdmins, setTopAdmins] = useState<TopActiveAdminItem[]>([]);
+  const [securityAlerts, setSecurityAlerts] = useState<SecurityAlertItem[]>([]);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 1,
+  });
 
   // Toast Notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -60,11 +63,12 @@ export const AdminAuditLogsPage: React.FC = () => {
   };
 
   // ── 2. DATA FETCHING ──
-  const loadAuditData = useCallback(async () => {
+  const loadAuditData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
     try {
       const [
         stats,
-        logsList,
+        logsResponse,
         cats,
         dist,
         matrix,
@@ -74,7 +78,7 @@ export const AdminAuditLogsPage: React.FC = () => {
         adminAuditLogsManagementService.getKPIStats(),
         adminAuditLogsManagementService.getAuditLogs({
           ...filters,
-          category: selectedCategory,
+          category: selectedCategory !== 'All' ? selectedCategory : undefined,
         }),
         adminAuditLogsManagementService.getCategories(),
         adminAuditLogsManagementService.getEventDistribution(),
@@ -84,29 +88,53 @@ export const AdminAuditLogsPage: React.FC = () => {
       ]);
 
       setKpiStats(stats);
-      setLogs(logsList);
+      setLogs(logsResponse.logs);
+      setPagination(logsResponse.pagination);
       setCategories(cats);
       setDistribution(dist);
       setHeatmapMatrix(matrix);
       setTopAdmins(admins);
       setSecurityAlerts(alerts);
 
-      if (logsList.length > 0 && !logsList.some((l) => l.id === selectedLog?.id)) {
-        setSelectedLog(logsList[0]);
+      if (logsResponse.logs.length > 0) {
+        setSelectedLog((prev) => {
+          if (!prev) return logsResponse.logs[0];
+          const exists = logsResponse.logs.find((l) => l.id === prev.id);
+          return exists || logsResponse.logs[0];
+        });
+      } else {
+        setSelectedLog(null);
       }
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to load audit logs data', 'error');
+    } catch (err: any) {
+      console.error('Failed to load audit logs:', err);
+      if (!isSilent) {
+        showToast('Failed to connect to audit logs service', 'error');
+      }
+    } finally {
+      if (!isSilent) setIsLoading(false);
     }
-  }, [filters, selectedCategory, selectedLog]);
+  }, [filters, selectedCategory]);
 
   useEffect(() => {
     loadAuditData();
   }, [loadAuditData]);
 
+  // Live polling stream every 10 seconds if isLiveActive is true
+  useEffect(() => {
+    if (!isLiveActive) return;
+    const interval = setInterval(() => {
+      loadAuditData(true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isLiveActive, loadAuditData]);
+
   // ── 3. OPERATIONAL ACTIONS ──
   const handleFilterChange = (updated: Partial<AuditLogFilters>) => {
-    setFilters((prev) => ({ ...prev, ...updated }));
+    setFilters((prev) => ({ ...prev, ...updated, page: 1 }));
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setFilters((prev) => ({ ...prev, page: newPage }));
   };
 
   const handleResetFilters = () => {
@@ -115,18 +143,25 @@ export const AdminAuditLogsPage: React.FC = () => {
       severity: 'All Severities',
       module: 'All Modules',
       status: 'All Statuses',
+      page: 1,
+      limit: 20,
     });
     setSelectedCategory('All');
     showToast('Filters reset to default view', 'info');
   };
 
   const handleExportLogs = () => {
+    if (logs.length === 0) {
+      showToast('No logs available to export', 'info');
+      return;
+    }
+
     const csvContent =
       'data:text/csv;charset=utf-8,EventID,Timestamp,Module,EventType,Description,Actor,IPAddress,Severity,Status\n' +
       logs
         .map(
           (l) =>
-            `${l.id},${l.date} ${l.timestamp},${l.module},${l.eventType},"${l.description}",${l.actor.name},${l.ipAddress},${l.severity},${l.status}`
+            `${l.id},${l.date} ${l.timestamp},${l.module},${l.eventType},"${l.description.replace(/"/g, '""')}",${l.actor.name},${l.ipAddress},${l.severity},${l.status}`
         )
         .join('\n');
 
@@ -209,12 +244,20 @@ export const AdminAuditLogsPage: React.FC = () => {
         onAdvancedSearch={() => setIsSearchModalOpen(true)}
       />
 
+      {/* Loading Skeleton Indicator */}
+      {isLoading && (
+        <div className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-[#6356E5]">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Synchronizing security telemetry from MongoDB...</span>
+        </div>
+      )}
+
       {/* ── 2. 6 TOP KPI SUMMARY CARDS ── */}
       <AuditKPIStatsCards
         stats={kpiStats}
         onCardClick={(id) => {
           if (id === 'criticalEvents') handleFilterChange({ severity: 'Critical' });
-          else if (id === 'failedLogins') handleFilterChange({ module: 'Authentication' });
+          else if (id === 'failedLogins') handleFilterChange({ module: 'Authentication', status: 'Failed' });
           else handleResetFilters();
         }}
       />
@@ -249,6 +292,8 @@ export const AdminAuditLogsPage: React.FC = () => {
               setSelectedLog(l);
               showToast(`Options opened for ${l.id}`, 'info');
             }}
+            pagination={pagination}
+            onPageChange={handlePageChange}
           />
         </div>
 
@@ -259,7 +304,7 @@ export const AdminAuditLogsPage: React.FC = () => {
             onExportEvent={handleExportSingleEvent}
             onCopyEventId={handleCopyEventId}
             onFlagInvestigation={handleFlagInvestigation}
-            onViewRelatedLogs={() => showToast(`Finding linked events for ${selectedLog.actor.name}`, 'info')}
+            onViewRelatedLogs={() => showToast(`Finding linked events for ${selectedLog?.actor?.name || 'Actor'}`, 'info')}
           />
         </div>
       </div>

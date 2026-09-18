@@ -58,29 +58,35 @@ export const PaymentQueueWidget: React.FC<PaymentQueueWidgetProps> = ({ queue })
       </div>
 
       <div className="space-y-2">
-        {queue.map((pay) => (
-          <div
-            key={pay.id}
-            onClick={() => navigate(pay.targetRoute)}
-            className="p-2.5 rounded-2xl bg-slate-50/70 hover:bg-purple-50/70 border border-slate-100 transition-all cursor-pointer flex items-center justify-between gap-2"
-          >
-            <div className="min-w-0 space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-mono font-bold text-slate-700">{pay.id}</span>
-                <span className="text-[10px] font-bold text-slate-400">({pay.bookingId})</span>
-              </div>
-              <p className="text-[10px] text-slate-500 font-medium truncate">{pay.method}</p>
-            </div>
-
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              <span className="text-xs font-black text-[#0F172A] font-mono">{pay.amount}</span>
-              <div className="flex items-center gap-1">
-                {getStatusBadge(pay.status)}
-                <span className="text-[9px] text-slate-400 font-semibold">{pay.time}</span>
-              </div>
-            </div>
+        {queue.length === 0 ? (
+          <div className="py-6 text-center text-xs font-semibold text-slate-400">
+            No pending or processing payment transactions in queue.
           </div>
-        ))}
+        ) : (
+          queue.map((pay) => (
+            <div
+              key={pay.id}
+              onClick={() => navigate(pay.targetRoute)}
+              className="p-2.5 rounded-2xl bg-slate-50/70 hover:bg-purple-50/70 border border-slate-100 transition-all cursor-pointer flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono font-bold text-slate-700">{pay.id}</span>
+                  <span className="text-[10px] font-bold text-slate-400">({pay.bookingId})</span>
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium truncate">{pay.method}</p>
+              </div>
+
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className="text-xs font-black text-[#0F172A] font-mono">{pay.amount}</span>
+                <div className="flex items-center gap-1">
+                  {getStatusBadge(pay.status)}
+                  <span className="text-[9px] text-slate-400 font-semibold">{pay.time}</span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

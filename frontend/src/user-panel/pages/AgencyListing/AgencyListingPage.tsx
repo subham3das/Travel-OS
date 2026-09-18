@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -23,6 +23,7 @@ import { FilterModal } from '../../components/common/FilterModal';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 import { useToast } from '../../context/ToastContext';
 import { agenciesData } from '../../data/agencies';
+import { marketplaceService } from '../../services/marketplace.service';
 
 // Featured Agencies from demo data
 const featuredAgencies: FeaturedAgency[] = agenciesData.slice(0, 3).map((a) => ({
@@ -92,10 +93,54 @@ export const AgencyListingPage: React.FC = () => {
   const [isMapViewOpen, setIsMapViewOpen] = useState(false);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [agenciesList, setAgenciesList] = useState<AgencyData[]>(mainAgenciesList);
+  const [featuredList, setFeaturedList] = useState<FeaturedAgency[]>(featuredAgencies);
   const [selectedForCompare, setSelectedForCompare] = useState<AgencyData[]>([
     mainAgenciesList[2],
     mainAgenciesList[1],
   ]);
+
+  useEffect(() => {
+    marketplaceService.getAgencies({ limit: 20 }).then((res) => {
+      if (res.agencies && res.agencies.length > 0) {
+        const mappedMain: AgencyData[] = res.agencies.map((a) => ({
+          id: a.id,
+          name: a.name,
+          isVerified: a.isVerified,
+          badges: [
+            { text: a.isVerified ? 'Verified Partner' : 'Authorized', variant: 'green' },
+            { text: `${a.yearsExperience}+ Years Exp`, variant: 'blue' },
+          ],
+          rating: a.rating,
+          reviewsCount: a.reviewCount,
+          location: a.location,
+          yearsExperience: `${a.yearsExperience}+ Years`,
+          tripsCompleted: a.tripsCompleted,
+          languagesCount: String(a.languagesCount || 3),
+          specializationTags: a.specializationTags,
+          startingPrice: a.startingPrice,
+          responseTime: a.responseTime,
+          coverImageUrl: a.coverImage,
+          logoUrl: a.logo,
+        }));
+        setAgenciesList(mappedMain);
+
+        const mappedFeatured: FeaturedAgency[] = res.agencies.slice(0, 3).map((a) => ({
+          id: a.id,
+          name: a.name,
+          isVerified: a.isVerified,
+          featuredBadge: a.featuredBadge || 'Featured Partner',
+          rating: a.rating,
+          reviewsCount: a.reviewCount,
+          tripsCompleted: a.tripsCompleted,
+          specialization: a.specializationTags[0] || 'Adventure Specialist',
+          coverImageUrl: a.coverImage,
+          logoUrl: a.logo,
+        }));
+        setFeaturedList(mappedFeatured);
+      }
+    }).catch((err) => console.warn('Failed to load agencies in AgencyListingPage:', err));
+  }, []);
 
   const handleCompareToggle = (agency: AgencyData) => {
     setSelectedForCompare((prev) => {
@@ -172,7 +217,7 @@ export const AgencyListingPage: React.FC = () => {
           <SectionHeader title="Featured Agencies" onViewAll={() => {}} />
 
           <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {featuredAgencies.map((agency) => (
+            {featuredList.map((agency) => (
               <FeaturedAgencyCard
                 key={agency.id}
                 agency={agency}
@@ -200,7 +245,7 @@ export const AgencyListingPage: React.FC = () => {
           </div>
 
           <div className="space-y-4">
-            {mainAgenciesList.map((agency) => (
+            {agenciesList.map((agency) => (
               <AgencyCard
                 key={agency.id}
                 agency={agency}

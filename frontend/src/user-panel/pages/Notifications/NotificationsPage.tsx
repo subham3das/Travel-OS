@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,11 +13,11 @@ import {
 } from 'lucide-react';
 import {
   getNotifications,
-  markAsRead,
-  markAllAsRead,
   NotificationCategory,
   NotificationItem,
 } from '../../data/notifications';
+import { userNotificationService } from '../../services/userNotification.service';
+import { userSocketService } from '../../services/userSocket.service';
 import { NotificationCard } from './components/NotificationCard';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 
@@ -30,6 +30,57 @@ export const NotificationsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    userNotificationService.getNotifications().then((liveList) => {
+      if (isMounted && liveList && liveList.length > 0) {
+        setNotifications(liveList);
+      }
+    });
+
+    const unsubscribeNew = userSocketService.subscribe('notification:new', (newNotif: any) => {
+      if (!isMounted) return;
+      setNotifications((prev) => {
+        const exists = prev.some((item) => item.id === newNotif.id || item.id === newNotif._id);
+        if (exists) return prev;
+        const formatted: NotificationItem = {
+          id: newNotif.id || newNotif._id,
+          type: newNotif.category || 'booking_confirmed',
+          category: 'bookings',
+          title: newNotif.title,
+          description: newNotif.description,
+          timestamp: 'Just now',
+          section: 'Today',
+          isRead: false,
+          iconType: 'check',
+          iconBgColor: 'bg-emerald-500 text-white',
+          actionRoute: newNotif.targetRoute || '/my-trips',
+        };
+        return [formatted, ...prev];
+      });
+    });
+
+    const unsubscribeRead = userSocketService.subscribe('notification:read', (data: any) => {
+      if (!isMounted) return;
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === data.id ? { ...item, isRead: true } : item))
+      );
+    });
+
+    const unsubscribeReadAll = userSocketService.subscribe('notification:read_all', () => {
+      if (!isMounted) return;
+      setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribeNew();
+      unsubscribeRead();
+      unsubscribeReadAll();
+    };
+  }, []);
+
   const filterChips: { id: NotificationCategory; label: string; icon: React.ReactNode }[] = [
     { id: 'all', label: 'All', icon: null },
     { id: 'bookings', label: 'Bookings', icon: <Briefcase className="w-3.5 h-3.5 text-blue-500" /> },
@@ -38,15 +89,25 @@ export const NotificationsPage: React.FC = () => {
     { id: 'offers', label: 'Offers', icon: <Tag className="w-3.5 h-3.5 text-orange-500" /> },
   ];
 
-  const handleNotificationClick = (n: NotificationItem) => {
-    markAsRead(n.id);
-    setNotifications(getNotifications());
+  const handleNotificationClick = async (n: NotificationItem) => {
+    try {
+      await userNotificationService.markAsRead(n.id);
+    } catch {
+      // Optimistic local update
+    }
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === n.id ? { ...item, isRead: true } : item))
+    );
     navigate(n.actionRoute);
   };
 
-  const handleMarkAllRead = () => {
-    markAllAsRead();
-    setNotifications(getNotifications());
+  const handleMarkAllRead = async () => {
+    try {
+      await userNotificationService.markAllAsRead();
+    } catch {
+      // Optimistic local update
+    }
+    setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
   };
 
   // Filtered Notifications

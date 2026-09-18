@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, MessageSquare } from 'lucide-react';
 import { Logo } from '../common/Logo';
+import { userNotificationService } from '../../services/userNotification.service';
+import { userSocketService } from '../../services/userSocket.service';
 
 interface AppHeaderProps {
   title?: string;
@@ -12,13 +14,47 @@ interface AppHeaderProps {
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
-  unreadNotificationsCount = 2,
-  unreadMessagesCount = 1,
+  unreadNotificationsCount: propNotifCount,
+  unreadMessagesCount = 0,
   onNotificationClick,
   onMessageClick,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [liveNotifCount, setLiveNotifCount] = useState<number>(propNotifCount ?? 0);
+
+  useEffect(() => {
+    if (propNotifCount !== undefined) {
+      setLiveNotifCount(propNotifCount);
+      return;
+    }
+
+    let isMounted = true;
+    userNotificationService.getUnreadCount().then((count) => {
+      if (isMounted) setLiveNotifCount(count);
+    });
+
+    const unsubscribeNew = userSocketService.subscribe('notification:new', () => {
+      if (isMounted) setLiveNotifCount((prev) => prev + 1);
+    });
+
+    const unsubscribeRead = userSocketService.subscribe('notification:read', () => {
+      if (isMounted) setLiveNotifCount((prev) => Math.max(0, prev - 1));
+    });
+
+    const unsubscribeReadAll = userSocketService.subscribe('notification:read_all', () => {
+      if (isMounted) setLiveNotifCount(0);
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribeNew();
+      unsubscribeRead();
+      unsubscribeReadAll();
+    };
+  }, [propNotifCount]);
+
+  const displayNotifCount = propNotifCount !== undefined ? propNotifCount : liveNotifCount;
 
   const navLinks = [
     { label: 'Home', path: '/home' },
@@ -76,7 +112,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             aria-label="Notifications"
           >
             <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
-            {unreadNotificationsCount > 0 && (
+            {displayNotifCount > 0 && (
               <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#FF4D6D] rounded-full ring-2 ring-white" />
             )}
           </button>

@@ -118,60 +118,70 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, index }) =
             {/* Action Menu */}
             <AnimatePresence>
               {showMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="absolute right-0 top-7 z-30 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 text-xs font-bold text-slate-700"
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
+                <>
+                  <div
+                    className="fixed inset-0 z-20 bg-transparent"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setShowMenu(false);
-                      navigate(`/agency/customers/${customer.id}`);
                     }}
-                    className="w-full px-3 py-2 text-left hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2 cursor-pointer"
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="absolute right-0 top-7 z-30 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 text-xs font-bold text-slate-700"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>View Profile</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        navigate(`/agency/customers/${customer.id}`);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>View Profile</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMenu(false);
-                      window.location.href = `tel:${customer.phone}`;
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Call Customer</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        window.location.href = `tel:${customer.phone}`;
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Call Customer</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMenu(false);
-                      window.location.href = `mailto:${customer.email}`;
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Mail className="w-3.5 h-3.5 text-sky-600" />
-                    <span>Send Email</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        window.location.href = `mailto:${customer.email}`;
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-sky-600" />
+                      <span>Send Email</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMenu(false);
-                      navigate(`/agency/messages?conversationId=${customer.id === 'cust-2' ? 'conv-2' : 'conv-1'}`);
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-emerald-700 font-extrabold"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Message Customer</span>
-                  </button>
-                </motion.div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        navigate(`/agency/messages?conversationId=${customer.id === 'cust-2' ? 'conv-2' : 'conv-1'}`);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-emerald-700 font-extrabold"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Message Customer</span>
+                    </button>
+                  </motion.div>
+                </>
               )}
             </AnimatePresence>
           </div>

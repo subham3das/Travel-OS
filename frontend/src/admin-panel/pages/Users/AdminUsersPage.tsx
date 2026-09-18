@@ -38,6 +38,8 @@ export const AdminUsersPage: React.FC = () => {
   // Pagination & Sorting
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [sortConfig, setSortConfig] = useState<UserSortConfig>({
     key: 'joinDate',
     direction: 'desc',
@@ -84,20 +86,25 @@ export const AdminUsersPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [fetchedUsers, fetchedStats] = await Promise.all([
+      const [fetchedResponse, fetchedStats] = await Promise.all([
         adminUserManagementService.getUsers(
           { ...filters, search: quickSearch || filters.search },
-          sortConfig
+          sortConfig,
+          { page: currentPage, limit: pageSize }
         ),
         adminUserManagementService.getKPIStats(),
       ]);
-      setUsers(fetchedUsers);
+      setUsers(fetchedResponse.users);
+      setTotalCount(fetchedResponse.pagination.total);
+      setTotalPages(Math.max(1, fetchedResponse.pagination.totalPages));
       setKpiStats(fetchedStats);
 
-      if (fetchedUsers.length > 0 && selectedUser) {
-        const stillPresent = fetchedUsers.find((u) => u.id === selectedUser.id);
-        setSelectedUser(stillPresent || fetchedUsers[0]);
-      } else if (fetchedUsers.length === 0) {
+      if (fetchedResponse.users.length > 0 && selectedUser) {
+        const stillPresent = fetchedResponse.users.find((u) => u.id === selectedUser.id);
+        if (stillPresent) {
+          setSelectedUser(stillPresent);
+        }
+      } else if (fetchedResponse.users.length === 0) {
         setSelectedUser(null);
       }
     } catch (err: any) {
@@ -105,7 +112,7 @@ export const AdminUsersPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [filters, quickSearch, sortConfig]);
+  }, [filters, quickSearch, sortConfig, currentPage, pageSize]);
 
   useEffect(() => {
     fetchUsersData();
@@ -134,6 +141,7 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   const handleApplyFilters = () => {
+    setCurrentPage(1);
     fetchUsersData();
     showToast('Filters applied successfully', 'success');
   };
@@ -171,9 +179,17 @@ export const AdminUsersPage: React.FC = () => {
     );
   };
 
-  const handleSelectUserForDrawer = (user: TravelerUser) => {
+  const handleSelectUserForDrawer = async (user: TravelerUser) => {
     setSelectedUser(user);
     setIsDrawerOpen(true);
+    try {
+      const fullDetails = await adminUserManagementService.getUserById(user.id);
+      if (fullDetails) {
+        setSelectedUser(fullDetails);
+      }
+    } catch {
+      // Keep baseline row details if network fails
+    }
   };
 
   // ── 5. SORTING ──
@@ -182,22 +198,14 @@ export const AdminUsersPage: React.FC = () => {
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
+    setCurrentPage(1);
   };
 
-  // ── 6. PAGINATION DATA ──
-  const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return users.slice(start, start + pageSize);
-  }, [users, currentPage, pageSize]);
-
-  const totalPages = Math.max(1, Math.ceil(users.length / pageSize));
-
-  // ── 7. MODAL & ROW ACTIONS ──
+  // ── 6. MODAL & ROW ACTIONS ──
   const handleRowAction = (actionType: string, user: TravelerUser) => {
     switch (actionType) {
       case 'view':
-        setSelectedUser(user);
-        setIsDrawerOpen(true);
+        handleSelectUserForDrawer(user);
         break;
       case 'edit':
         setEditModalUser(user);
@@ -222,8 +230,7 @@ export const AdminUsersPage: React.FC = () => {
         break;
       case 'view_trips':
       case 'view_bookings':
-        setSelectedUser(user);
-        setIsDrawerOpen(true);
+        handleSelectUserForDrawer(user);
         break;
       default:
         break;
@@ -238,76 +245,56 @@ export const AdminUsersPage: React.FC = () => {
 
       if (type === 'verify' && user) {
         await adminUserManagementService.verifyUser(user.id);
-        setUsers((prev) =>
-          prev.map((u) => (u.id === user.id ? { ...u, verificationStatus: 'Verified' } : u))
-        );
-        if (selectedUser?.id === user.id) {
-          setSelectedUser((prev) => (prev ? { ...prev, verificationStatus: 'Verified' } : null));
-        }
         showToast(`${user.name} verified successfully!`, 'success');
+        fetchUsersData();
       } else if (type === 'suspend' && user) {
         await adminUserManagementService.suspendUser(user.id);
-        setUsers((prev) =>
-          prev.map((u) => (u.id === user.id ? { ...u, status: 'Suspended' } : u))
-        );
-        if (selectedUser?.id === user.id) {
-          setSelectedUser((prev) => (prev ? { ...prev, status: 'Suspended' } : null));
-        }
         showToast(`${user.name} suspended.`, 'info');
+        fetchUsersData();
       } else if (type === 'activate' && user) {
         await adminUserManagementService.activateUser(user.id);
-        setUsers((prev) =>
-          prev.map((u) => (u.id === user.id ? { ...u, status: 'Active' } : u))
-        );
-        if (selectedUser?.id === user.id) {
-          setSelectedUser((prev) => (prev ? { ...prev, status: 'Active' } : null));
-        }
         showToast(`${user.name} activated successfully.`, 'success');
+        fetchUsersData();
       } else if (type === 'delete' && user) {
         await adminUserManagementService.deleteUser(user.id);
-        const remaining = users.filter((u) => u.id !== user.id);
-        setUsers(remaining);
         setSelectedIds((prev) => prev.filter((id) => id !== user.id));
         if (selectedUser?.id === user.id) {
-          setSelectedUser(remaining[0] || null);
+          setIsDrawerOpen(false);
+          setSelectedUser(null);
         }
         showToast(`${user.name} removed from platform.`, 'info');
+        fetchUsersData();
       } else if (type === 'reset_password' && user) {
-        showToast(`Password reset link sent to ${user.email}`, 'success');
+        const res = await adminUserManagementService.resetPassword(user.id);
+        showToast(res.message || `Password reset link sent to ${user.email}`, 'success');
       } else if (type === 'bulk_verify') {
         await adminUserManagementService.bulkVerify(selectedIds);
-        setUsers((prev) =>
-          prev.map((u) => (selectedIds.includes(u.id) ? { ...u, verificationStatus: 'Verified' } : u))
-        );
         showToast(`Verified ${selectedIds.length} users successfully!`, 'success');
         setSelectedIds([]);
+        fetchUsersData();
       } else if (type === 'bulk_suspend') {
         await adminUserManagementService.bulkSuspend(selectedIds);
-        setUsers((prev) =>
-          prev.map((u) => (selectedIds.includes(u.id) ? { ...u, status: 'Suspended' } : u))
-        );
         showToast(`Suspended ${selectedIds.length} users.`, 'info');
         setSelectedIds([]);
+        fetchUsersData();
       } else if (type === 'bulk_activate') {
         await adminUserManagementService.bulkActivate(selectedIds);
-        setUsers((prev) =>
-          prev.map((u) => (selectedIds.includes(u.id) ? { ...u, status: 'Active' } : u))
-        );
         showToast(`Activated ${selectedIds.length} users.`, 'success');
         setSelectedIds([]);
+        fetchUsersData();
       } else if (type === 'bulk_delete') {
         await adminUserManagementService.bulkDelete(selectedIds);
-        const remaining = users.filter((u) => !selectedIds.includes(u.id));
-        setUsers(remaining);
+        showToast(`Deleted ${confirmModal.selectedCount || selectedIds.length} users.`, 'info');
         setSelectedIds([]);
         if (selectedUser && selectedIds.includes(selectedUser.id)) {
-          setSelectedUser(remaining[0] || null);
+          setIsDrawerOpen(false);
+          setSelectedUser(null);
         }
-        showToast(`Deleted ${confirmModal.selectedCount} users.`, 'info');
+        fetchUsersData();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('An error occurred. Please try again.', 'error');
+      showToast(err?.message || 'An error occurred. Please try again.', 'error');
     } finally {
       setIsProcessing(false);
       setConfirmModal({ isOpen: false, type: 'verify', user: null });
@@ -316,61 +303,53 @@ export const AdminUsersPage: React.FC = () => {
 
   // Add User handler
   const handleAddNewUser = async (userData: Partial<TravelerUser>) => {
-    const created = await adminUserManagementService.addUser(userData);
-    setUsers((prev) => [created, ...prev]);
-    setSelectedUser(created);
-    setIsDrawerOpen(true);
-    showToast(`New traveler "${created.name}" created successfully!`, 'success');
+    try {
+      const created = await adminUserManagementService.addUser(userData);
+      showToast(`New traveler "${created.name}" created successfully!`, 'success');
+      fetchUsersData();
+      setSelectedUser(created);
+      setIsDrawerOpen(true);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to create traveler user', 'error');
+    }
   };
 
   // Update User handler
   const handleUpdateUser = async (id: string, updates: Partial<TravelerUser>) => {
-    const updated = await adminUserManagementService.updateUser(id, updates);
-    if (updated) {
-      setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
-      if (selectedUser?.id === id) setSelectedUser(updated);
-      showToast('User profile updated successfully.', 'success');
+    try {
+      const updated = await adminUserManagementService.updateUser(id, updates);
+      if (updated) {
+        if (selectedUser?.id === id) setSelectedUser(updated);
+        showToast('User profile updated successfully.', 'success');
+        fetchUsersData();
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to update user profile', 'error');
     }
   };
 
   // Send Notification handler
-  const handleSendNotification = (title: string, message: string) => {
-    showToast(`Notification "${title}" sent successfully!`, 'success');
+  const handleSendNotification = async (title: string, message: string) => {
+    if (!notifModalUser) return;
+    try {
+      await adminUserManagementService.sendNotification(notifModalUser.id, title, message);
+      showToast(`Notification "${title}" sent successfully!`, 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to send notification', 'error');
+    }
   };
 
   // CSV Export handler
-  const handleExportCSV = () => {
-    if (users.length === 0) {
-      showToast('No users available to export', 'info');
-      return;
+  const handleExportCSV = async () => {
+    try {
+      await adminUserManagementService.exportCSV({
+        ...filters,
+        search: quickSearch || filters.search,
+      });
+      showToast('Users exported to CSV successfully', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to export CSV', 'error');
     }
-
-    const headers = ['User ID', 'Name', 'Email', 'Phone', 'City', 'Country', 'Membership', 'Verification', 'Status', 'Trips', 'Bookings', 'Total Spend', 'Join Date'];
-    const rows = users.map((u) => [
-      u.userId,
-      `"${u.name}"`,
-      u.email,
-      u.phone,
-      u.city,
-      u.country,
-      u.membership,
-      u.verificationStatus,
-      u.status,
-      u.tripsCompleted,
-      u.totalBookings,
-      `"${u.totalSpend}"`,
-      `"${u.joinDate}"`,
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `apnatrip_users_export_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast(`Exported ${users.length} users to CSV`, 'success');
   };
 
   return (
@@ -475,7 +454,7 @@ export const AdminUsersPage: React.FC = () => {
       ) : (
         <div className="space-y-3">
           <UsersTable
-            users={paginatedUsers}
+            users={users}
             selectedIds={selectedIds}
             selectedUser={selectedUser}
             sortConfig={sortConfig}
@@ -488,11 +467,11 @@ export const AdminUsersPage: React.FC = () => {
           />
 
           {/* Pagination Footer */}
-          {users.length > 0 && (
+          {totalCount > 0 && (
             <UserPagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={users.length}
+              totalItems={totalCount}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
               onPageSizeChange={(size) => {

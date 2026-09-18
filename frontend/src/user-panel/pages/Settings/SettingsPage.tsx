@@ -40,7 +40,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme, ThemeMode } from '../../../context/ThemeContext';
+import { useWebsiteTheme as useTheme, WebsiteThemeMode as ThemeMode } from '../../context/WebsiteThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 
@@ -117,8 +117,9 @@ export const SettingsPage: React.FC = () => {
   };
 
   const getThemeLabel = (t: ThemeMode) => {
-    if (t === 'light') return 'Light';
-    if (t === 'dark') return 'Dark';
+    const lower = t.toLowerCase();
+    if (lower === 'light') return 'Light';
+    if (lower === 'dark') return 'Dark';
     return 'System Default';
   };
 

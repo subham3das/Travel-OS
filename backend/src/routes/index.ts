@@ -16,6 +16,9 @@ import cmsRoutes from './cms.routes.js';
 import mediaRoutes from './media.routes.js';
 import reportRoutes from './report.routes.js';
 import adminRoutes from './admin.routes.js';
+import searchRoutes from './search.routes.js';
+import userNotificationRoutes from './userNotification.routes.js';
+import reviewRoutes from './review.routes.js';
 
 const router = Router();
 
@@ -31,12 +34,17 @@ router.use('/onboarding', onboardingRoutes);
 // Future Phase Modular API Sub-Routers
 router.use('/users', userRoutes);
 router.use('/agencies', agencyRoutes);
+router.use('/agency', agencyRoutes);
 router.use('/packages', packageRoutes);
+router.use('/search', searchRoutes);
 router.use('/trips', tripRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/notifications', userNotificationRoutes);
 router.use('/support', supportRoutes);
+router.use('/chat', supportRoutes);
 router.use('/community', communityRoutes);
+router.use('/reviews', reviewRoutes);
 router.use('/cms', cmsRoutes);
 router.use('/media', mediaRoutes);
 router.use('/upload', mediaRoutes);

@@ -46,11 +46,15 @@ export const AdminBookingsPage: React.FC = () => {
   const [filters, setFilters] = useState<BookingFilters>({
     bookingStatus: 'All Status',
     paymentStatus: 'All Payment Status',
+    package: 'All Packages',
     agency: 'All Agencies',
     destination: 'All Destinations',
-    dateRange: 'All Dates',
+    travelDate: 'All Travel Dates',
+    bookingDate: 'All Booking Dates',
+    user: 'All Users',
     amountRange: 'All Amounts',
     search: '',
+    dateRange: 'All Dates',
   });
 
   // Modals state
@@ -118,11 +122,15 @@ export const AdminBookingsPage: React.FC = () => {
     setFilters({
       bookingStatus: 'All Status',
       paymentStatus: 'All Payment Status',
+      package: 'All Packages',
       agency: 'All Agencies',
       destination: 'All Destinations',
-      dateRange: 'All Dates',
+      travelDate: 'All Travel Dates',
+      bookingDate: 'All Booking Dates',
+      user: 'All Users',
       amountRange: 'All Amounts',
       search: '',
+      dateRange: 'All Dates',
     });
     setQuickSearch('');
     setCurrentPage(1);

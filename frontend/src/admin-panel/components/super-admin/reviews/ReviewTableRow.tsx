@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MoreVertical,
   Eye,
@@ -41,19 +42,61 @@ export const ReviewTableRow: React.FC<ReviewTableRowProps> = ({
   onImageClick,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number; openUpwards: boolean }>({
+    top: 0,
+    left: 0,
+    openUpwards: false,
+  });
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const handleToggleMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isMenuOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpwards = spaceBelow < 280 && rect.top > 280;
+      const menuWidth = 176; // w-44 = 176px
+      const left = Math.max(10, rect.right - menuWidth);
+      const top = openUpwards ? rect.top - 6 : rect.bottom + 6;
+      setMenuCoords({ top, left, openUpwards });
+      setIsMenuOpen(true);
+    } else {
+      setIsMenuOpen(false);
+    }
+  };
+
   useEffect(() => {
+    if (!isMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
         setIsMenuOpen(false);
       }
     };
-    if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    const handleScrollOrResize = () => {
+      setIsMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isMenuOpen]);
 
@@ -126,16 +169,19 @@ export const ReviewTableRow: React.FC<ReviewTableRowProps> = ({
           className="flex items-center gap-2.5 min-w-[150px] cursor-pointer"
         >
           <img
-            src={review.traveler.avatar}
-            alt={review.traveler.name}
+            src={
+              review.traveler?.avatar ||
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'
+            }
+            alt={review.traveler?.name || 'Traveler'}
             className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
           />
           <div className="min-w-0">
             <span className="font-bold text-xs text-[#0F172A] group-hover:text-[#6356E5] transition-colors block truncate">
-              {review.traveler.name}
+              {review.traveler?.name || 'Verified Traveler'}
             </span>
             <span className="text-[10px] text-slate-400 font-medium block truncate">
-              {review.traveler.location}
+              {review.traveler?.location || 'India'}
             </span>
           </div>
         </div>
@@ -145,19 +191,22 @@ export const ReviewTableRow: React.FC<ReviewTableRowProps> = ({
       <td className="py-3 px-3">
         <div className="flex items-center gap-2 min-w-[130px]">
           <img
-            src={review.agency.logo}
-            alt={review.agency.name}
+            src={
+              review.agency?.logo ||
+              'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop'
+            }
+            alt={review.agency?.name || 'Agency'}
             className="w-5 h-5 rounded-md object-cover border border-slate-200 shrink-0"
           />
           <span className="text-xs text-slate-800 font-bold truncate">
-            {review.agency.name}
+            {review.agency?.name || 'Partner Agency'}
           </span>
         </div>
       </td>
 
       {/* 5. Package */}
       <td className="py-3 px-3 text-xs text-slate-700 font-bold whitespace-nowrap">
-        {review.package.name}
+        {review.package?.name || 'Trip Package'}
       </td>
 
       {/* 6. Rating */}
@@ -224,19 +273,32 @@ export const ReviewTableRow: React.FC<ReviewTableRowProps> = ({
       </td>
 
       {/* 12. Actions Dropdown */}
-      <td className="py-3 px-3 text-right relative">
-        <div ref={menuRef} className="inline-block text-left">
-          <button
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="w-7 h-7 rounded-lg hover:bg-slate-200/80 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-            title="Review Actions"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </button>
+      <td className="py-3 px-3 text-right">
+        <button
+          ref={buttonRef}
+          onClick={handleToggleMenu}
+          className="w-7 h-7 rounded-lg hover:bg-slate-200/80 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+          title="Review Actions"
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
 
-          {/* Context Dropdown */}
-          {isMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-40 text-xs font-bold text-slate-700 select-none">
+        {/* Context Dropdown */}
+        {isMenuOpen &&
+          createPortal(
+            <div
+              ref={menuRef}
+              style={{
+                position: 'fixed',
+                left: `${menuCoords.left}px`,
+                ...(menuCoords.openUpwards
+                  ? { bottom: `${window.innerHeight - menuCoords.top}px` }
+                  : { top: `${menuCoords.top}px` }),
+                zIndex: 9999,
+              }}
+              className="w-44 bg-white rounded-2xl shadow-2xl border border-slate-100 py-1.5 text-xs font-bold text-slate-700 select-none space-y-0.5"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => {
                   onViewDetails(review);
@@ -319,9 +381,9 @@ export const ReviewTableRow: React.FC<ReviewTableRowProps> = ({
                 <Copy className="w-3.5 h-3.5 text-slate-400" />
                 <span>Copy Link</span>
               </button>
-            </div>
+            </div>,
+            document.body
           )}
-        </div>
       </td>
     </tr>
   );

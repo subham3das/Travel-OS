@@ -141,14 +141,14 @@ export const AgencyBookingsPage: React.FC = () => {
                   {groups.map((group) => (
                     <BookingGroupCard
                       key={group.groupId}
-                      group={group}
-                      onSelectBooking={(b) => setSelectedBooking(b)}
+                      group={group as any}
+                      onSelectBooking={(b) => setSelectedBooking(b as any)}
                       onConfirmBooking={(id) => confirmBooking(id)}
                       onRejectBooking={(id) => rejectBooking(id)}
-                      onCreateTrip={(grp) => setSelectedMoveGroup(grp)}
-                      onExtendDeadline={(grp, newDate) => extendDeadline(grp, newDate)}
-                      onCancelDeparture={(grp) => cancelDeparture(grp)}
-                      onForceCreateTrip={(grp) => forceCreateTrip(grp)}
+                      onCreateTrip={(grp) => setSelectedMoveGroup(grp as any)}
+                      onExtendDeadline={(grp: any, newDate: string) => extendDeadline(typeof grp === 'string' ? grp : grp.groupId, newDate)}
+                      onCancelDeparture={(grp: any) => cancelDeparture(typeof grp === 'string' ? grp : grp.groupId, 'Cancelled by agency')}
+                      onForceCreateTrip={(grp: any) => forceCreateTrip(typeof grp === 'string' ? grp : grp.groupId)}
                     />
                   ))}
                 </motion.div>
@@ -162,7 +162,7 @@ export const AgencyBookingsPage: React.FC = () => {
 
       {/* 6. Booking Details Sheet (Bottom Sheet / Drawer) */}
       <BookingDetailsSheet
-        booking={selectedBooking}
+        booking={selectedBooking as any}
         onClose={() => setSelectedBooking(null)}
         onConfirm={(id) => confirmBooking(id)}
         onReject={(id) => rejectBooking(id)}
@@ -170,10 +170,10 @@ export const AgencyBookingsPage: React.FC = () => {
 
       {/* 7. Create Trip Confirmation Modal */}
       <MoveToTripsModal
-        group={selectedMoveGroup}
+        group={selectedMoveGroup as any}
         isOpen={Boolean(selectedMoveGroup)}
         onClose={() => setSelectedMoveGroup(null)}
-        onConfirmMove={(grp) => moveGroupToTrips(grp)}
+        onConfirmMove={(grp) => moveGroupToTrips(grp as any)}
       />
 
       {/* 8. Booking Filters Modal */}

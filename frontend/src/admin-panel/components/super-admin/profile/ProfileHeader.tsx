@@ -29,6 +29,10 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onOpenAvatarModal,
   onOpenPasswordModal,
 }) => {
+  const defaultAvatar =
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop';
+  const effectiveAvatar = avatarUrl && avatarUrl.trim() !== '' ? avatarUrl : defaultAvatar;
+
   return (
     <div className="bg-white rounded-3xl p-6 border border-slate-100/90 shadow-2xs select-none">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -36,12 +40,18 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
           {/* Avatar Container with Upload Overlay */}
           <div className="relative group shrink-0">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden border-4 border-purple-100/80 shadow-md shadow-[#6356E5]/15">
-              <img
-                src={avatarUrl}
-                alt={`${personalInfo.firstName} ${personalInfo.lastName}`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden border-4 border-purple-100/80 shadow-md shadow-[#6356E5]/15 bg-slate-100">
+              {effectiveAvatar ? (
+                <img
+                  src={effectiveAvatar}
+                  alt={`${personalInfo.firstName} ${personalInfo.lastName}`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#6356E5] text-white flex items-center justify-center font-black text-2xl">
+                  {personalInfo.firstName?.charAt(0) || 'A'}
+                </div>
+              )}
             </div>
 
             {/* Photo Upload Trigger Button */}
@@ -83,18 +93,24 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
                 <span>{personalInfo.email}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-slate-400" />
-                <span>{personalInfo.phone}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                <span>{personalInfo.location}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <span>Member since {personalInfo.memberSince}</span>
-              </div>
+              {personalInfo.phone && (
+                <div className="flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{personalInfo.phone}</span>
+                </div>
+              )}
+              {personalInfo.location && (
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{personalInfo.location}</span>
+                </div>
+              )}
+              {personalInfo.memberSince && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Member since {personalInfo.memberSince}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

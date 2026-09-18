@@ -1,21 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Share2, Save, CheckCircle2, Instagram, Facebook, Youtube, Linkedin, Globe } from 'lucide-react';
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
 import { DesktopSidebar } from '../../components/dashboard/DesktopSidebar';
 import { BottomNavigation } from '../../components/dashboard/BottomNavigation';
-import { MOCK_AGENCY_PROFILE } from '../../data/profile';
+import { useAgencyProfile } from '../../hooks/useAgencyProfile';
 
 export const SocialMediaPage: React.FC = () => {
   const navigate = useNavigate();
-  const [links, setLinks] = useState(MOCK_AGENCY_PROFILE.social);
+  const { profile, isLoading, updateProfile } = useAgencyProfile();
+  const [links, setLinks] = useState(profile.social);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (profile.social) {
+      setLinks(profile.social);
+    }
+  }, [profile.social]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+    setIsSaving(true);
+    try {
+      await updateProfile({ social: links, website: links.website });
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update social media links.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -25,7 +41,7 @@ export const SocialMediaPage: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-24 md:pb-16">
         <DashboardHeader />
 
-        <div className="bg-white border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-[3.5rem] z-20">
+        <div className="bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-[57px] sm:top-[65px] z-20 select-none">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -42,123 +58,137 @@ export const SocialMediaPage: React.FC = () => {
         </div>
 
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 max-w-3xl mx-auto w-full">
-          <motion.form
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            onSubmit={handleSave}
-            className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-2xs space-y-4 text-xs font-bold"
-          >
-            {isSaved && (
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2 font-extrabold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Social Media links saved successfully!</span>
-              </div>
-            )}
-
-            <div className="space-y-3.5">
-              <div>
-                <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
-                  <Instagram className="w-4 h-4 text-pink-600" />
-                  <span>Instagram Profile URL</span>
-                </label>
-                <input
-                  type="text"
-                  value={links.instagram}
-                  onChange={(e) => setLinks({ ...links, instagram: e.target.value })}
-                  placeholder="https://instagram.com/youragency"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
-                  <Facebook className="w-4 h-4 text-blue-600" />
-                  <span>Facebook Page URL</span>
-                </label>
-                <input
-                  type="text"
-                  value={links.facebook}
-                  onChange={(e) => setLinks({ ...links, facebook: e.target.value })}
-                  placeholder="https://facebook.com/youragency"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
-                  <Youtube className="w-4 h-4 text-rose-600" />
-                  <span>YouTube Channel URL</span>
-                </label>
-                <input
-                  type="text"
-                  value={links.youtube}
-                  onChange={(e) => setLinks({ ...links, youtube: e.target.value })}
-                  placeholder="https://youtube.com/@youragency"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
-                  <Linkedin className="w-4 h-4 text-sky-700" />
-                  <span>LinkedIn Company Page</span>
-                </label>
-                <input
-                  type="text"
-                  value={links.linkedin}
-                  onChange={(e) => setLinks({ ...links, linkedin: e.target.value })}
-                  placeholder="https://linkedin.com/company/youragency"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
-                  <Share2 className="w-4 h-4 text-slate-700" />
-                  <span>X (Twitter) Profile</span>
-                </label>
-                <input
-                  type="text"
-                  value={links.x}
-                  onChange={(e) => setLinks({ ...links, x: e.target.value })}
-                  placeholder="https://x.com/youragency"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
-                  <Globe className="w-4 h-4 text-[#583BE8]" />
-                  <span>Official Website</span>
-                </label>
-                <input
-                  type="text"
-                  value={links.website}
-                  onChange={(e) => setLinks({ ...links, website: e.target.value })}
-                  placeholder="https://youragency.com"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
-                />
-              </div>
+          {isLoading && !links.instagram && !links.website ? (
+            <div className="flex flex-col items-center justify-center py-24 space-y-3">
+              <div className="w-8 h-8 border-3 border-[#583BE8] border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs font-bold text-slate-400">Loading social links...</p>
             </div>
+          ) : (
+            <motion.form
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              onSubmit={handleSave}
+              className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-2xs space-y-4 text-xs font-bold"
+            >
+              {isSaved && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2 font-extrabold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Social Media links saved successfully!</span>
+                </div>
+              )}
 
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => navigate('/agency/profile')}
-                className="px-5 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-black transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
+              <div className="space-y-3.5">
+                <div>
+                  <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
+                    <Instagram className="w-4 h-4 text-pink-600" />
+                    <span>Instagram Profile URL</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={links.instagram}
+                    onChange={(e) => setLinks({ ...links, instagram: e.target.value })}
+                    placeholder="https://instagram.com/youragency"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="px-6 py-2.5 rounded-2xl bg-[#583BE8] hover:bg-[#472dbf] text-white text-xs font-black flex items-center gap-2 shadow-md shadow-[#583BE8]/20 transition-all cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save Changes</span>
-              </button>
-            </div>
-          </motion.form>
+                <div>
+                  <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
+                    <Facebook className="w-4 h-4 text-blue-600" />
+                    <span>Facebook Page URL</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={links.facebook}
+                    onChange={(e) => setLinks({ ...links, facebook: e.target.value })}
+                    placeholder="https://facebook.com/youragency"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
+                    <Youtube className="w-4 h-4 text-rose-600" />
+                    <span>YouTube Channel URL</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={links.youtube}
+                    onChange={(e) => setLinks({ ...links, youtube: e.target.value })}
+                    placeholder="https://youtube.com/@youragency"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
+                    <Linkedin className="w-4 h-4 text-sky-700" />
+                    <span>LinkedIn Company Page</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={links.linkedin}
+                    onChange={(e) => setLinks({ ...links, linkedin: e.target.value })}
+                    placeholder="https://linkedin.com/company/youragency"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
+                    <Share2 className="w-4 h-4 text-slate-700" />
+                    <span>X (Twitter) Profile</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={links.x}
+                    onChange={(e) => setLinks({ ...links, x: e.target.value })}
+                    placeholder="https://x.com/youragency"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-700 block mb-1 flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-[#583BE8]" />
+                    <span>Official Website</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={links.website}
+                    onChange={(e) => setLinks({ ...links, website: e.target.value })}
+                    placeholder="https://youragency.com"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate('/agency/profile')}
+                  className="px-5 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-black transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-6 py-2.5 rounded-2xl bg-[#583BE8] hover:bg-[#472dbf] text-white text-xs font-black flex items-center gap-2 shadow-md shadow-[#583BE8]/20 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.form>
+          )}
         </main>
       </div>
 

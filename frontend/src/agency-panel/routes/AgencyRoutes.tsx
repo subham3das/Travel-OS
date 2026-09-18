@@ -1,12 +1,17 @@
 // ─── Agency Panel Route Definitions ──────────────────────────────────────────
 // All routes prefixed with /agency
+// Wrapped inside isolated AgencyThemeProvider
 
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Outlet } from 'react-router-dom';
 import { AgencyProtectedRoute } from './AgencyProtectedRoute';
+import { AgencyThemeProvider } from '../context/AgencyThemeContext';
 
 import { AgencyLoginPage } from '../pages/auth/AgencyLoginPage';
 import { AgencySignupPage } from '../pages/auth/AgencySignupPage';
+import { AgencyCreatePasswordPage } from '../pages/auth/AgencyCreatePasswordPage';
+import { AgencyForgotPasswordPage } from '../pages/auth/AgencyForgotPasswordPage';
+import { AgencyResetPasswordPage } from '../pages/auth/AgencyResetPasswordPage';
 import { AgencyOnboardingPage } from '../pages/onboarding/AgencyOnboardingPage';
 import { AgencyBusinessOnboardingPage } from '../pages/onboarding/AgencyBusinessOnboardingPage';
 import { AgencyProfileOnboardingPage } from '../pages/onboarding/AgencyProfileOnboardingPage';
@@ -45,10 +50,19 @@ import { DocumentsPage } from '../pages/profile/DocumentsPage';
 import { AgencySettingsPage } from '../pages/profile/AgencySettingsPage';
 
 /**
- * Returns all Agency Panel route elements to be embedded inside <Routes>.
+ * Isolated Agency Theme Wrapper
+ */
+const AgencyThemeWrapper: React.FC = () => (
+  <AgencyThemeProvider>
+    <Outlet />
+  </AgencyThemeProvider>
+);
+
+/**
+ * Returns all Agency Panel route elements wrapped in isolated AgencyThemeProvider.
  */
 export const AgencyRoutes = () => (
-  <>
+  <Route element={<AgencyThemeWrapper />}>
     {/* Public Agency Routes */}
     <Route path="/agency" element={<AgencyOnboardingPage />} />
     <Route path="/agency/onboarding" element={<AgencyOnboardingPage />} />
@@ -62,6 +76,9 @@ export const AgencyRoutes = () => (
     <Route path="/agency/application-rejected" element={<AgencyRejectedPage />} />
     <Route path="/agency/login" element={<AgencyLoginPage />} />
     <Route path="/agency/signup" element={<AgencySignupPage />} />
+    <Route path="/agency/forgot-password" element={<AgencyForgotPasswordPage />} />
+    <Route path="/agency/reset-password" element={<AgencyResetPasswordPage />} />
+    <Route path="/agency/create-new-password" element={<AgencyCreatePasswordPage />} />
 
     {/* Protected Agency Routes */}
     <Route element={<AgencyProtectedRoute />}>
@@ -70,6 +87,14 @@ export const AgencyRoutes = () => (
       <Route path="/agency/packages/create" element={<PackageCreatePage />} />
       <Route path="/agency/packages/:packageId" element={<AgencyPackageDetailsPage />} />
       <Route path="/agency/packages/:packageId/edit" element={<AgencyEditPackagePage />} />
+
+      {/* Trips & Dispatch Operations */}
+      <Route path="/agency/trips" element={<AgencyTripsPage />} />
+      <Route path="/agency/trips/:tripId" element={<AgencyTripDetailPage />} />
+      <Route path="/agency/trips/:tripId/team" element={<AgencyManageTeamPage />} />
+      <Route path="/agency/trips/:tripId/vehicle" element={<AgencyManageVehiclePage />} />
+      <Route path="/agency/trips/:tripId/travelers" element={<AgencyTripTravelersPage />} />
+      <Route path="/agency/trips/:tripId/travelers/:travelerId" element={<AgencyTripTravelersPage />} />
 
       <Route path="/agency/bookings" element={<AgencyBookingsPage />} />
       <Route path="/agency/notifications" element={<AgencyNotificationsPage />} />
@@ -88,13 +113,8 @@ export const AgencyRoutes = () => (
       <Route path="/agency/profile/bank" element={<BankDetailsPage />} />
       <Route path="/agency/profile/documents" element={<DocumentsPage />} />
       <Route path="/agency/profile/settings" element={<AgencySettingsPage />} />
-
-      <Route path="/agency/trips" element={<AgencyTripsPage />} />
-      <Route path="/agency/trips/:tripId" element={<AgencyTripDetailPage />} />
-      <Route path="/agency/trips/:tripId/team" element={<AgencyManageTeamPage />} />
-      <Route path="/agency/trips/:tripId/vehicle" element={<AgencyManageVehiclePage />} />
-      <Route path="/agency/trips/:tripId/travelers" element={<AgencyTripTravelersPage />} />
-      <Route path="/agency/team" element={<AgencyManageTeamPage />} />
     </Route>
-  </>
+  </Route>
 );
+
+export default AgencyRoutes;

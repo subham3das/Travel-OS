@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MoreVertical,
   Eye,
@@ -28,19 +29,55 @@ export const RecentCommunityFeedTable: React.FC<RecentCommunityFeedTableProps> =
   onSuspendUser,
 }) => {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number; openUpwards: boolean }>({
+    top: 0,
+    left: 0,
+    openUpwards: false,
+  });
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const handleToggleMenu = (e: React.MouseEvent<HTMLButtonElement>, id: string) => {
+    e.stopPropagation();
+    if (activeMenuId === id) {
+      setActiveMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpwards = spaceBelow < 280 && rect.top > 280;
+      const menuWidth = 176; // w-44 = 176px
+      const left = Math.max(10, rect.right - menuWidth);
+      const top = openUpwards ? rect.top - 6 : rect.bottom + 6;
+      setMenuCoords({ top, left, openUpwards });
+      setActiveMenuId(id);
+    }
+  };
+
   useEffect(() => {
+    if (!activeMenuId) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setActiveMenuId(null);
       }
     };
-    if (activeMenuId) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    const handleScrollOrResize = () => {
+      setActiveMenuId(null);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveMenuId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [activeMenuId]);
 
@@ -162,73 +199,83 @@ export const RecentCommunityFeedTable: React.FC<RecentCommunityFeedTableProps> =
                 <td className="py-3 px-3 text-right relative">
                   <div className="inline-block text-left">
                     <button
-                      onClick={() => setActiveMenuId(activeMenuId === row.id ? null : row.id)}
+                      onClick={(e) => handleToggleMenu(e, row.id)}
                       className="w-7 h-7 rounded-lg hover:bg-slate-200/80 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
 
-                    {activeMenuId === row.id && (
-                      <div
-                        ref={menuRef}
-                        className="absolute right-0 top-full mt-1 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-40 text-xs font-bold text-slate-700 select-none"
-                      >
-                        <button
-                          onClick={() => {
-                            onViewPost(row);
-                            setActiveMenuId(null);
+                    {activeMenuId === row.id &&
+                      createPortal(
+                        <div
+                          ref={menuRef}
+                          style={{
+                            position: 'fixed',
+                            left: `${menuCoords.left}px`,
+                            ...(menuCoords.openUpwards
+                              ? { bottom: `${window.innerHeight - menuCoords.top}px` }
+                              : { top: `${menuCoords.top}px` }),
+                            zIndex: 9999,
                           }}
-                          className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 hover:text-[#6356E5] text-left transition-colors cursor-pointer"
+                          className="w-44 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 text-xs font-bold text-slate-700 select-none animate-in fade-in zoom-in-95 duration-100"
                         >
-                          <Eye className="w-3.5 h-3.5 text-slate-400" />
-                          <span>View Post</span>
-                        </button>
+                          <button
+                            onClick={() => {
+                              onViewPost(row);
+                              setActiveMenuId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 hover:text-[#6356E5] text-left transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-slate-400" />
+                            <span>View Post</span>
+                          </button>
 
-                        <button
-                          onClick={() => {
-                            onApprovePost(row);
-                            setActiveMenuId(null);
-                          }}
-                          className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-emerald-50 text-emerald-600 text-left transition-colors cursor-pointer"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Moderate / Approve</span>
-                        </button>
+                          <button
+                            onClick={() => {
+                              onApprovePost(row);
+                              setActiveMenuId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-emerald-50 text-emerald-600 text-left transition-colors cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Moderate / Approve</span>
+                          </button>
 
-                        <button
-                          onClick={() => {
-                            onWarnUser(row);
-                            setActiveMenuId(null);
-                          }}
-                          className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-amber-50 text-amber-600 text-left transition-colors cursor-pointer"
-                        >
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>Warn Creator</span>
-                        </button>
+                          <button
+                            onClick={() => {
+                              onWarnUser(row);
+                              setActiveMenuId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-amber-50 text-amber-600 text-left transition-colors cursor-pointer"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>Warn Creator</span>
+                          </button>
 
-                        <button
-                          onClick={() => {
-                            onSuspendUser(row);
-                            setActiveMenuId(null);
-                          }}
-                          className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-rose-600 text-left transition-colors cursor-pointer"
-                        >
-                          <UserX className="w-3.5 h-3.5" />
-                          <span>Suspend User</span>
-                        </button>
+                          <button
+                            onClick={() => {
+                              onSuspendUser(row);
+                              setActiveMenuId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-rose-600 text-left transition-colors cursor-pointer"
+                          >
+                            <UserX className="w-3.5 h-3.5" />
+                            <span>Suspend User</span>
+                          </button>
 
-                        <button
-                          onClick={() => {
-                            onDeletePost(row);
-                            setActiveMenuId(null);
-                          }}
-                          className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-rose-600 text-left transition-colors cursor-pointer border-t border-slate-100"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete Post</span>
-                        </button>
-                      </div>
-                    )}
+                          <button
+                            onClick={() => {
+                              onDeletePost(row);
+                              setActiveMenuId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-rose-600 text-left transition-colors cursor-pointer border-t border-slate-100"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete Post</span>
+                          </button>
+                        </div>,
+                        document.body
+                      )}
                   </div>
                 </td>
               </tr>

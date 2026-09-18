@@ -21,6 +21,8 @@ export const UpdateProfileSchema = z.object({
     .optional(),
   gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
   preferredLanguage: z.string().max(50).optional(),
+  foodPreference: z.string().max(100).optional(),
+  accessibilityRequirements: z.string().max(300).optional(),
   country: z.string().max(100).optional(),
   isPublicProfile: z.boolean().optional(),
 });

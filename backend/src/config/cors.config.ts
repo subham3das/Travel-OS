@@ -30,8 +30,14 @@ export const corsOptions: CorsOptions = {
     'Origin',
     'X-Refresh-Token',
     'X-Request-Id',
+    'x-application-id',
+    'X-Application-Id',
+    'x-agency-id',
+    'X-Agency-Id',
+    'x-onboarding-id',
+    'X-Onboarding-Id',
   ],
-  exposedHeaders: ['X-Request-Id', 'X-Total-Count'],
+  exposedHeaders: ['X-Request-Id', 'X-Total-Count', 'x-application-id', 'x-agency-id'],
   maxAge: 86400, // 24 hours pre-flight caching
 };
 

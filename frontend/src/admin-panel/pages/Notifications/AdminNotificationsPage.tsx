@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,8 +12,8 @@ import {
   NotificationBottomWidgetsData,
   NotificationCategoryType,
 } from '../../types/advancedNotificationCenter';
-import { advancedNotificationCenterService } from '../../services/advancedNotificationCenter.service';
 import {
+  advancedNotificationCenterService,
   initialNotificationCenterKPIs,
   initialSmartGroups,
   initialSavedFilters,
@@ -21,7 +21,7 @@ import {
   initialAISummary,
   initialNotificationPreferences,
   initialBottomWidgetsData,
-} from '../../data/advancedNotificationCenterData';
+} from '../../services/advancedNotificationCenter.service';
 import { NotificationCenterHeader } from '../../components/super-admin/notifications/NotificationCenterHeader';
 import { NotificationCenterKPIs } from '../../components/super-admin/notifications/NotificationCenterKPIs';
 import { NotificationCenterFiltersBar } from '../../components/super-admin/notifications/NotificationCenterFiltersBar';
@@ -32,6 +32,7 @@ import { NotificationCenterBottomWidgets } from '../../components/super-admin/no
 import { NewNotificationModal } from '../../components/super-admin/notifications/NewNotificationModal';
 import { NotificationRulesModal } from '../../components/super-admin/notifications/NotificationRulesModal';
 import { AISummaryModal } from '../../components/super-admin/notifications/AISummaryModal';
+import { adminSocketService } from '../../services/adminSocket.service';
 
 export const AdminNotificationsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -112,6 +113,25 @@ export const AdminNotificationsPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // ── SOCKET.IO REAL-TIME LISTENERS ──
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
+
+  useEffect(() => {
+    const cleanupNew = adminSocketService.onNotificationNew(() => {
+      loadDataRef.current();
+    });
+
+    const cleanupReadAll = adminSocketService.onNotificationReadAll(() => {
+      loadDataRef.current();
+    });
+
+    return () => {
+      cleanupNew();
+      cleanupReadAll();
+    };
+  }, []);
 
   // ── 4. HANDLERS ──
   const handleSelectCategory = (cat: NotificationCategoryType) => {

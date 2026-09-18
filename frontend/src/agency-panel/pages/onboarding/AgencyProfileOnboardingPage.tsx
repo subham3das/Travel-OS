@@ -28,6 +28,7 @@ import {
   Shield,
   Smile,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { OnboardingStepper } from '../../components/OnboardingStepper';
 import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
@@ -151,6 +152,8 @@ export const AgencyProfileOnboardingPage: React.FC = () => {
 
   const [destSearch, setDestSearch] = useState('');
   const [showAddDestModal, setShowAddDestModal] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   // Calculate Years of Experience from Step 1 establishment year
   useEffect(() => {
@@ -189,11 +192,14 @@ export const AgencyProfileOnboardingPage: React.FC = () => {
       if (file.size > 10 * 1024 * 1024) {
         return;
       }
+      setIsUploadingLogo(true);
       try {
         const result = await cloudinaryUploadService.uploadImage(file, 'travelos/agencies/logo');
         setFormData((prev) => ({ ...prev, logoUrl: result.secureUrl }));
       } catch (err: any) {
         console.error('Logo upload error:', err);
+      } finally {
+        setIsUploadingLogo(false);
       }
     }
   };
@@ -204,11 +210,14 @@ export const AgencyProfileOnboardingPage: React.FC = () => {
       if (file.size > 10 * 1024 * 1024) {
         return;
       }
+      setIsUploadingCover(true);
       try {
         const result = await cloudinaryUploadService.uploadImage(file, 'travelos/agencies/banner');
         setFormData((prev) => ({ ...prev, coverUrl: result.secureUrl }));
       } catch (err: any) {
         console.error('Cover upload error:', err);
+      } finally {
+        setIsUploadingCover(false);
       }
     }
   };
@@ -376,7 +385,12 @@ export const AgencyProfileOnboardingPage: React.FC = () => {
                     className="hidden"
                   />
 
-                  {formData.logoUrl ? (
+                  {isUploadingLogo ? (
+                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-purple-300 bg-purple-50/50 flex flex-col items-center justify-center p-3 animate-pulse">
+                      <Loader2 className="w-6 h-6 text-[#583BE8] animate-spin mb-1" />
+                      <span className="text-[11px] font-bold text-[#583BE8]">Uploading...</span>
+                    </div>
+                  ) : formData.logoUrl ? (
                     <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-[#583BE8] p-1 bg-white shadow-md group overflow-hidden flex items-center justify-center">
                       <img
                         src={formData.logoUrl}
@@ -429,7 +443,12 @@ export const AgencyProfileOnboardingPage: React.FC = () => {
                     className="hidden"
                   />
 
-                  {formData.coverUrl ? (
+                  {isUploadingCover ? (
+                    <div className="w-full h-36 sm:h-40 rounded-2xl border-2 border-purple-300 bg-purple-50/50 flex flex-col items-center justify-center p-4 animate-pulse">
+                      <Loader2 className="w-7 h-7 text-[#583BE8] animate-spin mb-1.5" />
+                      <span className="text-xs font-bold text-[#583BE8]">Uploading Cover Photo...</span>
+                    </div>
+                  ) : formData.coverUrl ? (
                     <div className="relative w-full h-36 sm:h-40 rounded-2xl overflow-hidden border border-slate-200 shadow-sm group">
                       <img
                         src={formData.coverUrl}

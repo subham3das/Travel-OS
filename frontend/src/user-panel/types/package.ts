@@ -40,8 +40,22 @@ export interface PackageReview {
   photos?: string[];
 }
 
+export interface PackageDepartureInfo {
+  departureId: string;
+  departureDate: string;
+  endDate: string;
+  capacity: number;
+  bookedSeats: number;
+  availableSeats: number;
+  status: 'OPEN' | 'SOLDOUT' | 'BOOKING_CLOSED' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+  price?: number;
+  isSelectable?: boolean;
+}
+
 export interface TourPackage {
   id: string;
+  isBookable?: boolean;
+  readiness?: any;
   agencyId: string;
   agencyName: string;
   agencyVerified?: boolean;
@@ -49,6 +63,8 @@ export interface TourPackage {
   destinationId: string;
   destinationName: string;
   title: string;
+  category?: string;
+  adventureType?: string;
   duration: string;
   price: string;
   discountPrice?: string;
@@ -74,8 +90,12 @@ export interface TourPackage {
   includes: string[];
   excludes: string[];
   itinerary: PackageItineraryDay[];
+  accommodationConfirmed?: boolean;
+  accommodations?: any[];
   hotels: PackageHotel[];
   activities: PackageActivity[];
   reviews: PackageReview[];
   faq: PackageFAQ[];
+  departure?: PackageDepartureInfo;
+  departures?: PackageDepartureInfo[];
 }

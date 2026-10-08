@@ -18,8 +18,6 @@ import { SupportKPIStatsCards } from '../../components/super-admin/support/Suppo
 import { SupportTicketQueue } from '../../components/super-admin/support/SupportTicketQueue';
 import { SupportAnalyticsDashboard } from '../../components/super-admin/support/SupportAnalyticsDashboard';
 import { SupportConversationWorkspace } from '../../components/super-admin/support/SupportConversationWorkspace';
-import { CreateAnnouncementModal } from '../../components/super-admin/community/CreateAnnouncementModal';
-import { AnnouncementPayload } from '../../types/communityManagement';
 
 export const AdminSupportPage: React.FC = () => {
   // ── 1. STATE MANAGEMENT ──
@@ -28,8 +26,6 @@ export const AdminSupportPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Newest');
 
-  // Modals state
-  const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
 
   // Data States
   const [kpiStats, setKpiStats] = useState<SupportKPIStats>(initialSupportKPIStats);
@@ -103,9 +99,6 @@ export const AdminSupportPage: React.FC = () => {
     );
   };
 
-  const handleCreateAnnouncementSubmit = (payload: AnnouncementPayload) => {
-    showToast(`Announcement "${payload.title}" dispatched to ${payload.audience}`, 'success');
-  };
 
   // ── 4. EXPORT ──
   const handleExport = () => {
@@ -165,7 +158,6 @@ export const AdminSupportPage: React.FC = () => {
       <AdminSupportHeader
         onExport={handleExport}
         onRefresh={loadSupportData}
-        onCreateAnnouncement={() => setIsAnnouncementOpen(true)}
         isRefreshing={isRefreshing}
       />
 
@@ -222,12 +214,6 @@ export const AdminSupportPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── 4. CREATE ANNOUNCEMENT MODAL ── */}
-      <CreateAnnouncementModal
-        isOpen={isAnnouncementOpen}
-        onClose={() => setIsAnnouncementOpen(false)}
-        onPublish={handleCreateAnnouncementSubmit}
-      />
     </motion.div>
   );
 };

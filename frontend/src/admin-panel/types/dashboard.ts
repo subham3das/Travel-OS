@@ -7,20 +7,40 @@ export interface StatItem {
   growth: string;
   isPositive: boolean;
   comparisonText: string;
-  iconName: 'revenue' | 'gmv' | 'agency' | 'users' | 'bookings' | 'trips' | 'approvals' | 'tickets';
+  iconName:
+    | 'revenue'
+    | 'gmv'
+    | 'agency'
+    | 'users'
+    | 'bookings'
+    | 'trips'
+    | 'approvals'
+    | 'tickets'
+    | 'departures'
+    | 'package'
+    | 'car'
+    | 'coupon';
   bgGradient: string;
   iconColor: string;
 }
 
 export interface DashboardStats {
   platformRevenue: StatItem;
-  gmv: StatItem;
-  activeAgencies: StatItem;
-  totalUsers: StatItem;
   todaysBookings: StatItem;
-  runningTrips: StatItem;
-  pendingApprovals: StatItem;
-  openSupportTickets: StatItem;
+  upcomingDepartures: StatItem;
+  packagesPublished: StatItem;
+  packagesPendingApproval: StatItem;
+  agencyApprovalRequests: StatItem;
+  carRentalApprovalRequests: StatItem;
+  couponsUsedToday: StatItem;
+  activeAgencies: StatItem;
+  activeCarRentals: StatItem;
+  registeredTravelers: StatItem;
+  gmv?: StatItem;
+  totalUsers?: StatItem;
+  runningTrips?: StatItem;
+  pendingApprovals?: StatItem;
+  openSupportTickets?: StatItem;
 }
 
 export interface ChartDataPoint {

@@ -213,17 +213,29 @@ export class AgencyOnboardingService {
       status: { $in: ['ACTIVE', 'APPROVED'] },
     });
 
+    let agency: any = null;
+
     if (existingActive) {
-      throw new ConflictError('An active travel agency is already registered with this email address.');
+      // If account is an existing car rental provider expanding into travel agency, allow expansion
+      const isCarRentalOnly =
+        existingActive.businessTypes?.includes('car_rental') &&
+        !existingActive.businessTypes?.includes('agency');
+
+      if (isCarRentalOnly) {
+        agency = existingActive;
+      } else {
+        throw new ConflictError('An active travel agency is already registered with this email address.');
+      }
     }
 
     // 2. Check if updating an existing draft by applicationId or email
-    let agency = null;
-    if (payload.applicationId) {
-      agency = await AgencyModel.findOne({ applicationId: payload.applicationId });
-    }
     if (!agency) {
-      agency = await AgencyModel.findOne({ email, verificationStatus: 'PENDING' });
+      if (payload.applicationId) {
+        agency = await AgencyModel.findOne({ applicationId: payload.applicationId });
+      }
+      if (!agency) {
+        agency = await AgencyModel.findOne({ email, verificationStatus: 'PENDING' });
+      }
     }
 
     const applicationId =
@@ -351,8 +363,10 @@ export class AgencyOnboardingService {
       verificationChecklist,
       complianceScore,
       timeline: initialTimeline,
-      verificationStatus: 'PENDING',
-      status: 'PENDING',
+      verificationStatus: agency?.paymentStatus === 'PAID' ? 'UNDER_REVIEW' : 'PENDING',
+      onboardingStatus: agency?.paymentStatus === 'PAID' ? 'UNDER_REVIEW' : (agency?.onboardingStatus || 'PAYMENT_PENDING'),
+      status: agency?.status === 'ACTIVE' ? 'ACTIVE' : 'PENDING',
+      businessTypes: Array.from(new Set([...(agency?.businessTypes || []), 'agency'])),
       onboardingStep: 6,
       completionPercentage: 100,
       submissionIp: context.ip,

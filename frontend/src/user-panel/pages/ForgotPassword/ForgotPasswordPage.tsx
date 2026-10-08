@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Header } from '../../components/common/Header';
+import { BrandLogo } from '../../../common/brand';
 import { AuthLayout } from '../../components/layouts/AuthLayout';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
@@ -60,11 +61,9 @@ export const ForgotPasswordPage: React.FC = () => {
       {/* Main Content Form Container */}
       <div className="w-full flex-1 flex flex-col justify-between p-6 sm:p-8 pt-2 sm:pt-4 max-w-md mx-auto relative z-10">
         <div className="space-y-4 sm:space-y-5">
-          {/* Top Brand Text */}
+          {/* Top Brand Logo */}
           <div className="flex justify-center pb-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-              ApnaTrip
-            </span>
+            <BrandLogo theme="light" className="h-10 sm:h-11 w-auto" alt="ApnaTrip" />
           </div>
 
           {/* Title & Subtitle */}

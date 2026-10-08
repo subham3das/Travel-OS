@@ -31,6 +31,7 @@ import {
   clearOnboardingDrafts,
   CompleteOnboardingPayload,
 } from '../../services/agencyOnboarding.service';
+import { registrationDraftClient } from '../../services/registrationDraftClient.service';
 
 export const AgencyReviewOnboardingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -63,7 +64,44 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
     } catch (e) {
       // ignore
     }
+
+    // Always fetch latest draft from MongoDB to ensure complete data sync
+    registrationDraftClient.getDraft('agency').then((draft) => {
+      if (draft) {
+        if (draft.businessDetails && Object.keys(draft.businessDetails).length > 0) {
+          setBusinessData((prev) => ({ ...draft.businessDetails, ...prev }));
+        }
+        if (draft.profileDetails && Object.keys(draft.profileDetails).length > 0) {
+          setProfileData((prev) => ({ ...draft.profileDetails, ...prev }));
+        }
+        if (draft.bank && Object.keys(draft.bank).length > 0) {
+          setBankData((prev) => ({ ...draft.bank, ...prev }));
+        }
+        if (Array.isArray(draft.documents) && draft.documents.length > 0) {
+          setVerificationData((prev) => ({
+            ...prev,
+            documents: draft.documents,
+            registrationCert: prev.registrationCert || (draft.documents.find((d: any) => d.id === 'doc-reg-cert' || d.type === 'Business Registration') ? { dataUrl: draft.documents.find((d: any) => d.id === 'doc-reg-cert' || d.type === 'Business Registration')?.fileUrl, name: 'Business Registration' } : null),
+            gstCert: prev.gstCert || (draft.documents.find((d: any) => d.id === 'doc-gst-cert' || d.type === 'GST Certificate') ? { dataUrl: draft.documents.find((d: any) => d.id === 'doc-gst-cert' || d.type === 'GST Certificate')?.fileUrl, name: 'GST Certificate' } : null),
+            panCard: prev.panCard || (draft.documents.find((d: any) => d.id === 'doc-pan-card' || d.type === 'PAN Card') ? { dataUrl: draft.documents.find((d: any) => d.id === 'doc-pan-card' || d.type === 'PAN Card')?.fileUrl, name: 'PAN Card' } : null),
+            governmentIdFile: prev.governmentIdFile || (draft.documents.find((d: any) => d.id === 'doc-gov-id' || d.type === 'Government ID') ? { dataUrl: draft.documents.find((d: any) => d.id === 'doc-gov-id' || d.type === 'Government ID')?.fileUrl, name: 'Government ID' } : null),
+            selfieFile: prev.selfieFile || (draft.documents.find((d: any) => d.id === 'doc-selfie' || d.type === 'Owner Photo') ? { dataUrl: draft.documents.find((d: any) => d.id === 'doc-selfie' || d.type === 'Owner Photo')?.fileUrl, name: 'Owner Photo' } : null),
+            addressProofFile: prev.addressProofFile || (draft.documents.find((d: any) => d.id === 'doc-address-proof' || d.type === 'Address Proof') ? { dataUrl: draft.documents.find((d: any) => d.id === 'doc-address-proof' || d.type === 'Address Proof')?.fileUrl, name: 'Address Proof' } : null),
+          }));
+        }
+      }
+    }).catch(() => {});
   }, []);
+
+  const isDocUploaded = (key: string, typeName: string) => {
+    if (verificationData && verificationData[key]?.dataUrl) return true;
+    if (Array.isArray(verificationData?.documents)) {
+      return verificationData.documents.some(
+        (d: any) => d.type?.toLowerCase().includes(typeName.toLowerCase()) && (d.fileUrl || d.url)
+      );
+    }
+    return false;
+  };
 
   // Helper mask for account number
   const maskAccountNumber = (accNum?: string) => {
@@ -82,35 +120,109 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const payload: CompleteOnboardingPayload = {
-      business: businessData,
-      profile: profileData,
-      verification: verificationData,
-      bank: bankData,
-      submittedAt: new Date().toISOString(),
-    };
-
     try {
-      const res = await submitAgencyOnboarding(payload);
-      if (res.success) {
-        clearOnboardingDrafts();
-        navigate('/agency/onboarding/submitted');
-      } else {
-        setSubmitError('Failed to submit application. Please try again.');
-      }
-    } catch (err: any) {
-      let rawMsg = err?.message || 'An error occurred during submission. Please retry.';
-      try {
-        if (rawMsg.startsWith('[') || rawMsg.startsWith('{')) {
-          const parsed = JSON.parse(rawMsg);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            rawMsg = parsed.map((e: any) => e.message || 'Invalid input').join(' • ');
-          }
+      // Build normalized documents list from verification data
+      const docList: any[] = [];
+      if (Array.isArray(verificationData?.documents) && verificationData.documents.length > 0) {
+        docList.push(...verificationData.documents);
+      } else if (verificationData) {
+        if (verificationData.registrationCert?.dataUrl) {
+          docList.push({
+            id: 'doc-reg-cert',
+            type: 'Business Registration',
+            name: 'Business Registration Certificate',
+            fileUrl: verificationData.registrationCert.dataUrl,
+            url: verificationData.registrationCert.dataUrl,
+            title: verificationData.registrationCert.name,
+            size: verificationData.registrationCert.size,
+          });
         }
-      } catch {
-        // ignore
+        if (verificationData.gstCert?.dataUrl) {
+          docList.push({
+            id: 'doc-gst-cert',
+            type: 'GST Certificate',
+            name: 'GST Certificate',
+            fileUrl: verificationData.gstCert.dataUrl,
+            url: verificationData.gstCert.dataUrl,
+            title: verificationData.gstCert.name,
+            size: verificationData.gstCert.size,
+          });
+        }
+        if (verificationData.panCard?.dataUrl) {
+          docList.push({
+            id: 'doc-pan-card',
+            type: 'PAN Card',
+            name: 'Company PAN Card',
+            fileUrl: verificationData.panCard.dataUrl,
+            url: verificationData.panCard.dataUrl,
+            title: verificationData.panCard.name,
+            size: verificationData.panCard.size,
+          });
+        }
+        if (verificationData.governmentIdFile?.dataUrl) {
+          docList.push({
+            id: 'doc-gov-id',
+            type: 'Government ID',
+            name: `Owner Government ID (${verificationData.governmentIdType || 'Aadhaar'})`,
+            fileUrl: verificationData.governmentIdFile.dataUrl,
+            url: verificationData.governmentIdFile.dataUrl,
+            title: `${verificationData.governmentIdType}: ${verificationData.governmentIdFile.name}`,
+            size: verificationData.governmentIdFile.size,
+          });
+        }
+        if (verificationData.selfieFile?.dataUrl) {
+          docList.push({
+            id: 'doc-selfie',
+            type: 'Owner Photo',
+            name: 'Owner Photo / Selfie',
+            fileUrl: verificationData.selfieFile.dataUrl,
+            url: verificationData.selfieFile.dataUrl,
+            title: verificationData.selfieFile.name,
+            size: verificationData.selfieFile.size,
+          });
+        }
+        if (verificationData.addressProofFile?.dataUrl) {
+          docList.push({
+            id: 'doc-address-proof',
+            type: 'Address Proof',
+            name: 'Office Address Proof',
+            fileUrl: verificationData.addressProofFile.dataUrl,
+            url: verificationData.addressProofFile.dataUrl,
+            title: verificationData.addressProofFile.name,
+            size: verificationData.addressProofFile.size,
+          });
+        }
       }
-      setSubmitError(rawMsg);
+
+      // Save entire review state and form data into MongoDB RegistrationDraft
+      const draftPayload: any = {
+        serviceType: 'agency',
+        businessDetails: {
+          ...businessData,
+          governmentIdType: verificationData?.governmentIdType,
+          confirmAccuracy,
+          agreeTerms,
+        },
+        profileDetails: profileData,
+        currentStep: 5,
+      };
+
+      if (docList.length > 0) {
+        draftPayload.documents = docList;
+      }
+      if (bankData && Object.keys(bankData).length > 0) {
+        draftPayload.bank = bankData;
+      }
+
+      const res = await registrationDraftClient.saveDraft(draftPayload);
+      if (res?.draftId) {
+        registrationDraftClient.setStoredDraftId(res.draftId);
+      }
+
+      // Continue to Step 6 Subscription Payment with MongoDB draft ID
+      navigate(`/partner/subscription?type=agency&draftId=${res.draftId}`);
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Could not save application review state. Please retry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -235,9 +347,9 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
               </div>
 
               <div className="space-y-0.5">
-                <span className="text-slate-400 font-semibold block">Business Type</span>
-                <p className="font-bold text-slate-700">
-                  {businessData.businessType || 'Not Provided'}
+                <span className="text-slate-400 font-semibold block">Partner Category</span>
+                <p className="font-bold text-[#583BE8]">
+                  {businessData.businessType || 'Travel Agency'}
                 </p>
               </div>
 
@@ -443,64 +555,114 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
               {/* Registration Cert */}
               <div className="flex items-center justify-between p-2.5 rounded-2xl bg-purple-50/50 border border-purple-100">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  {isDocUploaded('registrationCert', 'Business Registration') ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <span className="w-4 h-4 rounded-full border-2 border-slate-300 inline-block shrink-0" />
+                  )}
                   <span className="font-extrabold text-[#0F172A]">Business Registration Certificate</span>
                 </div>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                  UPLOADED
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                    isDocUploaded('registrationCert', 'Business Registration')
+                      ? 'text-emerald-700 bg-emerald-100/80'
+                      : 'text-amber-700 bg-amber-50'
+                  }`}
+                >
+                  {isDocUploaded('registrationCert', 'Business Registration') ? 'UPLOADED' : 'PENDING'}
                 </span>
               </div>
 
               {/* PAN Card */}
               <div className="flex items-center justify-between p-2.5 rounded-2xl bg-purple-50/50 border border-purple-100">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  {isDocUploaded('panCard', 'PAN Card') ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <span className="w-4 h-4 rounded-full border-2 border-slate-300 inline-block shrink-0" />
+                  )}
                   <span className="font-extrabold text-[#0F172A]">PAN Card</span>
                 </div>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                  UPLOADED
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                    isDocUploaded('panCard', 'PAN Card')
+                      ? 'text-emerald-700 bg-emerald-100/80'
+                      : 'text-amber-700 bg-amber-50'
+                  }`}
+                >
+                  {isDocUploaded('panCard', 'PAN Card') ? 'UPLOADED' : 'PENDING'}
                 </span>
               </div>
 
               {/* Government ID */}
               <div className="flex items-center justify-between p-2.5 rounded-2xl bg-purple-50/50 border border-purple-100">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  {isDocUploaded('governmentIdFile', 'Government ID') ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <span className="w-4 h-4 rounded-full border-2 border-slate-300 inline-block shrink-0" />
+                  )}
                   <span className="font-extrabold text-[#0F172A]">
                     Government ID ({verificationData.governmentIdType || 'Aadhaar/Passport'})
                   </span>
                 </div>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                  UPLOADED
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                    isDocUploaded('governmentIdFile', 'Government ID')
+                      ? 'text-emerald-700 bg-emerald-100/80'
+                      : 'text-amber-700 bg-amber-50'
+                  }`}
+                >
+                  {isDocUploaded('governmentIdFile', 'Government ID') ? 'UPLOADED' : 'PENDING'}
                 </span>
               </div>
 
               {/* Selfie Verification */}
               <div className="flex items-center justify-between p-2.5 rounded-2xl bg-purple-50/50 border border-purple-100">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  {isDocUploaded('selfieFile', 'Owner Photo') ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <span className="w-4 h-4 rounded-full border-2 border-slate-300 inline-block shrink-0" />
+                  )}
                   <span className="font-extrabold text-[#0F172A]">Selfie Verification</span>
                 </div>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                  UPLOADED
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                    isDocUploaded('selfieFile', 'Owner Photo')
+                      ? 'text-emerald-700 bg-emerald-100/80'
+                      : 'text-amber-700 bg-amber-50'
+                  }`}
+                >
+                  {isDocUploaded('selfieFile', 'Owner Photo') ? 'UPLOADED' : 'PENDING'}
                 </span>
               </div>
 
               {/* Business Address Proof */}
               <div className="flex items-center justify-between p-2.5 rounded-2xl bg-purple-50/50 border border-purple-100">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  {isDocUploaded('addressProofFile', 'Address Proof') ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <span className="w-4 h-4 rounded-full border-2 border-slate-300 inline-block shrink-0" />
+                  )}
                   <span className="font-extrabold text-[#0F172A]">Business Address Proof</span>
                 </div>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                  UPLOADED
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                    isDocUploaded('addressProofFile', 'Address Proof')
+                      ? 'text-emerald-700 bg-emerald-100/80'
+                      : 'text-amber-700 bg-amber-50'
+                  }`}
+                >
+                  {isDocUploaded('addressProofFile', 'Address Proof') ? 'UPLOADED' : 'PENDING'}
                 </span>
               </div>
 
               {/* GST Certificate (Optional) */}
               <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-100">
                 <div className="flex items-center gap-2">
-                  {verificationData.gstCert ? (
+                  {isDocUploaded('gstCert', 'GST Certificate') ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   ) : (
                     <span className="w-4 h-4 rounded-full border-2 border-slate-300 inline-block shrink-0" />
@@ -509,12 +671,12 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
                 </div>
                 <span
                   className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                    verificationData.gstCert
+                    isDocUploaded('gstCert', 'GST Certificate')
                       ? 'text-emerald-700 bg-emerald-100'
                       : 'text-slate-400 bg-slate-200/60'
                   }`}
                 >
-                  {verificationData.gstCert ? 'UPLOADED' : 'Not Provided'}
+                  {isDocUploaded('gstCert', 'GST Certificate') ? 'UPLOADED' : 'Not Provided'}
                 </span>
               </div>
             </div>
@@ -547,13 +709,13 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="space-y-0.5">
                 <span className="text-slate-400 font-semibold block">Bank Name</span>
-                <p className="font-extrabold text-[#0F172A]">{bankData.bankName || 'State Bank of India'}</p>
+                <p className="font-extrabold text-[#0F172A]">{bankData.bankName || '—'}</p>
               </div>
 
               <div className="space-y-0.5">
                 <span className="text-slate-400 font-semibold block">Account Holder Name</span>
                 <p className="font-extrabold text-[#0F172A]">
-                  {bankData.accountHolderName || 'Not Provided'}
+                  {bankData.accountHolderName || '—'}
                 </p>
               </div>
 
@@ -567,7 +729,7 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
               <div className="space-y-0.5">
                 <span className="text-slate-400 font-semibold block">IFSC Code</span>
                 <p className="font-extrabold text-[#0F172A] uppercase">
-                  {bankData.ifscCode || 'SBIN0001234'}
+                  {bankData.ifscCode || '—'}
                 </p>
               </div>
 
@@ -666,7 +828,7 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
             <span>Back</span>
           </button>
 
-          {/* Submit Button */}
+          {/* Continue to Registration Payment Button */}
           <button
             type="button"
             disabled={!isDeclarationsValid || isSubmitting}
@@ -680,11 +842,11 @@ export const AgencyReviewOnboardingPage: React.FC = () => {
             {isSubmitting ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Submitting...</span>
+                <span>Saving Draft...</span>
               </>
             ) : (
               <>
-                <span>Submit Application</span>
+                <span>Continue to Registration Payment</span>
                 <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </>
             )}

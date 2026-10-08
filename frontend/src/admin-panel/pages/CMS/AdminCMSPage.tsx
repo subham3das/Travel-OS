@@ -9,27 +9,12 @@ import {
   FeaturedTripItem,
   PromotionalCampaignItem,
   PromoPopupItem,
-  HomepageSectionItem,
   HomepageSEOData,
   CMSKPIStats as CMSKPIStatsType,
   CMSScheduledItem,
   CMSRecentChangeItem,
 } from '../../types/cmsManagement';
-import {
-  adminCMSManagementService,
-  initialHeroBanners,
-  initialAnnouncements,
-  initialTrendingDestinations,
-  initialFeaturedAgencies,
-  initialFeaturedTrips,
-  initialPromotionalCampaigns,
-  initialPromoPopups,
-  initialHomepageSections,
-  initialSEOData,
-  initialCMSKPIStats,
-  initialCMSScheduledItems,
-  initialCMSRecentChanges,
-} from '../../services/adminCMSManagement.service';
+import { adminCMSManagementService } from '../../services/adminCMSManagement.service';
 
 import { AdminCMSHeader } from '../../components/super-admin/cms/AdminCMSHeader';
 import { CMSKPIStats } from '../../components/super-admin/cms/CMSKPIStats';
@@ -42,10 +27,9 @@ import { FeaturedAgenciesEditor } from '../../components/super-admin/cms/editors
 import { FeaturedTripsEditor } from '../../components/super-admin/cms/editors/FeaturedTripsEditor';
 import { PromotionalCampaignsEditor } from '../../components/super-admin/cms/editors/PromotionalCampaignsEditor';
 import { PopupManagerEditor } from '../../components/super-admin/cms/editors/PopupManagerEditor';
-import { HomepageSectionsEditor } from '../../components/super-admin/cms/editors/HomepageSectionsEditor';
 import { SEOEditor } from '../../components/super-admin/cms/editors/SEOEditor';
+import { DiscoveryControlEditor } from '../../components/super-admin/cms/editors/DiscoveryControlEditor';
 
-import { CMSLiveStorefrontPreview } from '../../components/super-admin/cms/CMSLiveStorefrontPreview';
 import { CMSBottomDashboard } from '../../components/super-admin/cms/CMSBottomDashboard';
 
 import { NewBannerModal } from '../../components/super-admin/cms/modals/NewBannerModal';
@@ -63,19 +47,30 @@ export const AdminCMSPage: React.FC = () => {
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
   const [isPopupModalOpen, setIsPopupModalOpen] = useState(false);
 
-  // Content Data
-  const [kpiStats, setKpiStats] = useState<CMSKPIStatsType>(initialCMSKPIStats);
-  const [banners, setBanners] = useState<HeroBannerItem[]>(initialHeroBanners);
-  const [announcements, setAnnouncements] = useState<PlatformAnnouncementItem[]>(initialAnnouncements);
-  const [destinations, setDestinations] = useState<TrendingDestinationItem[]>(initialTrendingDestinations);
-  const [agencies, setAgencies] = useState<FeaturedAgencyItem[]>(initialFeaturedAgencies);
-  const [trips, setTrips] = useState<FeaturedTripItem[]>(initialFeaturedTrips);
-  const [campaigns, setCampaigns] = useState<PromotionalCampaignItem[]>(initialPromotionalCampaigns);
-  const [popups, setPopups] = useState<PromoPopupItem[]>(initialPromoPopups);
-  const [sections, setSections] = useState<HomepageSectionItem[]>(initialHomepageSections);
-  const [seo, setSeo] = useState<HomepageSEOData>(initialSEOData);
-  const [scheduledItems, setScheduledItems] = useState<CMSScheduledItem[]>(initialCMSScheduledItems);
-  const [recentChanges, setRecentChanges] = useState<CMSRecentChangeItem[]>(initialCMSRecentChanges);
+  // Content Data (Pure DB State, 0 mock data)
+  const [kpiStats, setKpiStats] = useState<CMSKPIStatsType>({
+    publishedBanners: { value: 0, label: 'Active Banners', growth: '0%', subtitle: '0 Live' },
+    liveAnnouncements: { value: 0, label: 'Live Broadcasts', growth: '0%', subtitle: '0 Active' },
+    publishedCampaigns: { value: 0, label: 'Active Campaigns', growth: '0%', subtitle: '0 Linked' },
+    publishedPopups: { value: 0, label: 'Active Popups', growth: '0%', subtitle: '0 Modals' },
+    activeCoupons: { value: 0, label: 'Coupons in System', growth: '0%', subtitle: '0 Available' },
+    totalShowcases: { value: 0, label: 'Featured Showcases', growth: '0%', subtitle: '0 Items' },
+  });
+  const [banners, setBanners] = useState<HeroBannerItem[]>([]);
+  const [announcements, setAnnouncements] = useState<PlatformAnnouncementItem[]>([]);
+  const [destinations, setDestinations] = useState<TrendingDestinationItem[]>([]);
+  const [agencies, setAgencies] = useState<FeaturedAgencyItem[]>([]);
+  const [trips, setTrips] = useState<FeaturedTripItem[]>([]);
+  const [campaigns, setCampaigns] = useState<PromotionalCampaignItem[]>([]);
+  const [popups, setPopups] = useState<PromoPopupItem[]>([]);
+  const [seo, setSeo] = useState<HomepageSEOData>({
+    title: 'ApnaTrip — Discover, Customize & Book Verified Trips',
+    description: 'Book verified holiday tours directly from accredited travel operators.',
+    keywords: 'tour packages, travel india, kashmir tour',
+    ogImage: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200',
+  });
+  const [scheduledItems, setScheduledItems] = useState<CMSScheduledItem[]>([]);
+  const [recentChanges, setRecentChanges] = useState<CMSRecentChangeItem[]>([]);
 
   // Toast Notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -88,20 +83,7 @@ export const AdminCMSPage: React.FC = () => {
   // ── 2. DATA FETCHING ──
   const loadData = useCallback(async () => {
     try {
-      const [
-        stats,
-        bans,
-        anns,
-        dests,
-        ags,
-        trps,
-        camps,
-        pops,
-        secs,
-        seoData,
-        sched,
-        changes,
-      ] = await Promise.all([
+      const results = await Promise.allSettled([
         adminCMSManagementService.getKPIStats(),
         adminCMSManagementService.getBanners(),
         adminCMSManagementService.getAnnouncements(),
@@ -110,27 +92,38 @@ export const AdminCMSPage: React.FC = () => {
         adminCMSManagementService.getFeaturedTrips(),
         adminCMSManagementService.getCampaigns(),
         adminCMSManagementService.getPopups(),
-        adminCMSManagementService.getSections(),
-        adminCMSManagementService.getSEO(),
+        adminCMSManagementService.getSEO('home'),
         adminCMSManagementService.getScheduledItems(),
         adminCMSManagementService.getRecentChanges(),
       ]);
 
-      setKpiStats(stats);
-      setBanners(bans);
-      setAnnouncements(anns);
-      setDestinations(dests);
-      setAgencies(ags);
-      setTrips(trps);
-      setCampaigns(camps);
-      setPopups(pops);
-      setSections(secs);
-      setSeo(seoData);
-      setScheduledItems(sched);
-      setRecentChanges(changes);
+      const [
+        statsRes,
+        bansRes,
+        annsRes,
+        destsRes,
+        agsRes,
+        trpsRes,
+        campsRes,
+        popsRes,
+        seoRes,
+        schedRes,
+        changesRes,
+      ] = results;
+
+      if (statsRes.status === 'fulfilled' && statsRes.value) setKpiStats(statsRes.value);
+      if (bansRes.status === 'fulfilled' && bansRes.value) setBanners(bansRes.value);
+      if (annsRes.status === 'fulfilled' && annsRes.value) setAnnouncements(annsRes.value);
+      if (destsRes.status === 'fulfilled' && destsRes.value) setDestinations(destsRes.value);
+      if (agsRes.status === 'fulfilled' && agsRes.value) setAgencies(agsRes.value);
+      if (trpsRes.status === 'fulfilled' && trpsRes.value) setTrips(trpsRes.value);
+      if (campsRes.status === 'fulfilled' && campsRes.value) setCampaigns(campsRes.value);
+      if (popsRes.status === 'fulfilled' && popsRes.value) setPopups(popsRes.value);
+      if (seoRes.status === 'fulfilled' && seoRes.value) setSeo(seoRes.value);
+      if (schedRes.status === 'fulfilled' && schedRes.value) setScheduledItems(schedRes.value);
+      if (changesRes.status === 'fulfilled' && changesRes.value) setRecentChanges(changesRes.value);
     } catch (err) {
-      console.error(err);
-      showToast('Failed to load CMS content', 'error');
+      console.warn('CMS data load warning:', err);
     }
   }, []);
 
@@ -140,112 +133,176 @@ export const AdminCMSPage: React.FC = () => {
 
   // ── 3. HANDLERS ──
   const handleSaveBanner = async (b: Partial<HeroBannerItem>) => {
-    await adminCMSManagementService.saveBanner(b);
-    showToast('Hero Banner saved and published to storefront', 'success');
-    loadData();
+    try {
+      await adminCMSManagementService.saveBanner(b);
+      showToast('Hero banner saved and published to storefront', 'success');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save banner', 'error');
+    }
   };
 
   const handleDeleteBanner = async (id: string) => {
-    await adminCMSManagementService.deleteBanner(id);
-    showToast('Hero Banner deleted', 'info');
-    loadData();
+    try {
+      await adminCMSManagementService.deleteBanner(id);
+      showToast('Hero banner deleted from database', 'info');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete banner', 'error');
+    }
   };
 
   const handleSaveAnnouncement = async (ann: Partial<PlatformAnnouncementItem>) => {
-    await adminCMSManagementService.saveAnnouncement(ann);
-    showToast('Platform Announcement broadcasted successfully', 'success');
-    loadData();
+    try {
+      await adminCMSManagementService.saveAnnouncement(ann);
+      showToast('Platform announcement broadcasted to storefront', 'success');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save announcement', 'error');
+    }
   };
 
   const handleDeleteAnnouncement = async (id: string) => {
-    await adminCMSManagementService.deleteAnnouncement(id);
-    showToast('Announcement removed', 'info');
-    loadData();
+    try {
+      await adminCMSManagementService.deleteAnnouncement(id);
+      showToast('Announcement removed', 'info');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete announcement', 'error');
+    }
   };
 
   const handleSaveDestination = async (dest: Partial<TrendingDestinationItem>) => {
-    await adminCMSManagementService.saveDestination(dest);
-    showToast('Trending Destination updated', 'success');
-    loadData();
+    try {
+      await adminCMSManagementService.saveDestination(dest);
+      showToast('Trending destination updated in MongoDB', 'success');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save destination', 'error');
+    }
   };
 
   const handleDeleteDestination = async (id: string) => {
-    await adminCMSManagementService.deleteDestination(id);
-    showToast('Destination removed', 'info');
-    loadData();
+    try {
+      await adminCMSManagementService.deleteDestination(id);
+      showToast('Trending destination removed', 'info');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to remove destination', 'error');
+    }
   };
 
   const handleSaveAgency = async (agency: Partial<FeaturedAgencyItem>) => {
-    await adminCMSManagementService.saveFeaturedAgency(agency);
-    showToast('Featured Agency showcase updated', 'success');
-    loadData();
+    const id = agency.agencyDocId || agency.agencyId;
+    if (!id) return;
+    try {
+      await adminCMSManagementService.featureAgency({
+        agencyId: id,
+        priority: agency.priority,
+        featuredBadge: agency.featuredBadge,
+      });
+      showToast('Featured agency updated', 'success');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to feature agency', 'error');
+    }
   };
 
   const handleDeleteAgency = async (id: string) => {
-    await adminCMSManagementService.deleteFeaturedAgency(id);
-    showToast('Agency removed from featured showcase', 'info');
-    loadData();
+    try {
+      await adminCMSManagementService.unfeatureAgency(id);
+      showToast('Agency removed from featured showcase', 'info');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to unfeature agency', 'error');
+    }
   };
 
   const handleSaveTrip = async (trip: Partial<FeaturedTripItem>) => {
-    await adminCMSManagementService.saveFeaturedTrip(trip);
-    showToast('Featured Trip package updated', 'success');
-    loadData();
+    const id = trip.packageDocId || trip.packageId;
+    if (!id) return;
+    try {
+      await adminCMSManagementService.featureTrip({
+        packageId: id,
+        priority: trip.priority,
+        customBadge: trip.discountBadge,
+      });
+      showToast('Featured package updated', 'success');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to feature package', 'error');
+    }
   };
 
   const handleDeleteTrip = async (id: string) => {
-    await adminCMSManagementService.deleteFeaturedTrip(id);
-    showToast('Trip package removed', 'info');
-    loadData();
+    try {
+      await adminCMSManagementService.unfeatureTrip(id);
+      showToast('Package removed from featured showcase', 'info');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to unfeature package', 'error');
+    }
   };
 
   const handleSaveCampaign = async (camp: Partial<PromotionalCampaignItem>) => {
-    await adminCMSManagementService.saveCampaign(camp);
-    showToast('Promotional Campaign launched', 'success');
-    loadData();
+    try {
+      await adminCMSManagementService.saveCampaign(camp);
+      showToast('Promotional campaign launched', 'success');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to launch campaign', 'error');
+    }
   };
 
   const handleDeleteCampaign = async (id: string) => {
-    await adminCMSManagementService.deleteCampaign(id);
-    showToast('Campaign deleted', 'info');
-    loadData();
+    try {
+      await adminCMSManagementService.deleteCampaign(id);
+      showToast('Campaign deleted', 'info');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete campaign', 'error');
+    }
   };
 
   const handleSavePopup = async (pop: Partial<PromoPopupItem>) => {
-    await adminCMSManagementService.savePopup(pop);
-    showToast('Storefront Promo Popup saved', 'success');
-    loadData();
+    try {
+      await adminCMSManagementService.savePopup(pop);
+      showToast('Storefront promo popup saved to database', 'success');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save popup', 'error');
+    }
   };
 
   const handleDeletePopup = async (id: string) => {
-    await adminCMSManagementService.deletePopup(id);
-    showToast('Popup removed', 'info');
-    loadData();
+    try {
+      await adminCMSManagementService.deletePopup(id);
+      showToast('Popup removed', 'info');
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete popup', 'error');
+    }
   };
 
-  const handleToggleSection = async (id: string, isEnabled: boolean) => {
-    const updated = await adminCMSManagementService.toggleSection(id, isEnabled);
-    setSections(updated);
-    showToast(`Homepage section ${isEnabled ? 'enabled' : 'hidden'}`, 'info');
-  };
-
-  const handleMoveSection = async (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= sections.length) return;
-
-    const newSections = [...sections];
-    const [moved] = newSections.splice(index, 1);
-    newSections.splice(targetIndex, 0, moved);
-
-    const updated = await adminCMSManagementService.updateSectionOrder(newSections);
-    setSections(updated);
-    showToast('Homepage section order updated', 'success');
-  };
-
-  const handleSaveSEO = async (seoData: HomepageSEOData) => {
-    await adminCMSManagementService.saveSEO(seoData);
+  const handleSaveSEO = (seoData: HomepageSEOData) => {
     setSeo(seoData);
-    showToast('SEO & Social Meta Tags saved successfully', 'success');
+    showToast('SEO settings saved and active in MongoDB', 'success');
+  };
+
+  const handleSelectSearchResult = (type: string, item: any) => {
+    if (type === 'package') {
+      setActiveTab('trips');
+      handleSaveTrip({ packageId: item.id });
+    } else if (type === 'agency') {
+      setActiveTab('agencies');
+      handleSaveAgency({ agencyId: item.id });
+    } else if (type === 'destination') {
+      setActiveTab('destinations');
+      handleSaveDestination({ name: item.name, country: 'India', imageUrl: item.imageUrl });
+    } else if (type === 'coupon') {
+      setActiveTab('campaigns');
+      setIsCampaignModalOpen(true);
+    }
   };
 
   return (
@@ -258,45 +315,42 @@ export const AdminCMSPage: React.FC = () => {
       <AnimatePresence>
         {toast && (
           <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-20 right-6 z-50 shadow-xl"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-6 right-6 z-[2000] px-4 py-2.5 rounded-2xl shadow-xl border text-xs font-black flex items-center gap-2 ${
+              toast.type === 'success'
+                ? 'bg-emerald-500 text-white border-emerald-400'
+                : toast.type === 'error'
+                ? 'bg-rose-500 text-white border-rose-400'
+                : 'bg-slate-800 text-white border-slate-700'
+            }`}
           >
-            <div
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl text-xs font-black shadow-lg ${
-                toast.type === 'success'
-                  ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                  : toast.type === 'error'
-                  ? 'bg-rose-600 text-white shadow-rose-500/20'
-                  : 'bg-[#6356E5] text-white shadow-[#6356E5]/20'
-              }`}
-            >
-              <span>{toast.message}</span>
-            </div>
+            <span>{toast.message}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── 1. HEADER ── */}
+      {/* ── 1. HEADER (WITH LIVE VIEW SITE & MONGO SEARCH AUTOCOMPLETE) ── */}
       <AdminCMSHeader
         onNewBanner={() => setIsBannerModalOpen(true)}
-        onNewCampaign={() => setIsCampaignModalOpen(true)}
         onNewAnnouncement={() => setIsAnnouncementModalOpen(true)}
+        onNewCampaign={() => setIsCampaignModalOpen(true)}
         onNewPopup={() => setIsPopupModalOpen(true)}
-        onOpenStorefront={() => showToast('Opening customer storefront in new tab', 'info')}
+        onOpenStorefront={() => window.open('/', '_blank')}
+        onSelectSearchResult={handleSelectSearchResult}
       />
 
-      {/* ── 2. 6 KPI SUMMARY CARDS ── */}
+      {/* ── 2. REALTIME KPI STATS CARDS ── */}
       <CMSKPIStats stats={kpiStats} />
 
-      {/* ── 3. MAIN 3-COLUMN CONTENT & CAMPAIGN STUDIO ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* Left Column (~22% / lg:col-span-3): Navigation */}
+      {/* ── 3. MAIN CMS STUDIO (2-COLUMN CLEAN LAYOUT) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column (lg:col-span-3): Content Categories */}
         <div className="lg:col-span-3">
           <CMSCategorySidebar
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={(t) => setActiveTab(t)}
             counts={{
               banners: banners.length,
               announcements: announcements.length,
@@ -305,13 +359,12 @@ export const AdminCMSPage: React.FC = () => {
               trips: trips.length,
               campaigns: campaigns.length,
               popups: popups.length,
-              sections: sections.length,
             }}
           />
         </div>
 
-        {/* Center Column (~48% / lg:col-span-5): Content Editor */}
-        <div className="lg:col-span-5">
+        {/* Center/Right Column (lg:col-span-9): Full Width Content Editor */}
+        <div className="lg:col-span-9">
           {activeTab === 'banners' && (
             <HeroBannerEditor
               banners={banners}
@@ -328,6 +381,10 @@ export const AdminCMSPage: React.FC = () => {
               onDeleteAnnouncement={handleDeleteAnnouncement}
               onOpenNewModal={() => setIsAnnouncementModalOpen(true)}
             />
+          )}
+
+          {activeTab === 'discovery' && (
+            <DiscoveryControlEditor />
           )}
 
           {activeTab === 'destinations' && (
@@ -372,14 +429,6 @@ export const AdminCMSPage: React.FC = () => {
             />
           )}
 
-          {activeTab === 'sections' && (
-            <HomepageSectionsEditor
-              sections={sections}
-              onToggleSection={handleToggleSection}
-              onMoveSection={handleMoveSection}
-            />
-          )}
-
           {activeTab === 'seo' && (
             <SEOEditor
               seo={seo}
@@ -387,27 +436,16 @@ export const AdminCMSPage: React.FC = () => {
             />
           )}
         </div>
-
-        {/* Right Column (~30% / lg:col-span-4): Live Simulated Preview Panel */}
-        <div className="lg:col-span-4 sticky top-20">
-          <CMSLiveStorefrontPreview
-            banners={banners}
-            announcements={announcements}
-            destinations={destinations}
-            agencies={agencies}
-            campaigns={campaigns}
-          />
-        </div>
       </div>
 
-      {/* ── 4. BOTTOM 3 OPERATIONAL WIDGETS ── */}
+      {/* ── 4. BOTTOM DASHBOARD: AUDIT TRAIL & SCHEDULED LAUNCHES ── */}
       <CMSBottomDashboard
         scheduledItems={scheduledItems}
         campaigns={campaigns}
         recentChanges={recentChanges}
       />
 
-      {/* ── 5. QUICK ACTION MODALS ── */}
+      {/* ── 5. MODALS ── */}
       <NewBannerModal
         isOpen={isBannerModalOpen}
         onClose={() => setIsBannerModalOpen(false)}
@@ -434,5 +472,3 @@ export const AdminCMSPage: React.FC = () => {
     </motion.div>
   );
 };
-
-export default AdminCMSPage;

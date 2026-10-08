@@ -12,12 +12,38 @@ import {
   NotFoundError,
   UnauthorizedError,
   ForbiddenError,
+  TooManyRequestsError,
 } from '../utils/errors.util.js';
 import { IUser } from '../models/user.model.js';
 import { logger } from '../config/logger.config.js';
 import { DateUtil } from '../utils/date.util.js';
+import { mailService } from './mail.service.js';
+import { AuditLoggerService } from './auditLogger.service.js';
+import { envConfig } from '../config/env.config.js';
 
 export class AuthService {
+  private static emailResetAttempts = new Map<string, { count: number; firstAttempt: number }>();
+  private static ipResetAttempts = new Map<string, { count: number; firstAttempt: number }>();
+
+  private checkRateLimit(
+    key: string,
+    store: Map<string, { count: number; firstAttempt: number }>,
+    maxAttempts: number,
+    windowMs: number
+  ): boolean {
+    const now = Date.now();
+    const entry = store.get(key);
+    if (!entry || now - entry.firstAttempt > windowMs) {
+      store.set(key, { count: 1, firstAttempt: now });
+      return true;
+    }
+    if (entry.count >= maxAttempts) {
+      return false;
+    }
+    entry.count += 1;
+    return true;
+  }
+
   /**
    * Helper to format public user DTO with progress flags
    */
@@ -107,9 +133,19 @@ export class AuthService {
     });
 
     logger.info('👤 Customer registered successfully: %s [%s]', newUser.email, newUser._id);
-    logger.debug('✉️ Email Verification Token generated for %s: %s', newUser.email, verificationToken);
 
-    // 6. Generate Tokens
+    // 6. Deliver Welcome & Email Verification Emails via centralized MailService
+    const frontendBaseUrl = envConfig.FRONTEND_URL || envConfig.CLIENT_URL || 'http://localhost:5173';
+    const verificationLink = `${frontendBaseUrl.replace(/\/+$/, '')}/verify-email?token=${verificationToken}`;
+
+    mailService.sendWelcomeEmail(newUser.email, newUser.fullName).catch((err) => {
+      logger.error('Failed to send welcome email to %s: %s', newUser.email, err.message);
+    });
+    mailService.sendEmailVerificationEmail(newUser.email, newUser.fullName, verificationLink).catch((err) => {
+      logger.error('Failed to send email verification email to %s: %s', newUser.email, err.message);
+    });
+
+    // 7. Generate Tokens
     const tokenPayload: JwtTokenPayload = {
       userId: (newUser._id as mongoose.Types.ObjectId).toString(),
       email: newUser.email,
@@ -394,50 +430,352 @@ export class AuthService {
   }
 
   /**
-   * Forgot Password
+   * Request Password Reset Link (Secure, Anti-Enumeration, Rate-Limited, 15-Minute Expiry)
    */
-  public async forgotPassword(email: string) {
-    const user = await userRepository.findByEmail(email);
-    if (!user) {
-      // Return true to avoid user enumeration attacks
-      return { message: 'If an account exists with this email, a password reset link has been dispatched.' };
+  public async forgotPassword(
+    email: string | { email: string },
+    meta: { ipAddress?: string; userAgent?: string } = {}
+  ): Promise<{ message: string }> {
+    const rawEmail = typeof email === 'string' ? email : email?.email || '';
+    const cleanEmail = rawEmail.toLowerCase().trim();
+    const clientIp = meta.ipAddress || '127.0.0.1';
+    const genericMessage =
+      'If an account exists for this email, a password reset link has been sent.';
+
+    // 1. Rate Limiting: Max 5 attempts per email per hour, max 10 per IP per hour
+    const isEmailAllowed = this.checkRateLimit(
+      `user:email:${cleanEmail}`,
+      AuthService.emailResetAttempts,
+      5,
+      60 * 60 * 1000
+    );
+    const isIpAllowed = this.checkRateLimit(
+      `user:ip:${clientIp}`,
+      AuthService.ipResetAttempts,
+      10,
+      60 * 60 * 1000
+    );
+
+    if (!isEmailAllowed || !isIpAllowed) {
+      await AuditLoggerService.log({
+        actor: { email: cleanEmail, role: 'USER' },
+        ipAddress: clientIp,
+        browser: meta.userAgent,
+        module: 'Authentication',
+        action: 'Rate Limit Triggered',
+        eventType: 'Password Reset Rate Limit Exceeded',
+        description: `Rate limit exceeded for password reset request on email: ${cleanEmail} from IP: ${clientIp}`,
+        severity: 'High',
+        status: 'Failed',
+      });
+      throw new TooManyRequestsError(
+        'Too many password reset requests. Please wait an hour before trying again.'
+      );
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    await passwordResetRepository.create({
-      userId: user._id as mongoose.Types.ObjectId,
-      email: user.email,
-      token: resetToken,
-      expiresAt: DateUtil.addMinutes(new Date(), 60), // 1 hour
+    // 2. Audit Log: Password Reset Requested
+    await AuditLoggerService.log({
+      actor: { email: cleanEmail, role: 'USER' },
+      ipAddress: clientIp,
+      browser: meta.userAgent,
+      module: 'Authentication',
+      action: 'Password reset requested',
+      eventType: 'SECURITY_PASSWORD_RESET_REQUESTED',
+      description: `Password reset requested for email: ${cleanEmail}`,
+      severity: 'Low',
+      status: 'Success',
     });
 
-    logger.info('🔒 Password reset token generated for: %s', user.email);
-    logger.debug('Password reset token: %s', resetToken);
+    const user = await userRepository.findByEmail(cleanEmail);
+    if (!user || user.status !== 'Active') {
+      logger.info(
+        '🔒 Password reset requested for non-existent or inactive email: %s (Anti-enumeration)',
+        cleanEmail
+      );
+      // Return neutral success message to prevent user enumeration
+      return { message: genericMessage };
+    }
+
+    // 3. Generate high-entropy 32-byte cryptographic random token
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // Strict 15-Minute Expiry
+
+    // 4. Invalidate prior pending tokens and store only SHA-256 hash
+    await passwordResetRepository.create({
+      userId: user._id as mongoose.Types.ObjectId,
+      email: cleanEmail,
+      token: hashedToken,
+      expiresAt,
+    });
+
+    // 5. Construct secure reset link with raw unhashed token
+    const frontendBaseUrl =
+      envConfig.FRONTEND_URL || envConfig.CLIENT_URL || 'http://localhost:5173';
+    const resetLink = `${frontendBaseUrl.replace(/\/+$/, '')}/reset-password?token=${rawToken}`;
+
+    // 6. Deliver real branded HTML email via centralized MailService
+    try {
+      await mailService.sendUserPasswordResetEmail(cleanEmail, user.fullName, resetLink);
+
+      // Audit Log: Reset Email Sent
+      await AuditLoggerService.log({
+        actor: {
+          id: user._id.toString(),
+          email: cleanEmail,
+          name: user.fullName,
+          role: 'USER',
+        },
+        ipAddress: clientIp,
+        browser: meta.userAgent,
+        module: 'Authentication',
+        action: 'Password reset email sent',
+        eventType: 'SECURITY_PASSWORD_RESET_EMAIL_SENT',
+        description: `Password reset verification email dispatched to ${cleanEmail}`,
+        severity: 'Medium',
+        status: 'Success',
+        metadata: {
+          expiresInMinutes: 15,
+        },
+      });
+
+      logger.info('✉️ Customer password reset email delivered to: %s', cleanEmail);
+    } catch (mailError: any) {
+      logger.error(
+        '❌ Failed to dispatch password reset email to %s: %s',
+        cleanEmail,
+        mailError.message
+      );
+
+      // Invalidate generated token on delivery failure
+      await passwordResetRepository.invalidateAllForUser(user._id as mongoose.Types.ObjectId);
+
+      // Audit Log: Reset Email Failed
+      await AuditLoggerService.log({
+        actor: {
+          id: user._id.toString(),
+          email: cleanEmail,
+          name: user.fullName,
+          role: 'USER',
+        },
+        ipAddress: clientIp,
+        browser: meta.userAgent,
+        module: 'Authentication',
+        action: 'Reset Email Failed',
+        eventType: 'SECURITY_PASSWORD_RESET_EMAIL_FAILED',
+        description: `Failed to dispatch password reset email to ${cleanEmail}: ${mailError.message}`,
+        severity: 'High',
+        status: 'Failed',
+      });
+
+      // Still return generic message to preserve anti-enumeration
+    }
+
+    return { message: genericMessage };
+  }
+
+  /**
+   * Verify Reset Password Token Validity (Backend Validation Gate)
+   */
+  public async verifyResetToken(
+    token: string,
+    meta: { ipAddress?: string; userAgent?: string } = {}
+  ): Promise<{ valid: boolean; email: string }> {
+    const clientIp = meta.ipAddress || '127.0.0.1';
+
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      throw new BadRequestError('Password reset token is required.');
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token.trim()).digest('hex');
+    const record = await passwordResetRepository.findByTokenHash(hashedToken);
+
+    if (!record) {
+      await AuditLoggerService.log({
+        ipAddress: clientIp,
+        browser: meta.userAgent,
+        module: 'Authentication',
+        action: 'Invalid token attempt',
+        eventType: 'SECURITY_INVALID_RESET_TOKEN',
+        description: `Invalid password reset token verification attempt from IP: ${clientIp}`,
+        severity: 'Medium',
+        status: 'Failed',
+      });
+      throw new BadRequestError('Password reset link is invalid or has expired.');
+    }
+
+    if (record.isUsed) {
+      await AuditLoggerService.log({
+        actor: { id: record.userId.toString(), email: record.email, role: 'USER' },
+        ipAddress: clientIp,
+        browser: meta.userAgent,
+        module: 'Authentication',
+        action: 'Used token attempt',
+        eventType: 'SECURITY_USED_RESET_TOKEN',
+        description: `Replay attempt on already used password reset link for: ${record.email}`,
+        severity: 'High',
+        status: 'Failed',
+      });
+      throw new BadRequestError(
+        'This password reset link has already been used. Please request a new one.'
+      );
+    }
+
+    if (new Date() > record.expiresAt) {
+      await AuditLoggerService.log({
+        actor: { id: record.userId.toString(), email: record.email, role: 'USER' },
+        ipAddress: clientIp,
+        browser: meta.userAgent,
+        module: 'Authentication',
+        action: 'Expired token used',
+        eventType: 'SECURITY_EXPIRED_RESET_TOKEN',
+        description: `Expired password reset link accessed for: ${record.email}`,
+        severity: 'Medium',
+        status: 'Failed',
+      });
+      throw new BadRequestError(
+        'Your password reset link has expired. Please request a new one.'
+      );
+    }
+
+    // Mask email for safe user reassurance (e.g. j***e@example.com)
+    const [localPart, domainPart] = record.email.split('@');
+    const maskedLocal =
+      localPart.length > 2
+        ? `${localPart[0]}***${localPart[localPart.length - 1]}`
+        : `${localPart[0]}***`;
+    const maskedEmail = `${maskedLocal}@${domainPart}`;
 
     return {
-      message: 'If an account exists with this email, a password reset link has been dispatched.',
-      resetToken, // Returned in dev mode for seamless testing
+      valid: true,
+      email: maskedEmail,
     };
   }
 
   /**
-   * Reset Password
+   * Reset Password with Valid Token
    */
-  public async resetPassword(token: string, newPass: string) {
-    const validReset = await passwordResetRepository.findValidToken(token);
-    if (!validReset) {
-      throw new BadRequestError('Password reset link is invalid or has expired');
+  public async resetPassword(
+    token: string,
+    newPass: string,
+    meta: { ipAddress?: string; userAgent?: string } = {}
+  ): Promise<{ message: string }> {
+    const clientIp = meta.ipAddress || '127.0.0.1';
+
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      throw new BadRequestError('Password reset token is required.');
     }
 
-    const hashedPassword = await HashUtil.hash(newPass);
-    await userRepository.updatePassword(validReset.userId, hashedPassword);
-    await passwordResetRepository.markUsed(token);
+    if (!newPass || typeof newPass !== 'string' || newPass.length < 8) {
+      throw new BadRequestError('Password must be at least 8 characters long.');
+    }
 
-    // Invalidate all active sessions for security
-    await refreshTokenRepository.revokeAllUserTokens(validReset.userId);
+    // Strong password complexity validation
+    const strongPasswordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!strongPasswordRegex.test(newPass)) {
+      throw new BadRequestError(
+        'Password must be at least 8 characters and contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.'
+      );
+    }
 
-    logger.info('✅ Password successfully reset for user: %s', validReset.userId);
-    return { message: 'Password has been successfully updated. Please log in with your new password.' };
+    const hashedToken = crypto.createHash('sha256').update(token.trim()).digest('hex');
+    const record = await passwordResetRepository.findByTokenHash(hashedToken);
+
+    if (!record) {
+      await AuditLoggerService.log({
+        ipAddress: clientIp,
+        browser: meta.userAgent,
+        module: 'Authentication',
+        action: 'Invalid token attempt',
+        eventType: 'SECURITY_INVALID_RESET_TOKEN',
+        description: `Failed password reset attempt with invalid token from IP: ${clientIp}`,
+        severity: 'High',
+        status: 'Failed',
+      });
+      throw new BadRequestError('Password reset link is invalid or has expired.');
+    }
+
+    if (record.isUsed) {
+      await AuditLoggerService.log({
+        actor: { id: record.userId.toString(), email: record.email, role: 'USER' },
+        ipAddress: clientIp,
+        browser: meta.userAgent,
+        module: 'Authentication',
+        action: 'Used token attempt',
+        eventType: 'SECURITY_USED_RESET_TOKEN',
+        description: `Replay attack rejected on used password reset token for: ${record.email}`,
+        severity: 'High',
+        status: 'Failed',
+      });
+      throw new BadRequestError(
+        'This password reset link has already been used. Please request a new one.'
+      );
+    }
+
+    if (new Date() > record.expiresAt) {
+      await AuditLoggerService.log({
+        actor: { id: record.userId.toString(), email: record.email, role: 'USER' },
+        ipAddress: clientIp,
+        browser: meta.userAgent,
+        module: 'Authentication',
+        action: 'Expired token used',
+        eventType: 'SECURITY_EXPIRED_RESET_TOKEN',
+        description: `Attempt to reset password with expired token for: ${record.email}`,
+        severity: 'Medium',
+        status: 'Failed',
+      });
+      throw new BadRequestError(
+        'Your password reset link has expired. Please request a new one.'
+      );
+    }
+
+    const user = await userRepository.findById(record.userId.toString());
+    if (!user) {
+      throw new NotFoundError('User account associated with this reset link was not found.');
+    }
+
+    // 1. Hash new password securely with bcrypt
+    const hashedPassword = await HashUtil.hash(newPass.trim());
+    await userRepository.updatePassword(record.userId, hashedPassword);
+
+    // 2. Mark single-use token as used & invalidate any other active reset tokens for user
+    await passwordResetRepository.markUsed(hashedToken);
+    await passwordResetRepository.invalidateAllExcept(record.userId, hashedToken);
+
+    // 3. Invalidate all active login sessions / refresh tokens
+    await refreshTokenRepository.revokeAllUserTokens(record.userId.toString());
+
+    // 4. Security Audit Log
+    await AuditLoggerService.log({
+      actor: { id: user._id.toString(), email: user.email, name: user.fullName, role: 'USER' },
+      ipAddress: clientIp,
+      browser: meta.userAgent,
+      module: 'Authentication',
+      action: 'Password reset completed',
+      eventType: 'SECURITY_PASSWORD_RESET_COMPLETED',
+      description: `Password reset completed successfully for user ${user.email}`,
+      severity: 'Medium',
+      status: 'Success',
+    });
+
+    // 5. Dispatch confirmation email
+    mailService
+      .sendPasswordResetSuccessEmail(user.email, user.fullName, 'traveler')
+      .catch((err) => {
+        logger.error(
+          'Failed to dispatch password reset success email to %s: %s',
+          user.email,
+          err.message
+        );
+      });
+
+    logger.info('✅ Password successfully reset for customer: %s', user.email);
+
+    return {
+      message:
+        'Your password has been successfully updated. Please log in with your new password.',
+    };
   }
 
   /**

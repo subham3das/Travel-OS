@@ -40,6 +40,25 @@ export interface ConversationCompanion {
   avatar: string;
 }
 
+export interface VehicleBookingInfo {
+  bookingId: string;
+  vehicleName: string;
+  vehicleImage?: string;
+  pickupLocation?: string;
+  dropLocation?: string;
+  pickupDate?: string;
+  pickupTime?: string;
+  returnDate?: string;
+  depositPaid?: number;
+  remainingAmount?: number;
+  totalAmount?: number;
+  driverName?: string;
+  driverPhone?: string;
+  paymentStatus?: string;
+  bookingStatus?: string;
+  specialNotes?: string;
+}
+
 export interface ConversationCustomerInfo {
   customerId: string;
   name: string;
@@ -52,6 +71,19 @@ export interface ConversationCustomerInfo {
   paymentStatus: 'Paid' | 'Pending' | 'Partial';
   isVIP: boolean;
   tripStatus: 'Upcoming' | 'Ongoing' | 'Completed';
+  // Car Rental fields
+  vehicleName?: string;
+  vehicleImage?: string;
+  pickupLocation?: string;
+  dropLocation?: string;
+  pickupTime?: string;
+  returnDate?: string;
+  depositPaid?: number;
+  remainingAmount?: number;
+  totalAmount?: number;
+  driverName?: string;
+  driverPhone?: string;
+  specialNotes?: string;
   emergencyContact: {
     name: string;
     relationship: string;
@@ -72,6 +104,8 @@ export interface Conversation {
   lastMessageTime: string;
   unreadCount: number;
   isOnline: boolean;
+  conversationType?: 'PACKAGE' | 'CAR_RENTAL';
+  vehicleBooking?: VehicleBookingInfo;
   customerInfo: ConversationCustomerInfo;
 }
 

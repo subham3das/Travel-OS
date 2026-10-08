@@ -77,4 +77,6 @@ const AdminSessionSchema = new Schema<IAdminSession>(
   }
 );
 
+AdminSessionSchema.index({ adminId: 1, isActive: 1 });
+
 export const AdminSessionModel = mongoose.model<IAdminSession>('AdminSession', AdminSessionSchema);

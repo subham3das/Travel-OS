@@ -20,6 +20,16 @@ export class ReviewController {
       data: { review },
     });
   }
+
+  public async submitPackageReview(req: Request, res: Response): Promise<void> {
+    const userId = (req as any).user?.userId;
+    const review = await reviewService.submitPackageReview(userId, req.body);
+    res.status(201).json({
+      success: true,
+      data: { review },
+      message: 'Review submitted successfully',
+    });
+  }
 }
 
 export const reviewController = new ReviewController();

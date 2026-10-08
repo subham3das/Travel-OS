@@ -7,6 +7,18 @@ export enum AgencyVerificationStatus {
   REJECTED = 'REJECTED',
 }
 
+export type PartnerOnboardingStatus =
+  | 'ACCOUNT_CREATED'
+  | 'EMAIL_VERIFIED'
+  | 'PHONE_VERIFIED'
+  | 'PAYMENT_PENDING'
+  | 'PAYMENT_COMPLETED'
+  | 'DOCUMENTS_SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'SUSPENDED';
+
 export interface Agency {
   id: string;
   agencyId?: string;
@@ -28,6 +40,7 @@ export interface Agency {
   country: string;
   gstin?: string;
   licenseNumber?: string;
+  onboardingStatus?: PartnerOnboardingStatus;
   verificationStatus: AgencyVerificationStatus;
   status?: string;
   passwordChanged?: boolean;
@@ -40,6 +53,17 @@ export interface Agency {
   reviewCount: number;
   totalPackages: number;
   totalBookings: number;
+  businessTypes?: ('agency' | 'car_rental')[];
+  activeBusiness?: 'agency' | 'car_rental';
+  carRentalVerificationStatus?: 'NOT_REGISTERED' | 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED';
+  carRentalProfile?: any;
+  timeline?: Array<{
+    id: string;
+    title: string;
+    timestamp: string;
+    completed: boolean;
+    desc?: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }

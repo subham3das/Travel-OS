@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Package, Building2, Users } from 'lucide-react';
+import { MapPin, Package, Building2, Car } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export interface CategoryItem {
@@ -42,13 +42,13 @@ const categories: CategoryItem[] = [
     path: '/agencies',
   },
   {
-    id: 'community',
-    title: 'Community',
-    subtitle: 'Connect travelers',
-    icon: <Users className="w-5 h-5 sm:w-6 sm:h-6" />,
+    id: 'car-rental',
+    title: 'Car Rental',
+    subtitle: 'Book rides',
+    icon: <Car className="w-5 h-5 sm:w-6 sm:h-6" />,
     bgColor: 'bg-[#FFEDD5]',
     iconColor: 'text-[#EA580C]',
-    path: '/community',
+    path: '/car-rental',
   },
 ];
 

@@ -10,6 +10,7 @@ import { OnboardingPage } from '../pages/Onboarding/OnboardingPage';
 import { LoginPage } from '../pages/Login/LoginPage';
 import { SignupPage } from '../pages/Signup/SignupPage';
 import { ForgotPasswordPage } from '../pages/ForgotPassword/ForgotPasswordPage';
+import { ResetPasswordPage } from '../pages/ResetPassword/ResetPasswordPage';
 import { ProfileSetupPage } from '../pages/ProfileSetup/ProfileSetupPage';
 import { TravelPreferencesPage } from '../pages/Preferences/TravelPreferencesPage';
 import { WelcomePage } from '../pages/Welcome/WelcomePage';
@@ -17,14 +18,13 @@ import { WelcomePage } from '../pages/Welcome/WelcomePage';
 import { HomePage } from '../pages/Home/HomePage';
 import { ExplorePage } from '../pages/Explore/ExplorePage';
 import { MyTripsPage } from '../pages/Trips/MyTripsPage';
-import { CommunityPage } from '../pages/Community/CommunityPage';
-import { CreatePostPage } from '../pages/CreatePost/CreatePostPage';
-import { PostCommentsPage } from '../pages/PostComments/PostCommentsPage';
 import { TripDetailsPage } from '../pages/TripDetails/TripDetailsPage';
 import { TravelDocumentsPage } from '../pages/TravelDocuments/TravelDocumentsPage';
 import { TripReviewPage } from '../pages/Review/TripReviewPage';
 import { NotificationsPage } from '../pages/Notifications/NotificationsPage';
 import { ProfilePage } from '../pages/Profile/ProfilePage';
+import { CarRentalPage } from '../pages/CarRental/CarRentalPage';
+import { VehicleDetailsPage } from '../pages/CarRental/VehicleDetailsPage';
 
 import { SearchPage } from '../pages/Search/SearchPage';
 import { DestinationDetailsPage } from '../pages/Destination/DestinationDetailsPage';
@@ -34,17 +34,13 @@ import { PackageDetailsPage } from '../pages/PackageDetails/PackageDetailsPage';
 import { BookingCheckoutPage } from '../pages/BookingCheckout/BookingCheckoutPage';
 import { BookingSuccessPage } from '../pages/BookingCheckout/BookingSuccessPage';
 
-import { TravelerProfilePage } from '../pages/Community/TravelerProfilePage';
-import { PassportPage } from '../pages/Community/PassportPage';
-import { LeaderboardPage } from '../pages/Community/LeaderboardPage';
-import { TravelCircleDetailsPage } from '../pages/Community/TravelCircleDetailsPage';
-import { StoryDetailsPage } from '../pages/Community/StoryDetailsPage';
-
 import { EditProfilePage } from '../pages/Profile/EditProfilePage';
 import { SavedDestinationsPage } from '../pages/Profile/SavedDestinationsPage';
 import { SettingsPage } from '../pages/Settings/SettingsPage';
 import { ChatListPage } from '../pages/Chat/ChatListPage';
 import { ChatRoomPage } from '../pages/Chat/ChatRoomPage';
+import { BookingDetailsPage } from '../pages/BookingDetails/BookingDetailsPage';
+import { TravelerProfilePage } from '../pages/TravelerProfile/TravelerProfilePage';
 
 /**
  * Isolated Website Theme Wrapper
@@ -66,6 +62,7 @@ export const UserRoutes = () => (
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
     </Route>
 
     {/* Setup / Onboarding Steps (LoggedIn required) */}
@@ -82,17 +79,15 @@ export const UserRoutes = () => (
       <Route path="/explore" element={<ExplorePage />} />
       <Route path="/my-trips" element={<MyTripsPage />} />
       <Route path="/trips" element={<MyTripsPage />} />
+      <Route path="/my-bookings" element={<MyTripsPage defaultTab="bookings" />} />
+      <Route path="/bookings" element={<MyTripsPage defaultTab="bookings" />} />
+      <Route path="/my-bookings/cars" element={<MyTripsPage defaultTab="bookings" />} />
       <Route path="/trips/:tripId" element={<TripDetailsPage />} />
       <Route path="/trips/:id" element={<TripDetailsPage />} />
       <Route path="/trips/:tripId/documents" element={<TravelDocumentsPage />} />
       <Route path="/trips/:id/documents" element={<TravelDocumentsPage />} />
       <Route path="/trips/:tripId/review" element={<TripReviewPage />} />
       <Route path="/trips/:id/review" element={<TripReviewPage />} />
-      <Route path="/community" element={<CommunityPage />} />
-      <Route path="/community/create" element={<CreatePostPage />} />
-      <Route path="/community/post/:postId" element={<PostCommentsPage />} />
-      <Route path="/community/user/:userId" element={<TravelerProfilePage />} />
-      <Route path="/community/user/:id" element={<TravelerProfilePage />} />
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/chat" element={<ChatListPage />} />
       <Route path="/chat/:chatId" element={<ChatRoomPage />} />
@@ -100,38 +95,64 @@ export const UserRoutes = () => (
 
       {/* Search & Marketplace Detail Routes */}
       <Route path="/search" element={<SearchPage />} />
-      <Route path="/destination/:id" element={<DestinationDetailsPage />} />
+
+      {/* Packages (both /packages/... and /package/...) */}
+      <Route path="/packages/:packageId" element={<PackageDetailsPage />} />
+      <Route path="/packages/:id" element={<PackageDetailsPage />} />
+      <Route path="/package/:packageId" element={<PackageDetailsPage />} />
+      <Route path="/package/:id" element={<PackageDetailsPage />} />
+
+      {/* Destinations (both /destinations/... and /destination/...) */}
+      <Route path="/destinations/:destinationId" element={<DestinationDetailsPage />} />
+      <Route path="/destinations/:id" element={<DestinationDetailsPage />} />
       <Route path="/destination/:destinationId" element={<DestinationDetailsPage />} />
+      <Route path="/destination/:id" element={<DestinationDetailsPage />} />
+
+      {/* Agencies (both /agency/... and /agencies/...) */}
       <Route path="/agencies" element={<AgencyListingPage />} />
       <Route path="/agencies/:id" element={<AgencyDetailsPage />} />
       <Route path="/agencies/:agencyId" element={<AgencyDetailsPage />} />
+      <Route path="/agency/:id" element={<AgencyDetailsPage />} />
       <Route path="/agency/:agencyId" element={<AgencyDetailsPage />} />
-      <Route path="/package/:id" element={<PackageDetailsPage />} />
-      <Route path="/package/:packageId" element={<PackageDetailsPage />} />
+
+      {/* Cars & Rental (canonical /cars/:id and /car/:id and /car-rental/:id) */}
+      <Route path="/car-rental" element={<CarRentalPage />} />
+      <Route path="/car-rental/:id" element={<VehicleDetailsPage />} />
+      <Route path="/cars/:id" element={<VehicleDetailsPage />} />
+      <Route path="/cars/:vehicleId" element={<VehicleDetailsPage />} />
+      <Route path="/car/:id" element={<VehicleDetailsPage />} />
+
+      {/* Travelers */}
+      <Route path="/traveler/:userId" element={<TravelerProfilePage />} />
+      <Route path="/traveler/:id" element={<TravelerProfilePage />} />
+      <Route path="/travelers/:userId" element={<TravelerProfilePage />} />
+
+      {/* Bookings */}
+      <Route path="/bookings/:bookingId" element={<BookingDetailsPage />} />
+      <Route path="/bookings/:id" element={<BookingDetailsPage />} />
+      <Route path="/car-bookings/:bookingId" element={<BookingDetailsPage />} />
+      <Route path="/car-bookings/:id" element={<BookingDetailsPage />} />
+      <Route path="/car-booking/:bookingId" element={<BookingDetailsPage />} />
+      <Route path="/car-booking/:id" element={<BookingDetailsPage />} />
       <Route path="/booking/checkout/:packageId" element={<BookingCheckoutPage />} />
       <Route path="/booking/checkout/:id" element={<BookingCheckoutPage />} />
       <Route path="/booking/success/:bookingId" element={<BookingSuccessPage />} />
       <Route path="/booking/success" element={<BookingSuccessPage />} />
-      <Route path="/booking/:packageId" element={<BookingCheckoutPage />} />
+      <Route path="/booking/:bookingId" element={<BookingDetailsPage />} />
       <Route path="/booking/*" element={<BookingCheckoutPage />} />
 
-      {/* Community Routes */}
-      <Route path="/create-post" element={<CreatePostPage />} />
-      <Route path="/story/:id" element={<StoryDetailsPage />} />
-      <Route path="/traveler/:id" element={<TravelerProfilePage />} />
-      <Route path="/passport" element={<PassportPage />} />
-      <Route path="/leaderboard" element={<LeaderboardPage />} />
-      <Route path="/circle/:id" element={<TravelCircleDetailsPage />} />
-
-      {/* Profile Detail Routes */}
+      {/* Profile & Settings Sub-routes */}
       <Route path="/edit-profile" element={<EditProfilePage />} />
+      <Route path="/profile/edit" element={<EditProfilePage />} />
       <Route path="/saved-destinations" element={<SavedDestinationsPage />} />
-      <Route path="/saved-packages" element={<SavedDestinationsPage />} />
       <Route path="/wishlist" element={<SavedDestinationsPage />} />
-      <Route path="/followers" element={<TravelerProfilePage />} />
-      <Route path="/following" element={<TravelerProfilePage />} />
-      <Route path="/my-reviews" element={<StoryDetailsPage />} />
-      <Route path="/my-stories" element={<StoryDetailsPage />} />
+      <Route path="/saved-trips" element={<SavedDestinationsPage />} />
+      <Route path="/saved" element={<SavedDestinationsPage />} />
+      <Route path="/passport" element={<TravelerProfilePage />} />
+      <Route path="/profile/traveler" element={<TravelerProfilePage />} />
+
+      {/* Packages listing alias */}
+      <Route path="/packages" element={<ExplorePage />} />
 
       {/* Utility Routes */}
       <Route path="/settings" element={<SettingsPage />} />

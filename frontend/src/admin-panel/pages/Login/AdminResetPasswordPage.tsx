@@ -12,6 +12,7 @@ import {
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
+import { BrandLogo } from '../../../common/brand';
 import { resetPasswordAdminService } from '../../services/adminAuth.service';
 
 export const AdminResetPasswordPage: React.FC = () => {
@@ -68,10 +69,7 @@ export const AdminResetPasswordPage: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xl mb-4 text-[#6356E5]">
-            <Lock className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">TravelOS</h1>
+          <BrandLogo theme="dark" className="h-10 w-auto mx-auto mb-3" alt="ApnaTrip" />
           <p className="text-xs font-bold text-indigo-200/80 uppercase tracking-widest mt-1">
             Super Admin Portal • Security Recovery
           </p>

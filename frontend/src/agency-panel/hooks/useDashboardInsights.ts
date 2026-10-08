@@ -91,6 +91,7 @@ export function useDashboardInsights() {
     quickInsights: dashboardData?.quickInsights || [],
     recentBookings: dashboardData?.recentBookings || [],
     departures: dashboardData?.departures || [],
+    packagesRequiringAttention: dashboardData?.packagesRequiringAttention,
     selectedRange,
     setSelectedRange,
     isLoading,

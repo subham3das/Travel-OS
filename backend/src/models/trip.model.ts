@@ -220,12 +220,12 @@ export interface ITrip extends Document {
 
 const TripSchema = new Schema<ITrip>(
   {
-    tripId: { type: String, required: true, unique: true, index: true },
-    agencyId: { type: Schema.Types.ObjectId, ref: 'Agency', required: true, index: true },
+    tripId: { type: String, required: true, unique: true },
+    agencyId: { type: Schema.Types.ObjectId, ref: 'Agency', required: true },
     packageId: { type: Schema.Types.ObjectId, ref: 'Package', index: true },
     packageName: { type: String, required: true },
     dayBadge: { type: String, default: '' },
-    departureDate: { type: Date, required: true, index: true },
+    departureDate: { type: Date, required: true },
     returnDate: { type: Date, required: true },
     dateRangeText: { type: String, required: true },
     durationText: { type: String, default: '' },
@@ -264,7 +264,7 @@ const TripSchema = new Schema<ITrip>(
     travelerGroups: [{ type: Schema.Types.Mixed }],
     quickContacts: [{ type: Schema.Types.Mixed }],
 
-    isDeleted: { type: Boolean, default: false, index: true },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -272,6 +272,7 @@ const TripSchema = new Schema<ITrip>(
 TripSchema.index({ agencyId: 1, statusCategory: 1, isDeleted: 1 });
 TripSchema.index({ agencyId: 1, isDeleted: 1, departureDate: 1 });
 TripSchema.index({ departureDate: 1 });
+TripSchema.index({ bookingIds: 1 });
 TripSchema.index({ createdAt: -1 });
 
 export const TripModel = mongoose.models.Trip || mongoose.model<ITrip>('Trip', TripSchema, 'trips');

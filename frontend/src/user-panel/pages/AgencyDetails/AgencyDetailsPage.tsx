@@ -388,7 +388,17 @@ export const AgencyDetailsPage: React.FC = () => {
       </main>
 
       {/* 17. Sticky Booking Bottom CTA Bar */}
-      <StickyBookingBar startingPrice={agency.startingPrice} onViewPackages={() => navigate('/search?tab=packages')} />
+      <StickyBookingBar
+        startingPrice={agency.startingPrice}
+        onViewPackages={() => {
+          const el = document.getElementById('packages-section');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            navigate(`/explore?agency=${encodeURIComponent(agency.name || agency.id)}`);
+          }
+        }}
+      />
     </div>
   );
 };

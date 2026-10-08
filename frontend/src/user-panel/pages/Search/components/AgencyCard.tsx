@@ -12,13 +12,13 @@ export const AgencyCard: React.FC<AgencyCardProps> = ({ item }) => {
 
   return (
     <div
-      onClick={() => navigate(item.targetUrl)}
+      onClick={() => navigate(item.route || item.targetUrl)}
       className="bg-white rounded-3xl p-3.5 border border-slate-100/90 shadow-2xs hover:shadow-md hover:scale-[1.02] hover:border-[#6356E5]/30 transition-all cursor-pointer flex items-center justify-between gap-3.5 group"
     >
       <div className="flex items-center gap-3.5 min-w-0 flex-1">
         {/* Logo Circle */}
         <img
-          src={item.image}
+          src={item.image || item.imageUrl}
           alt={item.title}
           className="w-14 h-14 rounded-full object-cover shrink-0 border border-slate-100 group-hover:scale-105 transition-transform"
         />

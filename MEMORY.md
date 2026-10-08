@@ -778,7 +778,288 @@ Permanent development log for the Travel OS production platform. Maintains compl
   - Backend Build (`tsc --noEmit`): **0 errors**.
   - Frontend Build (`npm run build` / `tsc && vite build`): **0 errors**.
 
+---
 
+### Milestone: Production Car Rental Module Refactoring & Full-System Architecture Synchronization
+- **Objective**: Overhauled the Car Rental module to conform to production travel platform standards (Airbnb / Turo / Booking.com UX). Eliminated direct booking modal popups from vehicle catalog cards in favor of a dedicated vehicle detail inspection route (`/car-rental/:id`), rich vehicle telemetry, driver license verification, advance token payment calculation, live customer reviews, and complete MongoDB persistence.
+- **Frontend Architecture & Navigation Improvements**:
+  - **Route Added**: Registered `/car-rental/:id` in `frontend/src/user-panel/routes/UserAppRoutes.tsx` mapped to `VehicleDetailsPage.tsx`.
+  - **Catalog Navigation**: Updated `CarListingPage.tsx` so both entire vehicle cards and the "View & Book" button navigate cleanly to `/car-rental/:id`.
+  - **Vehicle Details Page (`VehicleDetailsPage.tsx`)**:
+    - Complete live backend data retrieval with fallback to seeded inventory.
+    - Added specs carousel (Transmission, Fuel Type, Seating Capacity, Luggage Capacity, Mileage, Top Speed).
+    - Added interactive features checklist (GPS Navigation, Bluetooth, Sunroof, Heated Seats, 360 Camera, Dashcam, etc.).
+    - Included verified Agency Host dossier and badge.
+    - Integrated real-time customer review listing and verified review submission form (`POST /api/cars/:id/reviews`).
+    - Fixed UI layout flaw where a duplicate `<BottomNavigation />` overlaid the sticky pricing and checkout action bar; anchored sticky bar to `bottom-0 z-30` with `backdrop-blur-md`.
+  - **Car Booking Modal (`CarBookingModal.tsx`)**:
+    - Multi-step wizard flow:
+      - **Step 1: Rental Logistics**: Pickup location, dropoff location, pickup date & time, return date & time, duration calculation in days.
+      - **Step 2: Driver & Payment Details**: Primary driver full name, email, phone number, driver license number (mandatory), and payment schedule selection:
+        - Full Payment (100% upfront).
+        - Advance Token Deposit (20% upfront, remaining 80% due on vehicle pickup).
+    - Zero mock state: submits to `POST /api/cars/bookings` and displays live confirmation ticket with Booking Reference ID.
+- **Backend Architecture & Endpoints**:
+  - `CarController` (`backend/src/controllers/car.controller.ts`):
+    - `getAllCars`: Filterable vehicle catalog with price sorting, category filters, and transmission filters.
+    - `getCarById`: Deep vehicle inspection by ID or slug.
+    - `getCarReviews`: Live customer reviews lookup for a specific vehicle with author details.
+    - `createCarReview`: Verified review submission with star rating, comments, and trip type.
+    - `createBooking`: Car reservation creation with date conflict checking, pricing breakdown, and advance token calculation.
+    - `getUserBookings`: Customer's active and historical car rental reservations.
+  - `CarRoutes` (`backend/src/routes/car.routes.ts`):
+    - `GET /api/cars` $\rightarrow$ Public vehicle directory.
+    - `GET /api/cars/:id` $\rightarrow$ Single vehicle details.
+    - `GET /api/cars/:id/reviews` $\rightarrow$ Verified vehicle reviews.
+    - `POST /api/cars/:id/reviews` $\rightarrow$ Authenticated review submission.
+    - `POST /api/cars/bookings` $\rightarrow$ Authenticated car rental checkout.
+    - `GET /api/cars/bookings/my` $\rightarrow$ Authenticated customer rental reservations.
+- **Database & Mongoose Models**:
+  - `CarModel` (`backend/src/models/car.model.ts`): Vehicle schema tracking brand, model, year, category (`Hatchback`, `Sedan`, `SUV`, `Luxury`, `Electric`, `Van`), transmission, fuel, seats, pricePerDay, securityDeposit, features, images, agencyId, rating, isAvailable.
+  - `CarBookingModel` (`backend/src/models/carBooking.model.ts`): Reservation tracking with pickup/dropoff dates, locations, driver details (license), totalAmount, advancePaid, remainingAmount, paymentStatus (`pending`, `partial_advance`, `paid`, `refunded`), and bookingStatus (`CONFIRMED`, `ACTIVE`, `COMPLETED`, `CANCELLED`).
+  - `CarReviewModel` (`backend/src/models/carReview.model.ts`): Customer vehicle reviews with rating (1-5), comment, author reference, and timestamp.
+- **Data Seeding & Verification**:
+  - `backend/scripts/seedCars.ts`: Populated 10 production vehicles across all 6 categories with high-resolution imagery, detailed specifications, agency ownership, and verified reviews.
+  - Integration Test Verification: Verified full end-to-end car booking and review lifecycle against MongoDB Atlas `travelos_db`.
+  - TypeScript Status: Backend `tsc --noEmit` $\rightarrow$ **0 errors**; Frontend `tsc --noEmit` $\rightarrow$ **0 errors**.
 
+---
 
+## 2026-09-19
 
+### Milestone: Multi-Business Provider System (Travel Agency + Car Rental Architecture)
+- **Objective**: Deliver a unified multi-business architecture enabling a single provider login to operate as a **Travel Agency**, **Car Rental Provider**, or **Both**, with independent super admin verification, dynamic header switcher, tailored sidebars, and zero breaking changes to existing agency workflows.
+- **Backend Architecture & Endpoints**:
+  - `AgencyModel` (`backend/src/models/agency.model.ts`):
+    - `businessTypes: ('agency' | 'car_rental')[]` (default `['agency']`)
+    - `activeBusiness: 'agency' | 'car_rental'` (default `'agency'`)
+    - `carRentalVerificationStatus: 'NOT_REGISTERED' | 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED'` (default `'NOT_REGISTERED'`)
+    - `carRentalProfile`: `businessName`, `fleetSize`, `operatingCities`, `emergencyContact`, `workingHours`, `description`, `documents`, `bankDetails`
+    - `carRentalApprovedAt`, `carRentalApprovedBy`, `carRentalRejectionReason`
+  - `AgencyCarRentalService` (`backend/src/services/agencyCarRental.service.ts`):
+    - `registerCarRental`: Validates payload, saves car rental profile, transitions status to `PENDING`, dispatches notification to admin.
+    - `getCarRentalProfile`: Retrieves vertical verification state and profile details.
+    - `updateCarRentalProfile`: Updates operating cities, emergency hotlines, and settlement bank accounts.
+    - `switchActiveBusiness`: Safe business switcher with registration prerequisite checks.
+    - `getDashboardStats`: Real-time telemetry computing fleet occupancy, active rentals, advance deposits collected, and revenue.
+    - `getCalendarSchedule`: Availability date grid mapping active vehicle bookings.
+    - `getDrivers`: Chauffeur directory extracted from fleet vehicles.
+  - Agency Car Rental Routes (`backend/src/routes/agency.routes.ts`):
+    - `GET /api/agencies/car-rental/profile`
+    - `POST /api/agencies/car-rental/register`
+    - `PATCH /api/agencies/car-rental/profile`
+    - `POST /api/agencies/car-rental/switch-business`
+    - `GET /api/agencies/car-rental/dashboard`
+    - `GET /api/agencies/car-rental/calendar`
+    - `GET /api/agencies/car-rental/drivers`
+    - `GET /api/agencies/cars` & `POST /api/agencies/cars` & `PATCH /api/agencies/cars/:id` & `DELETE /api/agencies/cars/:id`
+    - `GET /api/agencies/car-bookings` & `PATCH /api/agencies/car-bookings/:id/status`
+  - Super Admin Independent Approvals (`backend/src/services/adminAgencyRequest.service.ts`):
+    - `PUT /api/admin/agency-requests/:id/approve-car-rental` $\rightarrow$ Sets `carRentalVerificationStatus = 'APPROVED'`, adds `car_rental` to `businessTypes`, creates audit log, sends real-time in-app notification.
+    - `PUT /api/admin/agency-requests/:id/reject-car-rental` $\rightarrow$ Sets `carRentalVerificationStatus = 'REJECTED'` with rejection reason.
+- **Admin Panel UI**:
+  - `AgencyRequestTableRow.tsx`: Displays multi-business pills (`Agency + Car`, `🚗 Car Rental`, `Tour Operator`).
+  - `AgencyRequestDrawer.tsx`: Dedicated "Car Rental Business Vertical" card with independent "Approve Car Rental" & "Reject Car Rental" actions and live status badge.
+- **Agency Panel Frontend**:
+  - `ActiveBusinessContext.tsx` (`useActiveBusiness`): Core state management for active vertical (`agency` vs `car_rental`), approval verification, route synchronization, and smooth navigation triggers.
+  - `BusinessSwitcher.tsx` & `DashboardHeader.tsx`: Header capsule allowing instantaneous switching between Travel Agency and Car Rental modes.
+  - `DesktopSidebar.tsx` & `BottomNavigation.tsx`: Navigation items, icons, and portal branding adapt dynamically when operating in Car Rental mode.
+  - Pages Created:
+    - `AgencyCarRentalActivatePage.tsx`: Welcome and initial registration for Car Rental capability.
+    - `AgencyCarRentalPendingPage.tsx`: Real-time status review screen with automatic approval detection.
+    - `AgencyCarRentalDashboardPage.tsx`: Operational dashboard with 4 KPI cards and recent bookings table with accept/decline/complete actions.
+    - `AgencyCarRentalCarsPage.tsx`: Fleet catalog management with category filters, availability toggling, and "Add Vehicle" modal.
+    - `AgencyCarRentalBookingsPage.tsx`: Reservations table with status filtering and inline status updates.
+    - `AgencyCarRentalCalendarPage.tsx`: Vehicle schedule date grid showing reservations and occupancy.
+    - `AgencyCarRentalDriversPage.tsx`: Chauffeur directory with license verification, ratings, and vehicle assignments.
+    - `AgencyCarRentalAnalyticsPage.tsx`: Financial performance, advance collections vs remaining balances, and vehicle type breakdown.
+    - `AgencyCarRentalSettingsPage.tsx`: Rental brand profile, operating hubs, emergency helpline, and settlement bank details.
+  - Onboarding Integration: `BUSINESS_TYPES` extended with `Car Rental & Fleet Provider` and `Integrated Travel & Car Rental`.
+- **TypeScript Status**:
+  - Backend `npx tsc --noEmit` $\rightarrow$ **0 errors**.
+  - Frontend `npx tsc --noEmit` $\rightarrow$ **0 errors**.
+
+---
+
+## Architecture Decision Record (ADR): Multi-Business Platform Standard
+
+### 1. Business Model Decision
+ApnaTrip is officially designated as a **modular multi-business travel platform**. A single business account can operate:
+1. **Travel Agency**
+2. **Car Rental**
+3. **Both (Integrated)**
+
+This is the permanent platform architecture. Future verticals (e.g. Stays/Hotels, Experiences) will integrate into this identical multi-business architecture.
+
+### 2. Single Authentication & Identity Invariance
+There is strictly **one authentication system** across the platform:
+- **Zero Duplicate Logins**: No secondary login portal, no distinct car rental login screen.
+- **Zero Duplicate JWTs**: Session tokens represent the primary business identity; active vertical context is session-managed.
+- **Zero Duplicate Accounts**: Providers never register twice to access separate verticals. One provider account owns multiple business capabilities.
+
+### 3. Business Modules Topology
+The platform is organized into independent vertical modules that share underlying infrastructure:
+- **Travel Agency Module**: Dashboard, Tour Packages, Package Bookings, Customers/CRM, Messages/Inbox, Analytics, Payments, Profile, Settings.
+- **Car Rental Module**: Fleet Dashboard, Vehicle Catalog (Cars), Drivers/Crew, Car Reservations/Bookings, Customers/CRM, Messages/Inbox, Payments, Fleet Analytics, Profile, Rental Settings.
+Both modules operate independently in terms of daily operations while sharing global services.
+
+### 4. Zero-Reload Workspace Switching
+Providers operating multiple verticals switch workspaces directly within the interface:
+```
+Login ➔ Agency Dashboard ➔ Business Switcher ➔ Car Rental Dashboard
+```
+- No page reload architecture disruptions.
+- No re-authentication or token regeneration.
+- State is preserved smoothly via `ActiveBusinessContext` and synced via `activeBusiness` in the backend.
+
+### 5. Onboarding & Registration Standard (One Business at a Time + In-Dashboard Expansion)
+Partner onboarding enforces one business registration at a time:
+- **Dedicated Selection Gate**: `/partner`, `/partner/select-business`, `/partner/select-type` presents 2 distinct choices (No "Both" option):
+  1. `Travel Agency` ➔ Routes to `/agency/onboarding/business` (or `/partner/agency/onboarding`)
+  2. `Car Rental Provider` ➔ Routes to `/partner/car-rental/onboarding`
+- **Agency Onboarding Isolation**: The "Business Type" dropdown is completely removed from `AgencyBusinessOnboardingPage.tsx`. No car rental or fleet questions appear. `businessType` defaults internally to `'Travel Agency'`.
+- **Standalone Car Rental Registration**:
+  - `CarRentalOnboardingPage.tsx`: Dedicated 4-step wizard (Fleet Basics, Permits & Compliance, Payout Details, Review & Submit).
+  - Public Endpoint: `POST /api/agencies/car-rental/onboard`.
+  - Auto-assigns application tracking ID `ATP-CR-YYYY-XXXXXX`, hashes passwords, and initializes status as `PENDING`.
+- **In-Dashboard Expansion ("Expand Your Business")**:
+  - **Agency Dashboard**: If car rental is not approved and not dismissed, renders a soft, non-intrusive "Expand Your Business (Optional)" card (`[Start Now]` ➔ `/agency/car-rental/activate`, `[Maybe Later]` ➔ dismisses card permanently via `localStorage`).
+  - **Car Rental Dashboard**: If travel agency is not approved and not dismissed, renders the equivalent soft "Expand Your Business (Optional)" card (`[Start Now]` ➔ `/agency/onboarding/business`, `[Maybe Later]` ➔ dismisses card permanently via `localStorage`).
+  - Account expansion is seamlessly merged under the existing single account and single JWT.
+- **Conditional Dashboard Switching**:
+  - `BusinessSwitcher` capsule in the header appears **ONLY** after both businesses exist and both are verified.
+  - Desktop displays an elegant dropdown; mobile displays a native touch-friendly Bottom Sheet with swipe/drag handle and backdrop overlay.
+- **Deterministic Post-Login Routing**:
+  - `AgencyLoginPage.tsx` checks `agency.businessTypes`.
+  - Exclusively car rental providers (`['car_rental']`) navigate directly to `/agency/car-rental/dashboard` (if approved) or `/agency/car-rental/pending` (if under review).
+
+### 6. Existing Agency Invariance Principle
+Existing agency accounts remain 100% unaffected. All existing routes (`/agency/dashboard`, `/agency/packages`, etc.), controllers, and interfaces function exactly as before without any breaking changes.
+
+### 7. Database Immutability & Expansion Protocols
+- **Immutability of Existing Collections**: `users`, `agencies`, `packages`, `bookings`, `notifications`, `messages`, `payments` must **never** be renamed, restructured destructively, or recreated.
+- **Expansion Protocol**: New features must reuse existing collections whenever possible. Never duplicate models, APIs, or collections.
+  - Dedicated collections (`cars`, `car_bookings`, `car_reviews`) exist only where domain logic requires specialized schema models.
+  - All multi-business profile extensions attach directly to the primary `agencies` collection (`businessTypes`, `carRentalVerificationStatus`, `carRentalProfile`).
+
+### 8. Shared Core Infrastructure
+The following systems are universally shared and must **never** be duplicated per vertical:
+- Authentication & JWT RBAC
+- Omnichannel Notification Engine (Socket.IO + In-App + Email)
+- Messaging & Real-Time Customer Chat (`conversations`, `messages`)
+- Payment & Settlement Systems
+- User & Traveler Management
+- Cloudinary Media Asset Pipeline
+- Audit Logging & Timeline Tracking
+- Role-Based Access Control (RBAC)
+
+### 9. Business Services Hub in Settings & Future Verticals
+- **Centralized Management**: `AgencySettingsPage.tsx` mounts `<BusinessServicesCard />` as a permanent control center where providers can view all current services and launch un-enabled services (`+ Add Service`) regardless of whether dashboard cards were dismissed.
+- **Future Vertical Display**: Clearly conveys platform roadmap with disabled "Coming Soon" badges for:
+  - Hotels & Resorts
+  - Homestays & Villas
+  - Activities & Experiences
+  - Taxi Network
+  - Local Guides
+- **Responsive Workspace Switcher**:
+  - Desktop: Minimalist capsule dropdown.
+  - Mobile: Native bottom sheet drawer with backdrops, checkmarks, cancel button, and zero-reload workspace swaps.
+
+### 10. Admin Car Rental Approval Module Standards
+- **Dedicated Route & View**: Car Rental approvals operate in a distinct portal view (`/admin/car-rental-approvals`), isolated from Agency tour operator approvals (`/admin/verification-pending`).
+- **Sidebar Integration**: The Admin sidebar groups approvals under a clear verification hierarchy with distinct live badges for Agency and Car Rental queues.
+- **100% Backend-Driven**: Zero dummy or mocked data. All stats, queues, vehicle listings, chauffeur rosters, and document bundles query directly from MongoDB (`agencies`, `cars`, `audit_logs`, `notifications`).
+- **4-Tab Queue Architecture**: Dedicated queues for `Pending`, `Approved`, `Needs Changes`, and `Rejected` with search, sorting, and multi-filter criteria.
+- **Comprehensive Inspector**: Deep-dive review drawer exposes legal business details, fleet capacity, registered vehicles with specs & photos, assigned chauffeurs, document inspection with preview/zoom/download, and audit history.
+- **Approval Actions & Notifications**: Real backend state transitions for Approve, Reject (mandatory reason), Request Changes (structured issue checklist), Suspend, and Reopen Review, with automatic audit logging and real-time in-app notification dispatching.
+
+---
+
+### 11. Agency Dashboard Car Rental Integration (Phase 2)
+- **Dashboard Segmented Toggle**: Under the greeting and date card on both Travel Agency and Car Rental dashboards, an animated 3D glass segmented toggle (`[ Travel Agency ] [ Car Rental ]`) is mounted. Uses Framer Motion `layoutId="businessSegmentedPill"` for tactile slider animation and zero-reload instant business context switching.
+- **Dynamic Sidebar Switching**: `DesktopSidebar.tsx` dynamically transitions between Travel Agency (`Dashboard`, `Packages`, `Bookings`, `Customers`, `Messages`, `Analytics`, `Settings`) and Car Rental (`Dashboard`, `Vehicles`, `Fleet Overview`, `Bookings`, `Drivers`, `Customers`, `Reviews`, `Analytics`, `Settings`) with animated slide transitions.
+- **Car Rental Command Center**: Real-time KPI telemetry (Total Fleet, Available, Booked Today, Revenue, Pending Requests, Chauffeurs) powered directly by MongoDB aggregation queries. Visual matrices for Fleet Utilization, Top Vehicles, and Operations Dispatch.
+- **Fleet & Vehicles Directory**: Grid displaying vehicle specifications (Toyota Innova Crysta layout, Seats, Transmission, Fuel, Commercial Permit, Tariff, Rating & Trips). Features `[View]`, `[Edit]`, `[Bookings]` actions and slide-over `VehicleDetailsDrawer` with photo gallery, compliance certs (RC, AITP permit, Insurance, PUCC), owner info, and lifetime telemetry.
+- **Fleet Structure & Overview**: Matrix breakdown across vehicle types (`SUV`, `Sedan`, `Luxury`, `Tempo`, `Mini Bus`, `Maintenance`, `Inactive`) and verified partner owner cards with slide-over `OwnerProfileDrawer`.
+- **Rental Customers CRM**: Dedicated CRM displaying customer contact, lifetime bookings count, total spend, last rental date, and vehicle preference.
+- **Rental Bookings Queue**: Comprehensive dispatch queue with columns for Vehicle, Pickup, Drop, Customer, Status, Driver, Payment, Advance Paid, and Balance.
+- **Driver Module**: Chauffeur directory with driver photo, name, phone, experience, license, assigned vehicle, trips, and rating, plus slide-over `DriverDetailsDrawer` and registration modal.
+- **Rental Intelligence & Analytics**: Five core telemetry pillars: Occupancy index, Revenue cadence, Trip velocity, Peak Season forecasts, and Status-based Vehicle Utilization.
+- **100% Real Backend Data**: Fully backed by MongoDB models (`CarModel`, `DriverModel`, `CarBookingModel`, `AgencyModel`), zero dummy/mock data.
+
+---
+
+### 12. Milestone: Car Rental 100% Backend-Driven Production SaaS Transformation
+- **Feature**: Complete end-to-end transformation of the Car Rental module into a real production backend-driven SaaS system across User Panel, Agency Panel, Admin Panel, and Backend API, keeping 100% of approved UI/UX designs intact.
+- **Architectural Deliverables**:
+  - **Zero Dummy Data**: Cleaned all mock objects, fallback mock arrays, dummy DL numbers, hardcoded ratings (`4.8`), hardcoded analytics (`68%`), and synthetic reservation generators.
+  - **Single Source of Truth**: Unified all vehicle, booking, driver, and review operations onto existing MongoDB Atlas collections (`cars`, `car_bookings`, `drivers`, `car_reviews`, `agencies`, `users`, `conversations`, `messages`, `notifications`, `audit_logs`).
+  - **User Panel**:
+    - Backend search, multi-filter, pagination, and sorting directly executed via Express + MongoDB aggregation.
+    - User favorites persisted to `users.savedVehicles` and synced via `/api/cars/favorites/my` and `/api/cars/:id/favorite`.
+    - Authentic booking lifecycle: Token Advance (20%) or Full Payment reservation with Razorpay verification and instant booking creation.
+    - Zero client-side fallback mocks on 404 or missing vehicles.
+  - **Agency Panel**:
+    - Agency Car Rental reviews powered by `CarReviewModel` with real customer feedback, cleanliness, punctuality scores, and dynamic global rating aggregation (`/api/agencies/car-rental/reviews`).
+    - Agency Car Rental telemetry & analytics powered by real live booking volumes, revenue calculations, status-based vehicle utilization, and seasonal trend aggregation (`/api/agencies/car-rental/analytics`).
+    - Cleaned initial vehicle form mock values in `AgencyCarRentalCarsPage.tsx`.
+    - Driver roster queries live `DriverModel` with real commercial driver licenses, trips, and assigned vehicles.
+  - **Verification**:
+    - Backend TypeScript: `npx tsc --noEmit` -> **0 errors**.
+    - Frontend TypeScript: `npx tsc --noEmit` -> **0 errors**.
+    - No design, layout, color, typography, or animation regressions.
+
+---
+
+### 13. Milestone: Production Mongoose Index Audit & Duplicate Elimination
+- **Root Cause Resolved**:
+  - `[MONGOOSE] Warning: Duplicate schema index on {"departureDate":1} for model "Trip"` was triggered by declaring `departureDate: { index: true }` at the path level while simultaneously defining `TripSchema.index({ departureDate: 1 })` at the schema level.
+- **Architectural Deliverables**:
+  - Audited all 31 models in `backend/src/models` using automated dynamic schema reflection (`scripts/auditAllIndexes.ts`).
+  - **Eliminated 100% of Duplicate & Redundant Indexes**:
+    - Removed duplicate `departureDate` path-level index on `TripModel`.
+    - Removed redundant `index: true` from fields having `unique: true` across `tripId`, `email`, `applicationId`, `agencyId`, `bookingId`, `packageId`, `paymentId`, `token`, `tokenHash`, `key`, `slug`, `ticketId`, `postId`, `campaignId`, `contentId`.
+    - Removed redundant single-field indexes covered by compound index prefixes (e.g. `agencyId`, `customerId`, `userId`, `conversationId`, `recipientType`).
+    - Removed single-field indexes on low-cardinality boolean fields (`isDeleted`, `isArchived`, `isUnread`) in favor of selective compound indexes.
+    - Removed redundant reverse index `MessageSchema.index({ conversationId: 1, isDeleted: 1, createdAt: 1 })`, keeping `MessageSchema.index({ conversationId: 1, isDeleted: 1, createdAt: -1 })` (MongoDB scans B-trees forward or backward).
+  - **Added Missing Query Indexes**:
+    - `TripModel`: added `TripSchema.index({ bookingIds: 1 })` for multikey lookup from `trip.service.ts`.
+    - `UserModel`: added `googleId: { type: String, sparse: true, index: true }` for Google OAuth login.
+    - `AgencyModel`: added compound indexes `{ verificationStatus: 1, isDeleted: 1, createdAt: -1 }` and `{ carRentalVerificationStatus: 1, isDeleted: 1, createdAt: -1 }`.
+    - `CarModel`: added compound indexes `{ agencyId: 1, createdAt: -1 }` and `{ isActive: 1, isAvailable: 1, category: 1 }`.
+    - `CarBookingModel`: added compound index `{ agencyId: 1, isDeleted: 1, createdAt: -1 }`.
+    - `DriverModel`: added compound index `{ agencyId: 1, createdAt: -1 }`.
+    - `AdminSessionModel`: added compound index `{ adminId: 1, isActive: 1 }`.
+    - `AccessRequestModel`: added compound index `{ status: 1, createdAt: -1 }`.
+    - `SavedTravelerModel`: added compound index `{ userId: 1, isDeleted: 1 }`.
+    - `CampaignModel`: added compound index `{ status: 1, isDeleted: 1, createdAt: -1 }`.
+  - **Verification**:
+    - `scripts/auditAllIndexes.ts`: Total duplicate index definitions found: **0**.
+    - Backend TypeScript: `npx tsc --noEmit` -> **0 errors (Exit code 0)**.
+    - Frontend TypeScript: `npx tsc --noEmit` -> **0 errors (Exit code 0)**.
+    - `scripts/testBatch3Trips.ts` & `scripts/testAtlas.ts`: **100% Passed** with **0 duplicate index warnings**.
+
+---
+
+### 14. Milestone: Enterprise Traveler Identity Verification (KYC) Workspace & Comprehensive Documentation
+- **Features Delivered**:
+  - **Super Admin KYC Review Workspace**: Embedded comprehensive verification workspace directly into `UserDetailsDrawer.tsx` with live telemetry header, dynamic `DocumentSummary` counters, `KycDocumentCard` cards with masked IDs (`•••• •••• 4289`), full inspection stage `DocumentPreviewModal` with zoom, rotate, brightness/contrast filters, and sequential document navigation, alongside an immutable `KycTimeline` audit history.
+  - **Traveler Dashboard 4-State Lifecycle**: Refactored `TravelProfileDashboardCard.tsx` on Traveler Home:
+    - State 1: Incomplete profile wizard prompt.
+    - State 2: Compact pending verification card with ~45% height reduction, reassuring copy, and status timeline.
+    - State 3: Verified status triggers card removal (`return null;`) with zero ghost layout shifts or empty wrappers.
+    - State 4: "Verification Failed" warning with specific rejection reason and one-click re-upload action.
+  - **Automated Membership Upgrade**: Super Admin approval of traveler KYC automatically unlocks the Silver Membership tier (`tier: 'SILVER'`, `status: 'ACTIVE'`, `validity: 365 days`), granting instant booking privileges and member benefits.
+  - **Deterministic Backend State Machine**: Derived overall KYC status strictly from uploaded document states (`NOT_SUBMITTED`, `PENDING_REVIEW`, `VERIFIED`, `REJECTED`, `EXPIRED`). Zero frontend derivation.
+  - **Master Documentation Audit & Synthesis**:
+    - Created canonical [`docs/KYC_TRAVEL_PROFILE_SPECIFICATION.md`](file:///d:/project/APNA_TRIPV4/docs/KYC_TRAVEL_PROFILE_SPECIFICATION.md) master specification.
+    - Created root [`README.md`](file:///d:/project/APNA_TRIPV4/README.md) with comprehensive TravelOS architecture and Section 3 Traveler KYC specification.
+    - Updated [`ARCHITECTURE.md`](file:///d:/project/APNA_TRIPV4/ARCHITECTURE.md) with Section 10.2 and updated MongoDB collection directory.
+    - Updated [`backend/BACKEND_SPECIFICATION.md`](file:///d:/project/APNA_TRIPV4/backend/BACKEND_SPECIFICATION.md) and [`backend/BACKEND_ARCHITECTURE.md`](file:///d:/project/APNA_TRIPV4/backend/BACKEND_ARCHITECTURE.md).
+    - Updated [`PROJECT_STRUCTURE.md`](file:///d:/project/APNA_TRIPV4/PROJECT_STRUCTURE.md) and [`DEVELOPMENT_GUIDE.md`](file:///d:/project/APNA_TRIPV4/DEVELOPMENT_GUIDE.md).
+    - Updated [`backend/README.md`](file:///d:/project/APNA_TRIPV4/backend/README.md) and [`frontend/README.md`](file:///d:/project/APNA_TRIPV4/frontend/README.md).
+    - Updated [`ROADMAP.md`](file:///d:/project/APNA_TRIPV4/ROADMAP.md) and [`RULES.md`](file:///d:/project/APNA_TRIPV4/RULES.md).
+- **Verification**:
+  - Backend TypeScript: `npx tsc --noEmit` -> **0 errors**.
+  - Frontend TypeScript: `npx tsc --noEmit` -> **0 errors**.
+  - Zero code regressions; only documentation and type-safe invariants updated.

@@ -16,6 +16,7 @@ import {
   Check,
 } from 'lucide-react';
 import { OnboardingStepper } from '../../components/OnboardingStepper';
+import { registrationDraftClient } from '../../services/registrationDraftClient.service';
 
 const STORAGE_KEY = 'apnatrip_agency_onboarding_bank';
 
@@ -41,17 +42,6 @@ const initialBankData: BankFormData = {
   payoutMethod: 'bank',
 };
 
-// IFSC Prefix Lookup dictionary for realistic Bank Name & Branch rendering
-const MOCK_IFSC_MAP: Record<string, { bank: string; branch: string }> = {
-  SBIN: { bank: 'State Bank of India', branch: 'Dibrugarh Branch, Assam' },
-  HDFC: { bank: 'HDFC Bank', branch: 'Koramangala Branch, Bengaluru' },
-  ICIC: { bank: 'ICICI Bank', branch: 'Connaught Place Branch, New Delhi' },
-  UTIB: { bank: 'Axis Bank', branch: 'Bandra West Branch, Mumbai' },
-  PUNB: { bank: 'Punjab National Bank', branch: 'Mall Road Branch, Shimla' },
-  BARB: { bank: 'Bank of Baroda', branch: 'Alkapuri Branch, Vadodara' },
-  KKBK: { bank: 'Kotak Mahindra Bank', branch: 'MG Road Branch, Pune' },
-};
-
 export const AgencyBankOnboardingPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -70,6 +60,15 @@ export const AgencyBankOnboardingPage: React.FC = () => {
   const [showAccountNum, setShowAccountNum] = useState<boolean>(false);
   const [showConfirmNum, setShowConfirmNum] = useState<boolean>(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Load from MongoDB draft on mount
+  useEffect(() => {
+    registrationDraftClient.getDraft().then((draft) => {
+      if (draft?.bank && Object.keys(draft.bank).length > 0) {
+        setFormData((prev) => ({ ...prev, ...draft.bank }));
+      }
+    });
+  }, []);
 
   // Auto save to localStorage
   useEffect(() => {
@@ -97,20 +96,13 @@ export const AgencyBankOnboardingPage: React.FC = () => {
 
   // IFSC Verification Lookup
   const isValidIFSCFormat = /^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode);
-  const ifscPrefix = formData.ifscCode.substring(0, 4);
-  const verifiedBankInfo = isValidIFSCFormat
-    ? MOCK_IFSC_MAP[ifscPrefix] || {
-        bank: formData.bankName || 'Verified Scheduled Bank',
-        branch: 'Main City Branch, India',
-      }
-    : null;
-
-  // Auto-fill Bank Name if IFSC is verified and Bank Name is empty
-  useEffect(() => {
-    if (verifiedBankInfo && !formData.bankName) {
-      setFormData((prev) => ({ ...prev, bankName: verifiedBankInfo.bank }));
-    }
-  }, [verifiedBankInfo]);
+  const verifiedBankInfo =
+    isValidIFSCFormat && formData.bankName
+      ? {
+          bank: formData.bankName,
+          branch: 'Valid IFSC code format',
+        }
+      : null;
 
   // Validations
   const isHolderValid = formData.accountHolderName.trim().length > 0;
@@ -132,9 +124,18 @@ export const AgencyBankOnboardingPage: React.FC = () => {
     isIfscValid &&
     isUpiFormatValid;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isFormValid) {
+      try {
+        await registrationDraftClient.saveDraft({
+          serviceType: 'agency',
+          bank: formData,
+          currentStep: 4,
+        });
+      } catch (err) {
+        console.warn('Draft save error:', err);
+      }
       navigate('/agency/onboarding/review');
     }
   };

@@ -23,7 +23,10 @@ export class MediaController {
 
       ResponseUtil.success(
         res,
-        result,
+        {
+          ...result,
+          url: result.secureUrl,
+        },
         'Image uploaded successfully to Cloudinary',
         HTTP_STATUS.CREATED
       );
@@ -51,7 +54,7 @@ export class MediaController {
         res,
         {
           count: results.length,
-          images: results,
+          images: results.map((r) => ({ ...r, url: r.secureUrl })),
         },
         `${results.length} images uploaded successfully to Cloudinary`,
         HTTP_STATUS.CREATED

@@ -15,11 +15,11 @@ export const ActiveTripsWidget: React.FC<ActiveTripsWidgetProps> = ({ trips }) =
       <div className="flex items-center justify-between pb-1 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <Compass className="w-4 h-4 text-indigo-600" />
-          <h3 className="text-xs font-black text-[#0F172A]">Active Trips Running</h3>
+          <h3 className="text-xs font-black text-[#0F172A]">Active Departures Running</h3>
         </div>
         <button
           type="button"
-          onClick={() => navigate('/admin/trips')}
+          onClick={() => navigate('/admin/departures')}
           className="text-[10px] font-bold text-[#6356E5] hover:underline flex items-center gap-1 cursor-pointer"
         >
           <span>View All</span>

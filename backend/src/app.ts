@@ -35,8 +35,15 @@ export const createApp = (): Application => {
   // 4. Request Compression
   app.use(compression());
 
-  // 5. Request Body Parsing
-  app.use(express.json({ limit: '10mb' }));
+  // 5. Request Body Parsing with rawBody support for Razorpay/Stripe webhooks
+  app.use(
+    express.json({
+      limit: '10mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // 6. Cookie Parser
@@ -57,6 +64,8 @@ export const createApp = (): Application => {
 
   // 9. Mount Master API Routes
   app.use(envConfig.API_PREFIX, apiRouter);
+  app.use('/api/v1', apiRouter);
+  app.use('/api', apiRouter);
 
   // 10. 404 Not Found Handler for unmapped routes
   app.use(notFoundHandler);

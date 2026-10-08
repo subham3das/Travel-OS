@@ -1,6 +1,6 @@
 import React from 'react';
 import { MapPin, ChevronDown } from 'lucide-react';
-import { MOCK_CITIES } from '../../../data/destinations';
+import { MAJOR_CITIES } from '../../../data/destinations';
 
 interface CitySelectorProps {
   pickupCity: string;
@@ -35,7 +35,7 @@ export const CitySelector: React.FC<CitySelectorProps> = ({
             <option value="" disabled>
               Select pickup city...
             </option>
-            {MOCK_CITIES.map((city) => (
+            {MAJOR_CITIES.map((city) => (
               <option key={city} value={city}>
                 {city}
               </option>
@@ -66,7 +66,7 @@ export const CitySelector: React.FC<CitySelectorProps> = ({
             <option value="" disabled>
               Select drop-off city...
             </option>
-            {MOCK_CITIES.map((city) => (
+            {MAJOR_CITIES.map((city) => (
               <option key={city} value={city}>
                 {city}
               </option>

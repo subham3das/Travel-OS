@@ -21,25 +21,27 @@ import {
   ReviewStatsResponse,
 } from '../../services/agencyReviews.service';
 
+const ZERO_REVIEW_STATS: ReviewStatsResponse = {
+  averageRating: 0,
+  totalReviews: 0,
+  replyRate: '0%',
+  positiveSentimentPercent: '0%',
+  distribution: [
+    { star: 5, count: 0, percent: 0 },
+    { star: 4, count: 0, percent: 0 },
+    { star: 3, count: 0, percent: 0 },
+    { star: 2, count: 0, percent: 0 },
+    { star: 1, count: 0, percent: 0 },
+  ],
+};
+
 /**
  * Agency Reviews & Customer Reputation Command Center
  * Route: /agency/reviews (Protected: APPROVED agencies only)
  */
 export const AgencyReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<AgencyReviewItem[]>([]);
-  const [stats, setStats] = useState<ReviewStatsResponse>({
-    averageRating: 4.8,
-    totalReviews: 4,
-    replyRate: '75%',
-    positiveSentimentPercent: '95%',
-    distribution: [
-      { star: 5, count: 3, percent: 75 },
-      { star: 4, count: 1, percent: 25 },
-      { star: 3, count: 0, percent: 0 },
-      { star: 2, count: 0, percent: 0 },
-      { star: 1, count: 0, percent: 0 },
-    ],
-  });
+  const [stats, setStats] = useState<ReviewStatsResponse>(ZERO_REVIEW_STATS);
   const [activeTab, setActiveTab] = useState<'All' | 'Pending Reply' | 'Replied'>('All');
   const [selectedStar, setSelectedStar] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -67,10 +69,12 @@ export const AgencyReviewsPage: React.FC = () => {
         }),
         agencyReviewsService.getStats(),
       ]);
-      setReviews(reviewsData.reviews);
-      setStats(statsData);
+      setReviews(reviewsData?.reviews || []);
+      setStats(statsData || ZERO_REVIEW_STATS);
     } catch (err) {
       console.error('Failed to load agency reviews:', err);
+      setReviews([]);
+      setStats(ZERO_REVIEW_STATS);
     } finally {
       setIsLoading(false);
     }

@@ -4,6 +4,7 @@ import { ArrowRight, ChevronUp, ChevronDown, Lock } from 'lucide-react';
 interface StickyPaymentBarProps {
   totalAmount: number;
   isDisabled: boolean;
+  isLoading?: boolean;
   onOpenPriceBreakdown: () => void;
   isBreakdownOpen?: boolean;
   onPayClick: () => void;
@@ -13,6 +14,7 @@ interface StickyPaymentBarProps {
 export const StickyPaymentBar: React.FC<StickyPaymentBarProps> = ({
   totalAmount,
   isDisabled,
+  isLoading = false,
   onOpenPriceBreakdown,
   isBreakdownOpen = false,
   onPayClick,
@@ -44,17 +46,26 @@ export const StickyPaymentBar: React.FC<StickyPaymentBarProps> = ({
 
         <button
           type="button"
-          disabled={isDisabled}
+          disabled={isDisabled || isLoading}
           onClick={onPayClick}
           className={`h-11 sm:h-12 px-5 sm:px-7 rounded-2xl font-black text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 shrink-0 ${
-            isDisabled
+            isDisabled || isLoading
               ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
               : 'bg-[#FF4D6D] hover:bg-[#e03e5c] text-white shadow-[#FF4D6D]/25 cursor-pointer active:scale-[0.98]'
           }`}
         >
-          <Lock className="w-3.5 h-3.5 text-white shrink-0" />
-          <span className="whitespace-nowrap font-black tracking-tight">{buttonText}</span>
-          <ArrowRight className="w-4 h-4 text-white shrink-0" />
+          {isLoading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+              <span className="whitespace-nowrap font-black tracking-tight">Processing...</span>
+            </>
+          ) : (
+            <>
+              <Lock className="w-3.5 h-3.5 text-white shrink-0" />
+              <span className="whitespace-nowrap font-black tracking-tight">{buttonText}</span>
+              <ArrowRight className="w-4 h-4 text-white shrink-0" />
+            </>
+          )}
         </button>
       </div>
     </div>

@@ -9,15 +9,14 @@ import {
   AlertTriangle,
   AlertOctagon,
   Info,
-  Users,
-  Layout,
   Calendar,
+  X,
+  Palette,
 } from 'lucide-react';
 import {
   PlatformAnnouncementItem,
   AnnouncementType,
-  AnnouncementAudience,
-  AnnouncementLocation,
+  AnnouncementPlacement,
 } from '../../../../types/cmsManagement';
 
 interface AnnouncementManagerProps {
@@ -37,10 +36,10 @@ export const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({
 
   const getTypeBadge = (type: AnnouncementType) => {
     switch (type) {
-      case 'critical':
+      case 'alert':
         return (
           <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
-            <AlertOctagon className="w-3 h-3" /> Critical
+            <AlertOctagon className="w-3 h-3" /> Critical Alert
           </span>
         );
       case 'warning':
@@ -59,7 +58,7 @@ export const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({
       default:
         return (
           <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
-            <Info className="w-3 h-3" /> Info
+            <Info className="w-3 h-3" /> Information
           </span>
         );
     }
@@ -71,246 +70,248 @@ export const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-black text-[#0F172A]">Platform Announcement Center</h2>
+            <h2 className="text-sm font-black text-[#0F172A]">Platform Announcements</h2>
             <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-black border border-amber-200">
               Universal Alert Engine
             </span>
           </div>
           <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
-            Dispatches live alerts and notices across Homepage, Customer App, and Agency Portal without deployment.
+            Dispatches live alerts, maintenance notices, and broadcast banners to the storefront in real time.
           </p>
         </div>
         <button
           type="button"
           onClick={onOpenNewModal}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-xs cursor-pointer transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-xs cursor-pointer transition-all"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Announcement</span>
         </button>
       </div>
 
-      {/* Announcements List */}
-      <div className="space-y-3">
-        {announcements.map((ann) => (
-          <div
-            key={ann.id}
-            className={`p-4 rounded-2xl border transition-all ${
-              ann.type === 'critical'
-                ? 'bg-rose-50/40 border-rose-200'
-                : ann.type === 'warning'
-                ? 'bg-amber-50/40 border-amber-200'
-                : ann.type === 'success'
-                ? 'bg-emerald-50/40 border-emerald-200'
-                : 'bg-blue-50/40 border-blue-200'
-            }`}
+      {/* Empty State */}
+      {announcements.length === 0 ? (
+        <div className="py-12 px-4 text-center border-2 border-dashed border-slate-100 rounded-3xl space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+            <Megaphone className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-slate-800">No Active Announcements</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-0.5">
+              There are no platform broadcast notices right now. Create one to inform travelers about flash sales or updates.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenNewModal}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-black shadow-sm hover:bg-amber-700 cursor-pointer"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1.5 min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
+            <Plus className="w-4 h-4" />
+            <span>Create Announcement</span>
+          </button>
+        </div>
+      ) : (
+        /* Announcements List */
+        <div className="space-y-3">
+          {announcements.map((ann) => (
+            <div
+              key={ann.id}
+              className={`p-4 rounded-2xl border transition-all space-y-2.5 ${
+                ann.isEnabled
+                  ? 'bg-slate-50/70 border-slate-200/80 hover:border-amber-200'
+                  : 'bg-slate-100/40 border-slate-200/40 opacity-60'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
                   {getTypeBadge(ann.type)}
                   {ann.isPinned && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-purple-100 text-[#6356E5] flex items-center gap-0.5">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
                       <Pin className="w-2.5 h-2.5" /> Pinned
                     </span>
                   )}
-                  {ann.requireAck && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-900 text-white">
-                      Ack Required
-                    </span>
-                  )}
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">
-                    Status: {ann.status}
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase">
+                    Placement: {ann.placement || 'all'}
                   </span>
                 </div>
 
-                <h3 className="text-xs font-black text-[#0F172A]">{ann.title}</h3>
-                <p className="text-[11px] text-slate-600 font-medium">{ann.description}</p>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onSaveAnnouncement({ id: ann.id, isEnabled: !ann.isEnabled })}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-colors cursor-pointer ${
+                      ann.isEnabled
+                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                        : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                    }`}
+                  >
+                    {ann.isEnabled ? 'Active' : 'Disabled'}
+                  </button>
 
-                <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px] text-slate-500 font-semibold">
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3 text-slate-400" />
-                    Audience: <strong className="text-slate-800 uppercase">{ann.audience}</strong>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Layout className="w-3 h-3 text-slate-400" />
-                    Location: <strong className="text-slate-800 uppercase">{ann.location}</strong>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-slate-400" />
-                    {ann.startDate} → {ann.endDate}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditingAnn(ann)}
+                    className="p-1 rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors cursor-pointer"
+                    title="Edit Announcement"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onDeleteAnnouncement(ann.id)}
+                    className="p-1 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                    title="Delete Announcement"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onSaveAnnouncement({
-                      id: ann.id,
-                      status: ann.status === 'published' ? 'draft' : 'published',
-                    })
-                  }
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-colors cursor-pointer ${
-                    ann.status === 'published'
-                      ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                      : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                  }`}
-                >
-                  {ann.status === 'published' ? 'Live' : 'Draft'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingAnn(ann)}
-                  className="p-1.5 rounded-lg hover:bg-white text-slate-500 hover:text-[#6356E5] transition-colors cursor-pointer border border-transparent hover:border-slate-200"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDeleteAnnouncement(ann.id)}
-                  className="p-1.5 rounded-lg hover:bg-white text-slate-400 hover:text-rose-600 transition-colors cursor-pointer border border-transparent hover:border-slate-200"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+              <div>
+                <h4 className="text-xs font-black text-[#0F172A]">{ann.title}</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{ann.description}</p>
+              </div>
+
+              {/* Color ribbon preview */}
+              <div
+                className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center justify-between"
+                style={{ backgroundColor: ann.bgColor || '#3B82F6', color: ann.textColor || '#FFFFFF' }}
+              >
+                <span className="truncate">Storefront Banner Preview: {ann.title}</span>
+                {ann.ctaText && (
+                  <span className="underline text-[11px] shrink-0 ml-2 font-black">{ann.ctaText} →</span>
+                )}
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Edit Announcement Modal */}
       {editingAnn && (
-        <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3 text-xs">
-          <div className="flex items-center justify-between pb-1 border-b border-amber-200">
-            <span className="font-black text-[#0F172A]">Edit Announcement: {editingAnn.title}</span>
-            <button
-              type="button"
-              onClick={() => setEditingAnn(null)}
-              className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
-            >
-              Close
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                Announcement Headline
-              </label>
-              <input
-                type="text"
-                value={editingAnn.title}
-                onChange={(e) => setEditingAnn({ ...editingAnn, title: e.target.value })}
-                className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-[#0F172A]"
-              />
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <h3 className="text-sm font-black text-slate-900">Edit Announcement</h3>
+              <button onClick={() => setEditingAnn(null)} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                Message Body
-              </label>
-              <textarea
-                rows={2}
-                value={editingAnn.description}
-                onChange={(e) => setEditingAnn({ ...editingAnn, description: e.target.value })}
-                className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-[#0F172A]"
-              />
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={editingAnn.title}
+                  onChange={(e) => setEditingAnn({ ...editingAnn, title: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Description / Content</label>
+                <textarea
+                  rows={3}
+                  value={editingAnn.description || ''}
+                  onChange={(e) => setEditingAnn({ ...editingAnn, description: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Alert Type</label>
+                  <select
+                    value={editingAnn.type}
+                    onChange={(e) => setEditingAnn({ ...editingAnn, type: e.target.value as any })}
+                    className="w-full px-3 py-2 border rounded-xl bg-white font-semibold"
+                  >
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="alert">Critical Alert</option>
+                    <option value="success">Success</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Placement</label>
+                  <select
+                    value={editingAnn.placement || 'all'}
+                    onChange={(e) => setEditingAnn({ ...editingAnn, placement: e.target.value as any })}
+                    className="w-full px-3 py-2 border rounded-xl bg-white font-semibold"
+                  >
+                    <option value="all">Everywhere</option>
+                    <option value="home_only">Homepage Only</option>
+                    <option value="mobile_only">Mobile Only</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Background Color</label>
+                  <input
+                    type="color"
+                    value={editingAnn.bgColor || '#3B82F6'}
+                    onChange={(e) => setEditingAnn({ ...editingAnn, bgColor: e.target.value })}
+                    className="w-full h-9 border rounded-xl p-1 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Text Color</label>
+                  <input
+                    type="color"
+                    value={editingAnn.textColor || '#FFFFFF'}
+                    onChange={(e) => setEditingAnn({ ...editingAnn, textColor: e.target.value })}
+                    className="w-full h-9 border rounded-xl p-1 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">CTA Text (Optional)</label>
+                  <input
+                    type="text"
+                    value={editingAnn.ctaText || ''}
+                    onChange={(e) => setEditingAnn({ ...editingAnn, ctaText: e.target.value })}
+                    placeholder="e.g. Learn More"
+                    className="w-full px-3 py-2 border rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Link URL</label>
+                  <input
+                    type="text"
+                    value={editingAnn.linkUrl || ''}
+                    onChange={(e) => setEditingAnn({ ...editingAnn, linkUrl: e.target.value })}
+                    placeholder="/packages or https://..."
+                    className="w-full px-3 py-2 border rounded-xl"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                  Type
-                </label>
-                <select
-                  value={editingAnn.type}
-                  onChange={(e) =>
-                    setEditingAnn({ ...editingAnn, type: e.target.value as AnnouncementType })
-                  }
-                  className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs"
-                >
-                  <option value="info">Information</option>
-                  <option value="warning">Warning</option>
-                  <option value="success">Success</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                  Audience
-                </label>
-                <select
-                  value={editingAnn.audience}
-                  onChange={(e) =>
-                    setEditingAnn({ ...editingAnn, audience: e.target.value as AnnouncementAudience })
-                  }
-                  className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs"
-                >
-                  <option value="all">Everyone</option>
-                  <option value="customers">Customers Only</option>
-                  <option value="agencies">Agencies Only</option>
-                  <option value="logged_in">Logged In Users</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                  Display Location
-                </label>
-                <select
-                  value={editingAnn.location}
-                  onChange={(e) =>
-                    setEditingAnn({ ...editingAnn, location: e.target.value as AnnouncementLocation })
-                  }
-                  className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs"
-                >
-                  <option value="homepage">Homepage Only</option>
-                  <option value="customer_dashboard">Customer Dashboard</option>
-                  <option value="agency_dashboard">Agency Dashboard</option>
-                  <option value="both">Both Dashboards</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                  Pin to Top
-                </label>
-                <select
-                  value={editingAnn.isPinned ? 'yes' : 'no'}
-                  onChange={(e) =>
-                    setEditingAnn({ ...editingAnn, isPinned: e.target.value === 'yes' })
-                  }
-                  className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 font-bold text-xs"
-                >
-                  <option value="yes">Pinned</option>
-                  <option value="no">Standard</option>
-                </select>
-              </div>
+            <div className="flex justify-end gap-2 pt-3 border-t">
+              <button
+                type="button"
+                onClick={() => setEditingAnn(null)}
+                className="px-4 py-2 rounded-xl border text-slate-600 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSaveAnnouncement(editingAnn);
+                  setEditingAnn(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-amber-600 text-white font-black text-xs"
+              >
+                Save Announcement
+              </button>
             </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setEditingAnn(null)}
-              className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onSaveAnnouncement(editingAnn);
-                setEditingAnn(null);
-              }}
-              className="px-4 py-1.5 rounded-xl bg-amber-500 text-white font-black shadow-xs cursor-pointer"
-            >
-              Save Announcement
-            </button>
           </div>
         </div>
       )}

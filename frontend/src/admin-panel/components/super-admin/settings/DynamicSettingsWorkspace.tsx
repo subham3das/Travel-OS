@@ -21,6 +21,8 @@ import {
   Check,
   CheckCircle2,
 } from 'lucide-react';
+import { BrandLogo } from '../../../../common/brand';
+import { PlatformCommissionSettingsCard } from './PlatformCommissionSettingsCard';
 import {
   GeneralSettingsData,
   FeatureFlagItem,
@@ -193,12 +195,9 @@ export const DynamicSettingsWorkspace: React.FC<DynamicSettingsWorkspaceProps> =
 
               {/* Logo Emblem */}
               <div className="flex flex-col items-center py-2">
-                <div className="w-12 h-12 rounded-2xl bg-[#6356E5] text-white flex items-center justify-center shadow-md shadow-[#6356E5]/25 mb-1.5">
-                  <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M12 2L2 22h20L12 2zm0 6l5 10H7l5-10z" />
-                  </svg>
+                <div className="h-12 flex items-center justify-center mb-1.5">
+                  <BrandLogo theme="light" className="h-10 w-auto" alt="ApnaTrip" />
                 </div>
-                <h5 className="font-black text-slate-900 text-sm tracking-tight">Travel OS</h5>
               </div>
 
               {/* Upload CTA */}
@@ -426,7 +425,11 @@ export const DynamicSettingsWorkspace: React.FC<DynamicSettingsWorkspaceProps> =
         </div>
       )}
 
-      {category !== 'general' && (
+      {category === 'payments' && (
+        <PlatformCommissionSettingsCard />
+      )}
+
+      {category !== 'general' && category !== 'payments' && (
         <div className="p-8 rounded-3xl bg-slate-50/50 border border-slate-100 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-purple-50 text-[#6356E5] flex items-center justify-center mx-auto shadow-2xs">
             <CheckCircle2 className="w-6 h-6" />

@@ -37,6 +37,32 @@ export class CustomerChatController {
       data: { message },
     });
   }
+
+  public async initConversation(req: Request, res: Response): Promise<void> {
+    const userId = (req as any).user?.userId;
+    const { agencyId, carId, initialMessage } = req.body;
+
+    const result = await customerChatService.initOrGetConversation(userId, {
+      agencyId,
+      carId,
+      initialMessage,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  }
+
+  public async getAgencyContactByBooking(req: Request, res: Response): Promise<void> {
+    const userId = (req as any).user?.userId;
+    const targetId = String(req.params.bookingId || req.params.id || '');
+    const contact = await customerChatService.getAgencyContact(userId, targetId);
+    res.status(200).json({
+      success: true,
+      data: contact,
+    });
+  }
 }
 
 export const customerChatController = new CustomerChatController();

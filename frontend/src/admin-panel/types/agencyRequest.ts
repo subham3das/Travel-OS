@@ -93,6 +93,9 @@ export interface AgencyRequestItem {
   ownerEmail: string;
   ownerPhone: string;
   businessType: 'Tour Operator' | 'Adventure' | 'Travel Agency' | 'DMC' | 'OTA';
+  businessTypes?: ('agency' | 'car_rental')[];
+  carRentalVerificationStatus?: 'NOT_REGISTERED' | 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED';
+  carRentalProfile?: any;
   submittedDate: string;
   gstNumber: string;
   website: string;

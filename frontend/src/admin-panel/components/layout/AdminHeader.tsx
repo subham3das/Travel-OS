@@ -25,6 +25,7 @@ import { AdminNotificationDropdown } from '../super-admin/notifications/AdminNot
 import { adminHeaderNotificationsService } from '../../services/adminHeaderNotifications.service';
 import { GlobalSearchModal } from '../super-admin/search/GlobalSearchModal';
 import { useSuperAdminTheme as useTheme } from '../../context/SuperAdminThemeContext';
+import { BrandLogo } from '../../../common/brand';
 
 interface AdminHeaderProps {
   onSearchChange?: (q: string) => void;
@@ -170,17 +171,20 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
         </AnimatePresence>
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 max-w-[1600px] mx-auto">
-          {/* Left: Mobile Menu Toggle + Global Search Input */}
+          {/* Left: Mobile Menu Toggle & Brand Icon + Global Search Input */}
           <div className="flex items-center gap-3 w-full md:w-auto">
             {onToggleMobileMenu && (
-              <button
-                type="button"
-                onClick={onToggleMobileMenu}
-                className="md:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer shrink-0"
-                aria-label="Open Navigation Menu"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2 md:hidden">
+                <button
+                  type="button"
+                  onClick={onToggleMobileMenu}
+                  className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer shrink-0"
+                  aria-label="Open Navigation Menu"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+                <BrandLogo theme="light" className="h-7 w-auto shrink-0" alt="ApnaTrip" />
+              </div>
             )}
 
             {/* ── GLOBAL SEARCH COMMAND CENTER TRIGGER INPUT ── */}
@@ -194,7 +198,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
                 readOnly
                 value={searchQuery}
                 onClick={() => setIsSearchModalOpen(true)}
-                placeholder="Search anything in Travel OS..."
+                placeholder="Search anything in ApnaTrip..."
                 className="w-full pl-10 pr-20 py-2.5 rounded-2xl bg-slate-50 group-hover:bg-purple-50/40 border border-slate-200 group-hover:border-purple-200 text-xs font-semibold text-[#0F172A] placeholder-slate-400 focus:outline-none transition-all cursor-pointer shadow-2xs"
               />
               <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-extrabold text-[#6356E5] bg-white border border-slate-200 rounded-lg shadow-2xs pointer-events-none group-hover:border-purple-200">
@@ -429,13 +433,13 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
                             setIsThemeSubmenuOpen(!isThemeSubmenuOpen);
                             setIsLanguageSubmenuOpen(false);
                           }}
-                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-purple-50 hover:text-[#6356E5] transition-colors cursor-pointer"
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-[#2563EB] transition-colors cursor-pointer"
                         >
                           <div className="flex items-center gap-2.5">
                             {activeTheme === 'Light' ? (
                               <Sun className="w-4 h-4 text-amber-500" />
                             ) : activeTheme === 'Dark' ? (
-                              <Moon className="w-4 h-4 text-indigo-500" />
+                              <Moon className="w-4 h-4 text-blue-500" />
                             ) : (
                               <Laptop className="w-4 h-4 text-slate-400" />
                             )}
@@ -445,7 +449,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
                         </button>
 
                         {isThemeSubmenuOpen && (
-                          <div className="p-1 my-1 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
+                          <div className="p-1 my-1 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/10 space-y-0.5">
                             {(['Light', 'Dark', 'System'] as const).map((t) => (
                               <button
                                 key={t}
@@ -458,12 +462,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onSearchChange, onTogg
                                 }}
                                 className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] transition-colors cursor-pointer ${
                                   activeTheme === t
-                                    ? 'bg-purple-100/70 text-[#6356E5] font-black'
-                                    : 'text-slate-600 hover:bg-white'
+                                    ? 'bg-blue-100/70 text-[#2563EB] dark:bg-blue-900/40 dark:text-[#60A5FA] font-black'
+                                    : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
                                 }`}
                               >
                                 <span>{t}</span>
-                                {activeTheme === t && <Check className="w-3 h-3 text-[#6356E5]" />}
+                                {activeTheme === t && <Check className="w-3 h-3 text-[#2563EB] dark:text-[#60A5FA]" />}
                               </button>
                             ))}
                           </div>

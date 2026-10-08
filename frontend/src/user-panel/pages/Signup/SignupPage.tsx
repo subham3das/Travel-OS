@@ -53,11 +53,28 @@ export const SignupPage: React.FC = () => {
     e.preventDefault();
     const newErrors: typeof errors = {};
 
-    if (!fullName.trim()) newErrors.fullName = 'Full name is required';
-    if (!email.trim() || !email.includes('@')) newErrors.email = 'Valid email address is required';
-    if (!phone.trim()) newErrors.phone = 'Phone number is required';
-    if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    if (!fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
+    } else if (fullName.trim().length < 2) {
+      newErrors.fullName = 'Full name must be at least 2 characters';
+    }
+
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = 'Valid email address is required';
+    }
+
+    const cleanPhone = phone.trim().replace(/[^\d+]/g, '');
+    if (!cleanPhone || cleanPhone.replace(/\D/g, '').length < 10) {
+      newErrors.phone = 'Valid phone number (at least 10 digits) is required';
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
+      newErrors.password = 'Password must contain at least 1 letter and 1 number';
+    }
     
     if (password !== confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
@@ -79,7 +96,7 @@ export const SignupPage: React.FC = () => {
       const data = await userAuthService.register({
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
-        phone: phone.trim(),
+        phone: cleanPhone,
         password,
         confirmPassword,
         acceptTerms: agreeTerms,
@@ -89,17 +106,34 @@ export const SignupPage: React.FC = () => {
       showToast('Account created successfully! Welcome to ApnaTrip.', 'success');
       navigate('/profile-setup');
     } catch (err: any) {
-      const errorMsg = err.message || 'Registration failed. Please try again.';
-      if (errorMsg.toLowerCase().includes('email')) {
-        setErrors({ email: errorMsg });
-      } else if (errorMsg.toLowerCase().includes('phone')) {
-        setErrors({ phone: errorMsg });
-      } else if (errorMsg.toLowerCase().includes('password')) {
-        setErrors({ password: errorMsg });
+      const validationErrors = err.errors || err.data?.errors || [];
+      if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+        const fieldErrors: typeof errors = {};
+        validationErrors.forEach((e: any) => {
+          const f = String(e.field || '').toLowerCase();
+          if (f.includes('fullname') || f.includes('name')) fieldErrors.fullName = e.message;
+          else if (f.includes('email')) fieldErrors.email = e.message;
+          else if (f.includes('phone')) fieldErrors.phone = e.message;
+          else if (f.includes('password') && !f.includes('confirm')) fieldErrors.password = e.message;
+          else if (f.includes('confirm')) fieldErrors.confirmPassword = e.message;
+          else if (f.includes('terms') || f.includes('accept')) fieldErrors.terms = e.message;
+          else fieldErrors.general = e.message;
+        });
+        setErrors(fieldErrors);
+        showToast(validationErrors[0]?.message || 'Please check the highlighted fields.', 'error');
       } else {
-        setErrors({ general: errorMsg });
+        const errorMsg = err.message || 'Registration failed. Please try again.';
+        if (errorMsg.toLowerCase().includes('email')) {
+          setErrors({ email: errorMsg });
+        } else if (errorMsg.toLowerCase().includes('phone')) {
+          setErrors({ phone: errorMsg });
+        } else if (errorMsg.toLowerCase().includes('password')) {
+          setErrors({ password: errorMsg });
+        } else {
+          setErrors({ general: errorMsg });
+        }
+        showToast(errorMsg, 'error');
       }
-      showToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -200,7 +234,7 @@ export const SignupPage: React.FC = () => {
             <div className="space-y-1.5">
               <Input
                 isPassword
-                placeholder="Password (min 8 chars, 1 uppercase, 1 number, 1 special)"
+                placeholder="Password (min 8 chars, with letter & number)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 leftIcon={<Lock className="w-4 h-4" />}

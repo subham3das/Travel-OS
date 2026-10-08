@@ -41,9 +41,9 @@ export const SearchPage: React.FC = () => {
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('apnatrip_recent_searches');
-      return saved ? JSON.parse(saved) : ['Meghalaya', 'Ladakh', 'Himalayan Explorers', 'Kerala'];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['Meghalaya', 'Ladakh', 'Himalayan Explorers', 'Kerala'];
+      return [];
     }
   });
 
@@ -83,11 +83,7 @@ export const SearchPage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    if (window.history.length > 2) {
-      navigate(-1);
-    } else {
-      navigate('/home');
-    }
+    navigate('/home');
   };
 
   const activeFiltersPresent = isFilterActive(filters);
@@ -116,6 +112,7 @@ export const SearchPage: React.FC = () => {
               setSearchParams(activeTab !== 'all' ? { tab: activeTab } : {});
             }}
             onCancel={handleCancel}
+            onBackToHome={() => navigate('/home')}
             onFilterToggle={() => setIsFilterOpen(!isFilterOpen)}
             isFilterOpen={isFilterOpen}
             isFilterActive={activeFiltersPresent}
@@ -196,9 +193,14 @@ export const SearchPage: React.FC = () => {
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
                 counts={{
-                  destinations: results.destinations.length,
-                  packages: results.packages.length,
-                  agencies: results.agencies.length,
+                  destinations: results.destinations?.length || 0,
+                  packages: results.packages?.length || 0,
+                  agencies: results.agencies?.length || 0,
+                  cars: results.cars?.length || 0,
+                  travelers: results.travelers?.length || 0,
+                  bookings: results.bookings?.length || 0,
+                  trips: results.trips?.length || 0,
+                  messages: results.messages?.length || 0,
                 }}
               />
 

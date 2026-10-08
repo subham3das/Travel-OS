@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Compass, Briefcase, Users, User } from 'lucide-react';
+import { Home, Compass, Briefcase, Car, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export interface NavTab {
@@ -25,8 +25,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   const tabs: NavTab[] = [
     { id: 'home', label: 'Home', path: '/home', icon: <Home className="w-5 h-5" /> },
     { id: 'explore', label: 'Explore', path: '/explore', icon: <Compass className="w-5 h-5" /> },
-    { id: 'trips', label: 'My Trips', path: '/my-trips', icon: <Briefcase className="w-5 h-5" /> },
-    { id: 'community', label: 'Community', path: '/community', icon: <Users className="w-5 h-5" /> },
+    { id: 'trips', label: 'My Bookings', path: '/my-bookings', icon: <Briefcase className="w-5 h-5" /> },
+    { id: 'car-rental', label: 'Car Rental', path: '/car-rental', icon: <Car className="w-5 h-5" /> },
     { id: 'profile', label: 'Profile', path: '/profile', icon: <User className="w-5 h-5" /> },
   ];
 
@@ -36,9 +36,10 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     >
       {tabs.map((tab) => {
         const isCurrent = activeTab
-          ? activeTab === tab.id || (tab.id === 'trips' && (activeTab === 'my-trips' || activeTab === 'trips'))
+          ? activeTab === tab.id || (tab.id === 'trips' && (activeTab === 'my-trips' || activeTab === 'trips' || activeTab === 'my-bookings')) || (tab.id === 'car-rental' && activeTab === 'car-rental')
           : location.pathname === tab.path ||
-            (tab.id === 'trips' && (location.pathname === '/trips' || location.pathname === '/my-trips'));
+            (tab.id === 'trips' && (location.pathname === '/trips' || location.pathname === '/my-trips' || location.pathname === '/my-bookings')) ||
+            (tab.id === 'car-rental' && (location.pathname === '/car-rental' || location.pathname.startsWith('/car-rental')));
 
         return (
           <button

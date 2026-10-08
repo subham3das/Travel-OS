@@ -232,12 +232,18 @@ class ApiClient {
     }));
 
     if (!response.ok) {
-      const errorMessage =
-        data.message ||
-        (data.errors && data.errors.length > 0 ? data.errors[0].message : `Request failed with status ${response.status}`);
+      let errorMessage = data.message;
+      if (!errorMessage || errorMessage === 'Request validation failed') {
+        if (data.errors && data.errors.length > 0) {
+          errorMessage = data.errors.map((e: any) => e.message).join('. ');
+        } else {
+          errorMessage = `Request failed with status ${response.status}`;
+        }
+      }
       const error: any = new Error(errorMessage);
       error.status = response.status;
       error.data = data;
+      error.errors = data.errors || [];
       throw error;
     }
 
@@ -278,3 +284,4 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+export default apiClient;

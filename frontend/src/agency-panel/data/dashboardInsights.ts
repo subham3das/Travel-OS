@@ -65,6 +65,22 @@ export interface DashboardUpcomingDeparture {
   occupancyColor: 'green' | 'orange' | 'red';
 }
 
+export interface AttentionPackageItem {
+  id: string;
+  packageId: string;
+  packageName: string;
+  reason: string;
+  status: 'Incomplete Setup' | 'Sold Out' | 'Booking Closed' | 'Hidden';
+}
+
+export interface PackagesRequiringAttentionData {
+  totalActive: number;
+  totalIncomplete: number;
+  totalSoldOut: number;
+  totalBookingClosed: number;
+  attentionPackages: AttentionPackageItem[];
+}
+
 export interface AgencyDashboardDataPayload {
   agency: {
     id: string;
@@ -98,4 +114,5 @@ export interface AgencyDashboardDataPayload {
   quickInsights: QuickInsightItem[];
   recentBookings: DashboardRecentBooking[];
   departures: DashboardUpcomingDeparture[];
+  packagesRequiringAttention?: PackagesRequiringAttentionData;
 }

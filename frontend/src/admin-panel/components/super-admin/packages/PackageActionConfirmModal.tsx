@@ -11,7 +11,21 @@ import { AdminPackageItem } from '../../../types/packageManagement';
 
 interface PackageActionConfirmModalProps {
   isOpen: boolean;
-  type: 'approve' | 'feature' | 'hide' | 'delete' | 'bulk_approve' | 'bulk_feature' | 'bulk_hide' | 'bulk_delete';
+  type:
+    | 'approve'
+    | 'activate'
+    | 'deactivate'
+    | 'feature'
+    | 'hide'
+    | 'archive'
+    | 'popular'
+    | 'trending'
+    | 'most_popular'
+    | 'delete'
+    | 'bulk_approve'
+    | 'bulk_feature'
+    | 'bulk_hide'
+    | 'bulk_delete';
   pkg?: AdminPackageItem | null;
   selectedCount?: number;
   isProcessing?: boolean;
@@ -33,12 +47,59 @@ export const PackageActionConfirmModal: React.FC<PackageActionConfirmModalProps>
   const getContent = () => {
     switch (type) {
       case 'approve':
+      case 'activate':
         return {
-          title: `Approve ${pkg?.title}?`,
-          desc: `Approve and activate "${pkg?.title}". The package will be immediately discoverable for travelers on the marketplace.`,
+          title: `Activate ${pkg?.title}?`,
+          desc: `Activate "${pkg?.title}". The package will be immediately discoverable and bookable for scheduled departures.`,
           icon: <CheckCircle2 className="w-6 h-6 text-emerald-600" />,
-          btnText: 'Approve Package',
+          btnText: 'Activate Package',
           btnStyle: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20',
+        };
+      case 'deactivate':
+        return {
+          title: `Deactivate ${pkg?.title}?`,
+          desc: `Deactivate "${pkg?.title}". The package will be paused from public booking while keeping existing scheduled departures intact.`,
+          icon: <AlertTriangle className="w-6 h-6 text-amber-600" />,
+          btnText: 'Deactivate Package',
+          btnStyle: 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-500/20',
+        };
+      case 'archive':
+        return {
+          title: `Archive ${pkg?.title}?`,
+          desc: `Archive "${pkg?.title}". This removes it from active catalogs into the historical archive.`,
+          icon: <AlertTriangle className="w-6 h-6 text-slate-600" />,
+          btnText: 'Archive Package',
+          btnStyle: 'bg-slate-700 hover:bg-slate-800 text-white shadow-slate-500/20',
+        };
+      case 'popular':
+        return {
+          title: `${pkg?.isPopular ? 'Remove Popular Tag from' : 'Mark Popular:'} ${pkg?.title}?`,
+          desc: pkg?.isPopular
+            ? `Remove Popular tag from "${pkg?.title}".`
+            : `Highlight "${pkg?.title}" with the Popular badge across the platform.`,
+          icon: <Star className="w-6 h-6 text-amber-500" />,
+          btnText: pkg?.isPopular ? 'Remove Popular' : 'Mark Popular',
+          btnStyle: 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20',
+        };
+      case 'trending':
+        return {
+          title: `${pkg?.isTrending ? 'Remove Trending Tag from' : 'Mark Trending:'} ${pkg?.title}?`,
+          desc: pkg?.isTrending
+            ? `Remove Trending tag from "${pkg?.title}".`
+            : `Feature "${pkg?.title}" in Trending showcases.`,
+          icon: <Star className="w-6 h-6 text-rose-500" />,
+          btnText: pkg?.isTrending ? 'Remove Trending' : 'Mark Trending',
+          btnStyle: 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20',
+        };
+      case 'most_popular':
+        return {
+          title: `${pkg?.isMostPopular ? 'Remove Most Popular Tag from' : 'Mark Most Popular:'} ${pkg?.title}?`,
+          desc: pkg?.isMostPopular
+            ? `Remove Most Popular tag from "${pkg?.title}".`
+            : `Promote "${pkg?.title}" with the top-tier Most Popular tag.`,
+          icon: <Star className="w-6 h-6 text-purple-600" />,
+          btnText: pkg?.isMostPopular ? 'Remove Tag' : 'Mark Most Popular',
+          btnStyle: 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/20',
         };
       case 'feature':
         return {

@@ -23,6 +23,7 @@ export interface IPaymentActivityLog {
 
 export interface IPayment extends Document {
   paymentId: string;
+  orderId?: string;
   bookingId?: string;
   agencyId?: mongoose.Types.ObjectId;
   agencyName?: string;
@@ -39,6 +40,9 @@ export interface IPayment extends Document {
   durationText?: string;
   amount: number;
   platformFee?: number;
+  platformCommissionRate?: number;
+  platformCommissionAmount?: number;
+  transferId?: string;
   gstAmount?: number;
   agencyEarnings?: number;
   netAmount?: number;
@@ -48,6 +52,11 @@ export interface IPayment extends Document {
   gateway: PaymentGateway;
   paymentMethod: string;
   status: PaymentStatus;
+  captured?: boolean;
+  refunded?: boolean;
+  refundAmount?: number;
+  signatureVerified?: boolean;
+  receiptNumber?: string;
   settlementStatus: SettlementStatus;
   settlementAccount?: string;
   settlementId?: string;
@@ -57,6 +66,7 @@ export interface IPayment extends Document {
   gatewayResponse?: string;
   authorizationCode?: string;
   failureReason?: string;
+  metadata?: Record<string, any>;
   paidAt?: Date;
   capturedAt?: Date;
   timeline?: IPaymentTimelineStep[];
@@ -68,12 +78,13 @@ export interface IPayment extends Document {
 
 const PaymentSchema = new Schema<IPayment>(
   {
-    paymentId: { type: String, required: true, unique: true, index: true },
+    paymentId: { type: String, required: true, unique: true },
+    orderId: { type: String, index: true },
     bookingId: { type: String, index: true },
-    agencyId: { type: Schema.Types.ObjectId, ref: 'Agency', index: true },
+    agencyId: { type: Schema.Types.ObjectId, ref: 'Agency' },
     agencyName: { type: String, default: 'ApnaTrip Partner Agency' },
     agencyLogo: { type: String, default: '' },
-    userId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User' },
     userName: { type: String },
     userEmail: { type: String },
     userPhone: { type: String },
@@ -85,6 +96,9 @@ const PaymentSchema = new Schema<IPayment>(
     durationText: { type: String, default: '3D / 2N' },
     amount: { type: Number, required: true },
     platformFee: { type: Number, default: 0 },
+    platformCommissionRate: { type: Number, default: 10 },
+    platformCommissionAmount: { type: Number, default: 0 },
+    transferId: { type: String, index: true },
     gstAmount: { type: Number, default: 0 },
     agencyEarnings: { type: Number, default: 0 },
     netAmount: { type: Number, default: 0 },
@@ -100,14 +114,17 @@ const PaymentSchema = new Schema<IPayment>(
     status: {
       type: String,
       enum: ['SUCCESS', 'PENDING', 'FAILED', 'REFUNDED'],
-      default: 'SUCCESS',
-      index: true,
+      default: 'PENDING',
     },
+    captured: { type: Boolean, default: false },
+    refunded: { type: Boolean, default: false },
+    refundAmount: { type: Number, default: 0 },
+    signatureVerified: { type: Boolean, default: false },
+    receiptNumber: { type: String, default: '' },
     settlementStatus: {
       type: String,
       enum: ['Pending', 'Settled', 'Failed', 'Processing'],
       default: 'Pending',
-      index: true,
     },
     settlementAccount: { type: String, default: '' },
     settlementId: { type: String, default: '' },
@@ -117,8 +134,9 @@ const PaymentSchema = new Schema<IPayment>(
     gatewayResponse: { type: String, default: 'Authorized' },
     authorizationCode: { type: String, default: '' },
     failureReason: { type: String },
-    paidAt: { type: Date, default: Date.now },
-    capturedAt: { type: Date, default: Date.now },
+    metadata: { type: Schema.Types.Mixed },
+    paidAt: { type: Date },
+    capturedAt: { type: Date },
     timeline: [
       {
         id: { type: String },
@@ -138,7 +156,7 @@ const PaymentSchema = new Schema<IPayment>(
         timestamp: { type: String },
       },
     ],
-    isDeleted: { type: Boolean, default: false, index: true },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

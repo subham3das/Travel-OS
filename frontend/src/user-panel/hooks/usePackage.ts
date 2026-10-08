@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TourPackage } from '../types/package';
 import { marketplaceService } from '../services/marketplace.service';
-import { getPackageById as getMockPackageById } from '../data/packages';
 
 interface UsePackageResult {
   pkg: TourPackage | null;
@@ -34,27 +33,14 @@ export const usePackage = (packageId?: string): UsePackageResult => {
           setPkg(data);
           setError(null);
         } else {
-          // Fallback if demo ID
-          const fallback = getMockPackageById(packageId);
-          if (fallback) {
-            setPkg(fallback);
-            setError(null);
-          } else {
-            setPkg(null);
-            setError(`Package "${packageId}" not found`);
-          }
+          setPkg(null);
+          setError(`Package "${packageId}" not found`);
         }
       })
       .catch((err) => {
         if (!isMounted) return;
-        const fallback = getMockPackageById(packageId);
-        if (fallback) {
-          setPkg(fallback);
-          setError(null);
-        } else {
-          setPkg(null);
-          setError(err?.message || `Package "${packageId}" not found`);
-        }
+        setPkg(null);
+        setError(err?.message || `Package "${packageId}" not found`);
       })
       .finally(() => {
         if (isMounted) setLoading(false);

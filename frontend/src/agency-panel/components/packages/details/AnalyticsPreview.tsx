@@ -28,16 +28,7 @@ export const AnalyticsPreview: React.FC<AnalyticsPreviewProps> = ({ analytics })
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-        {/* Revenue */}
-        <div className="p-3 sm:p-4 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-1 min-w-0">
-          <span className="text-[10px] font-extrabold uppercase text-purple-700 block truncate">Total Revenue</span>
-          <span className="text-sm sm:text-xl font-black text-[#583BE8] truncate block">
-            ₹{analytics.totalRevenue.toLocaleString('en-IN')}
-          </span>
-          <p className="text-[10px] font-bold text-slate-400 truncate">Gross Sales</p>
-        </div>
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
         {/* Bookings */}
         <div className="p-3 sm:p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100 space-y-1 min-w-0">
           <span className="text-[10px] font-extrabold uppercase text-emerald-800 block truncate">Total Bookings</span>
@@ -54,15 +45,6 @@ export const AnalyticsPreview: React.FC<AnalyticsPreviewProps> = ({ analytics })
             {analytics.occupancyRate}%
           </span>
           <p className="text-[10px] font-bold text-slate-400 truncate">Seat Utilization</p>
-        </div>
-
-        {/* Conversion Rate */}
-        <div className="p-3 sm:p-4 rounded-2xl bg-amber-50/60 border border-amber-100 space-y-1 min-w-0">
-          <span className="text-[10px] font-extrabold uppercase text-amber-800 block truncate">Conversion</span>
-          <span className="text-sm sm:text-xl font-black text-amber-700 truncate block">
-            {analytics.conversionRate}%
-          </span>
-          <p className="text-[10px] font-bold text-slate-400 truncate">Inquiry to Booking</p>
         </div>
       </div>
     </div>

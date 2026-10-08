@@ -24,6 +24,7 @@ export class AdminAgencyRequestController {
   public getRequests = async (req: Request, res: Response): Promise<void> => {
     try {
       const result = await adminAgencyRequestService.getAgencyRequests(req.query as any);
+      logger.info('👔 [HTTP ADMIN LIST] GET /api/admin/agency-requests: returned %d items', result.items?.length || 0);
       ResponseUtil.success(res, result, 'Agency requests retrieved successfully.');
     } catch (error: any) {
       logger.error('Error fetching agency requests: %s', error.message);
@@ -52,6 +53,9 @@ export class AdminAgencyRequestController {
   public getRequestById = async (req: Request, res: Response): Promise<void> => {
     try {
       const agency = await adminAgencyRequestService.getAgencyRequestById(req.params.id as string);
+      logger.info('👔 [HTTP ADMIN DETAIL] GET /api/admin/agency-requests/%s: docs=%d, bankName="%s", accNum="%s"',
+        req.params.id, agency.documentsUploadedCount, agency.bankDetails?.bankName || '', agency.bankDetails?.accountNumber || ''
+      );
       ResponseUtil.success(res, agency, 'Agency request details retrieved successfully.');
     } catch (error: any) {
       logger.error('Error fetching agency request by ID: %s', error.message);
@@ -106,6 +110,57 @@ export class AdminAgencyRequestController {
     } catch (error: any) {
       logger.error('Error approving agency request: %s', error.message);
       ResponseUtil.error(res, error.message || 'Failed to approve agency.', HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+  };
+
+  /**
+   * PUT /api/admin/agency-requests/:id/approve-car-rental
+   */
+  public approveCarRental = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminUser = (req as any).admin;
+      const { notes } = req.body || {};
+      const reqContext = {
+        ip: String(req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1'),
+        browser: String(req.headers['user-agent'] || 'Chrome'),
+      };
+
+      const result = await adminAgencyRequestService.approveCarRentalRequest(
+        req.params.id as string,
+        adminUser,
+        notes,
+        reqContext
+      );
+      ResponseUtil.success(res, result, 'Car Rental business capability approved successfully.');
+    } catch (error: any) {
+      logger.error('Error approving car rental request: %s', error.message);
+      ResponseUtil.error(res, error.message || 'Failed to approve car rental capability.', HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+  };
+
+  /**
+   * PUT /api/admin/agency-requests/:id/reject-car-rental
+   */
+  public rejectCarRental = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminUser = (req as any).admin;
+      const { reason, notes } = req.body || {};
+      const reqContext = {
+        ip: String(req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1'),
+        browser: String(req.headers['user-agent'] || 'Chrome'),
+      };
+
+      const result = await adminAgencyRequestService.rejectCarRentalRequest(
+        req.params.id as string,
+        adminUser,
+        reason || 'Car Rental compliance criteria not met',
+        notes,
+        reqContext
+      );
+      ResponseUtil.success(res, result, 'Car Rental capability rejected.');
+    } catch (error: any) {
+      logger.error('Error rejecting car rental request: %s', error.message);
+      ResponseUtil.error(res, error.message || 'Failed to reject car rental capability.', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
   };
 

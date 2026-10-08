@@ -27,6 +27,7 @@ export const AddPackageModal: React.FC<AddPackageModalProps> = ({
     availableSeats: 15,
     totalSeats: 20,
     category: 'Beach',
+    adventureType: 'General Adventure',
     departureMonth: 'June',
     isFeatured: false,
     description: '',
@@ -139,6 +140,49 @@ export const AddPackageModal: React.FC<AddPackageModalProps> = ({
                   <option value="Cultural">Cultural</option>
                   <option value="Honeymoon">Honeymoon</option>
                   <option value="Family">Family</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                  Adventure Type
+                </label>
+                <select
+                  value={formData.adventureType}
+                  onChange={(e) => setFormData({ ...formData, adventureType: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-[#0F172A] focus:outline-none focus:border-[#6356E5]"
+                >
+                  <option value="Trekking">🥾 Trekking</option>
+                  <option value="Camping">🏕️ Camping</option>
+                  <option value="Backpacking">🎒 Backpacking</option>
+                  <option value="Expedition">🏔️ Expedition</option>
+                  <option value="Road Trip">🛣️ Road Trip</option>
+                  <option value="Wildlife Safari">🦁 Wildlife Safari</option>
+                  <option value="Desert Safari">🐪 Desert Safari</option>
+                  <option value="Cycling">🚴 Cycling</option>
+                  <option value="River Rafting">🚣 River Rafting</option>
+                  <option value="Skiing">⛷️ Skiing</option>
+                  <option value="Snow Adventure">❄️ Snow Adventure</option>
+                  <option value="Scuba Diving">🤿 Scuba Diving</option>
+                  <option value="Paragliding">🪂 Paragliding</option>
+                  <option value="General Adventure">🧭 General Adventure</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                  Departure Month
+                </label>
+                <select
+                  value={formData.departureMonth}
+                  onChange={(e) => setFormData({ ...formData, departureMonth: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-[#0F172A] focus:outline-none focus:border-[#6356E5]"
+                >
+                  {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
                 </select>
               </div>
             </div>

@@ -27,6 +27,7 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({
     approvalStatus: 'Approved' as AdminPackageItem['approvalStatus'],
     isFeatured: false,
     category: '',
+    adventureType: 'General Adventure',
     description: '',
   });
 
@@ -43,6 +44,7 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({
         approvalStatus: pkg.approvalStatus,
         isFeatured: pkg.isFeatured,
         category: pkg.category,
+        adventureType: pkg.adventureType || 'General Adventure',
         description: pkg.description,
       });
     }
@@ -203,6 +205,47 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({
                   <option value="Pending">Pending</option>
                   <option value="Rejected">Rejected</option>
                   <option value="—">—</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                  Category
+                </label>
+                <input
+                  type="text"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  placeholder="e.g. Adventure, Cultural"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-[#0F172A] focus:outline-none focus:border-[#6356E5]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                  Adventure Type
+                </label>
+                <select
+                  value={formData.adventureType}
+                  onChange={(e) => setFormData({ ...formData, adventureType: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-[#0F172A] focus:outline-none focus:border-[#6356E5]"
+                >
+                  <option value="Trekking">🥾 Trekking</option>
+                  <option value="Camping">🏕️ Camping</option>
+                  <option value="Backpacking">🎒 Backpacking</option>
+                  <option value="Expedition">🏔️ Expedition</option>
+                  <option value="Road Trip">🛣️ Road Trip</option>
+                  <option value="Wildlife Safari">🦁 Wildlife Safari</option>
+                  <option value="Desert Safari">🐪 Desert Safari</option>
+                  <option value="Cycling">🚴 Cycling</option>
+                  <option value="River Rafting">🚣 River Rafting</option>
+                  <option value="Skiing">⛷️ Skiing</option>
+                  <option value="Snow Adventure">❄️ Snow Adventure</option>
+                  <option value="Scuba Diving">🤿 Scuba Diving</option>
+                  <option value="Paragliding">🪂 Paragliding</option>
+                  <option value="General Adventure">🧭 General Adventure</option>
                 </select>
               </div>
             </div>

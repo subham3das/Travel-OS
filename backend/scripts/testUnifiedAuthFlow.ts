@@ -21,6 +21,7 @@ async function run() {
       email: testEmail,
       phone: testPhone,
       password: testPassword,
+      confirmPassword: testPassword,
       acceptTerms: true,
     });
 

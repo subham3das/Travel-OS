@@ -5,7 +5,7 @@ import {
   ReportItem,
   ReportCategory,
   RevenueTrendDataPoint,
-  GeographicRegionData,
+  BookingFunnelItem,
   TopDestinationReportItem,
   AgencyMatrixBubble,
   CategoryPerformanceItem,
@@ -39,7 +39,7 @@ export const AdminReportsPage: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
   const [revenueTrend, setRevenueTrend] = useState<RevenueTrendDataPoint[]>([]);
   const [heatmapMatrix, setHeatmapMatrix] = useState<number[][]>(Array.from({ length: 7 }, () => Array(7).fill(0)));
-  const [geographicData, setGeographicData] = useState<GeographicRegionData[]>([]);
+  const [bookingFunnel, setBookingFunnel] = useState<BookingFunnelItem[]>([]);
   const [topDestinations, setTopDestinations] = useState<TopDestinationReportItem[]>([]);
   const [agencyBubbles, setAgencyBubbles] = useState<AgencyMatrixBubble[]>([]);
   const [categoryPerformance, setCategoryPerformance] = useState<CategoryPerformanceItem[]>([]);
@@ -70,7 +70,7 @@ export const AdminReportsPage: React.FC = () => {
         reportList,
         trend,
         heatmap,
-        geo,
+        funnel,
         destinations,
         bubbles,
         cats,
@@ -83,7 +83,7 @@ export const AdminReportsPage: React.FC = () => {
         adminReportsManagementService.getReports(activeCategory, activeTab, searchQuery),
         adminReportsManagementService.getRevenueTrend('Daily'),
         adminReportsManagementService.getBookingHeatmap(),
-        adminReportsManagementService.getGeographicData(),
+        adminReportsManagementService.getBookingFunnel(),
         adminReportsManagementService.getTopDestinations(),
         adminReportsManagementService.getAgencyMatrix(),
         adminReportsManagementService.getCategoryPerformance(),
@@ -97,7 +97,7 @@ export const AdminReportsPage: React.FC = () => {
       setReports(reportList);
       setRevenueTrend(trend);
       setHeatmapMatrix(heatmap);
-      setGeographicData(geo);
+      setBookingFunnel(funnel);
       setTopDestinations(destinations);
       setAgencyBubbles(bubbles);
       setCategoryPerformance(cats);
@@ -229,7 +229,7 @@ export const AdminReportsPage: React.FC = () => {
           <ReportsAnalyticsWorkspace
             revenueTrend={revenueTrend}
             heatmapMatrix={heatmapMatrix}
-            geographicData={geographicData}
+            bookingFunnel={bookingFunnel}
             topDestinations={topDestinations}
             agencyBubbles={agencyBubbles}
             categoryPerformance={categoryPerformance}

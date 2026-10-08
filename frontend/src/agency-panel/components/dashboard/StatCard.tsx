@@ -50,10 +50,8 @@ export const StatCard: React.FC<StatCardProps> = ({ stat, delay = 0 }) => {
   const { bgIcon, icon } = getTheme(stat.type);
 
   const handleClick = () => {
-    if (stat.type === 'awaiting_payment' || stat.type === 'bookings') {
+    if (stat.type === 'awaiting_payment' || stat.type === 'bookings' || stat.type === 'trips') {
       navigate('/agency/bookings');
-    } else if (stat.type === 'trips') {
-      navigate('/agency/trips');
     } else if (stat.type === 'packages') {
       navigate('/agency/packages');
     } else if (stat.type === 'revenue') {

@@ -136,7 +136,7 @@ export const MOCK_AGENCY_NOTIFICATIONS: AgencyNotification[] = [
     relatedEntityName: 'Ladakh Expedition',
     triggeredBy: 'Agency Operations',
     ctaText: 'Open Trip',
-    ctaLink: '/agency/trips',
+    ctaLink: '/agency/bookings',
   },
   {
     id: 'NOTIF-2024-004',
@@ -259,7 +259,7 @@ export const MOCK_AGENCY_NOTIFICATIONS: AgencyNotification[] = [
     relatedEntityName: 'Tsering Dorje (Tour Guide)',
     triggeredBy: 'Operations Team',
     ctaText: 'View Trip Details',
-    ctaLink: '/agency/trips',
+    ctaLink: '/agency/bookings',
   },
   {
     id: 'NOTIF-2024-011',
@@ -308,7 +308,7 @@ export const MOCK_AGENCY_NOTIFICATIONS: AgencyNotification[] = [
     relatedEntityName: 'Meghalaya Monsoon Trek',
     triggeredBy: 'Transport Operations',
     ctaText: 'Open Trip',
-    ctaLink: '/agency/trips',
+    ctaLink: '/agency/bookings',
   },
   {
     id: 'NOTIF-2024-014',
@@ -342,7 +342,7 @@ export const MOCK_AGENCY_NOTIFICATIONS: AgencyNotification[] = [
     relatedEntityName: 'Uttarakhand Circuit',
     triggeredBy: 'Tour Leader',
     ctaText: 'View Summary',
-    ctaLink: '/agency/trips',
+    ctaLink: '/agency/bookings',
   },
   {
     id: 'NOTIF-2024-016',

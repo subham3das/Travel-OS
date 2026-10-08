@@ -69,25 +69,6 @@ export const BookingSettingsCard: React.FC<BookingSettingsCardProps> = ({
           )}
         </div>
 
-        {/* Min & Max Travelers */}
-        <div className="space-y-1">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">
-            Min Travelers Per Booking
-          </label>
-          {isEditing ? (
-            <input
-              type="number"
-              value={data.minTravelers}
-              onChange={(e) => onChange({ minTravelers: parseInt(e.target.value) || 1 })}
-              className="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold text-[#0F172A] focus:outline-none focus:border-[#583BE8]"
-            />
-          ) : (
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 font-extrabold text-[#0F172A]">
-              {data.minTravelers} Person
-            </div>
-          )}
-        </div>
-
         <div className="space-y-1">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">
             Max Travelers Per Booking

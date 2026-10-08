@@ -14,6 +14,7 @@ export interface IReview extends Document {
   packageId?: mongoose.Types.ObjectId;
   packageName: string;
   bookingId?: string;
+  tripId?: string;
   rating: number;
   reviewText: string;
   images: string[];
@@ -21,6 +22,8 @@ export interface IReview extends Document {
   sentiment: 'Positive' | 'Neutral' | 'Negative';
   spamScore: number;
   helpfulCount: number;
+  verifiedPurchase: boolean;
+  isHidden: boolean;
   agencyReply?: {
     text: string;
     repliedAt: Date;
@@ -33,17 +36,18 @@ export interface IReview extends Document {
 
 const ReviewSchema = new Schema<IReview>(
   {
-    reviewId: { type: String, required: true, unique: true, index: true },
+    reviewId: { type: String, required: true, unique: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     userName: { type: String, required: true },
     userEmail: { type: String, default: 'traveler@email.com' },
     userAvatar: { type: String, default: '' },
-    agencyId: { type: Schema.Types.ObjectId, ref: 'Agency', index: true },
+    agencyId: { type: Schema.Types.ObjectId, ref: 'Agency' },
     agencyName: { type: String, required: true },
     agencyLogo: { type: String, default: '' },
     packageId: { type: Schema.Types.ObjectId, ref: 'Package' },
     packageName: { type: String, required: true },
-    bookingId: { type: String, default: 'BK-10455' },
+    bookingId: { type: String, required: true },
+    tripId: { type: String, default: '' },
     rating: { type: Number, required: true, min: 1, max: 5 },
     reviewText: { type: String, required: true },
     images: [{ type: String }],
@@ -61,12 +65,14 @@ const ReviewSchema = new Schema<IReview>(
     },
     spamScore: { type: Number, default: 5 },
     helpfulCount: { type: Number, default: 0 },
+    verifiedPurchase: { type: Boolean, default: true },
+    isHidden: { type: Boolean, default: false, index: true },
     agencyReply: {
       text: { type: String },
       repliedAt: { type: Date },
       authorName: { type: String },
     },
-    isDeleted: { type: Boolean, default: false, index: true },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -74,8 +80,10 @@ const ReviewSchema = new Schema<IReview>(
 ReviewSchema.index({ createdAt: -1 });
 ReviewSchema.index({ rating: 1, status: 1 });
 ReviewSchema.index({ agencyId: 1, isDeleted: 1, createdAt: -1 });
-ReviewSchema.index({ packageId: 1, status: 1, isDeleted: 1 });
+ReviewSchema.index({ packageId: 1, status: 1, isHidden: 1, isDeleted: 1 });
+ReviewSchema.index({ packageId: 1, bookingId: 1, userId: 1 }, { unique: true, sparse: true });
 
 export const ReviewModel =
   mongoose.models.Review || mongoose.model<IReview>('Review', ReviewSchema, 'reviews');
+
 

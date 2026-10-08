@@ -20,29 +20,19 @@ export const AgencyProtectedRoute: React.FC = () => {
   }
 
   const rawStatus = String(agency.verificationStatus || '');
-  const isApproved =
-    rawStatus === 'APPROVED' ||
-    rawStatus === 'VERIFIED' ||
-    agency.verificationStatus === AgencyVerificationStatus.APPROVED ||
-    agency.status === 'ACTIVE';
+  const onboardingStatus = String(agency.onboardingStatus || '');
 
-  if (isApproved) {
-    // Mandatory first login password change enforcement
-    if (agency.passwordChanged === false) {
-      return <Navigate to="/agency/create-new-password" replace />;
-    }
-    return <Outlet />;
-  }
-
-  if (rawStatus === 'PENDING' || agency.verificationStatus === AgencyVerificationStatus.PENDING) {
-    return <Navigate to="/agency/onboarding" replace />;
-  }
-
-  if (rawStatus === 'REJECTED' || agency.verificationStatus === AgencyVerificationStatus.REJECTED) {
+  if (rawStatus === 'REJECTED' || onboardingStatus === 'REJECTED') {
     return <Navigate to="/agency/application-rejected" replace />;
   }
 
-  return <Navigate to="/agency/verification-pending" replace />;
+  // Mandatory first login password change enforcement if set
+  if (agency.passwordChanged === false) {
+    return <Navigate to="/agency/create-new-password" replace />;
+  }
+
+  // Partner is authenticated - permit dashboard view to render contextual onboarding state machine
+  return <Outlet />;
 };
 
 export default AgencyProtectedRoute;

@@ -130,7 +130,7 @@ export const RolesBottomWidgets: React.FC<RolesBottomWidgetsProps> = ({
           {activity.length === 0 ? (
             <div className="py-6 text-center text-slate-400">
               <Activity className="w-5 h-5 mx-auto mb-1 text-slate-300" />
-              <p className="text-[11px] font-bold text-slate-500">No activity recorded</p>
+              <p className="text-[11px] font-bold text-slate-500">No administrative activity yet.</p>
             </div>
           ) : (
             activity.map((act) => (

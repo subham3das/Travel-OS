@@ -26,7 +26,7 @@ export const AgencyFilter: React.FC<AgencyFilterProps> = ({
   onFilterChange,
 }) => {
   return (
-    <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-none pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
       {defaultFilterChips.map((chip) => {
         const isActive = activeFilter === chip.id;
         return (

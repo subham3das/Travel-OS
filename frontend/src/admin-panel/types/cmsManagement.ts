@@ -3,144 +3,197 @@
 export type CMSCategoryTab =
   | 'banners'
   | 'announcements'
+  | 'discovery'
   | 'destinations'
   | 'agencies'
   | 'trips'
   | 'campaigns'
   | 'popups'
-  | 'sections'
   | 'seo';
 
-export type ContentStatus = 'draft' | 'scheduled' | 'published' | 'expired' | 'active';
+export type ContentStatus = 'draft' | 'scheduled' | 'published' | 'expired' | 'archived';
+export type BannerTargetType = 'Package' | 'Agency' | 'Destination' | 'Car Rental' | 'External';
+
+export interface BannerVersion {
+  version: number;
+  title: string;
+  subtitle?: string;
+  desktopImage: string;
+  mobileImage?: string;
+  targetType: BannerTargetType;
+  targetId?: string;
+  externalUrl?: string;
+  ctaText?: string;
+  savedBy: string;
+  savedAt: string;
+}
 
 export interface HeroBannerItem {
   id: string;
+  bannerId?: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   ctaText: string;
-  ctaLink: string;
+  targetType: BannerTargetType;
+  targetId?: string;
+  externalUrl?: string;
   desktopImage: string;
-  mobileImage: string;
-  startDate: string;
-  endDate: string;
+  mobileImage?: string;
+  startDate?: string;
+  endDate?: string;
   priority: number;
   isEnabled: boolean;
   status: ContentStatus;
+  version?: number;
+  versionHistory?: BannerVersion[];
 }
 
-export type AnnouncementType = 'info' | 'warning' | 'success' | 'critical';
-export type AnnouncementAudience = 'all' | 'customers' | 'agencies' | 'logged_in';
-export type AnnouncementLocation = 'homepage' | 'customer_dashboard' | 'agency_dashboard' | 'both';
+export type AnnouncementType = 'info' | 'warning' | 'alert' | 'success';
+export type AnnouncementTargetType = 'Package' | 'Agency' | 'Destination' | 'External' | 'None';
+export type AnnouncementPlacement = 'all' | 'home_only' | 'mobile_only';
 
 export interface PlatformAnnouncementItem {
   id: string;
+  announcementId?: string;
   title: string;
-  description: string;
+  description?: string;
   type: AnnouncementType;
-  audience: AnnouncementAudience;
-  location: AnnouncementLocation;
-  isPinned: boolean;
-  isDismissible: boolean;
-  requireAck: boolean;
-  startDate: string;
-  endDate: string;
+  bgColor?: string;
+  textColor?: string;
+  targetType?: AnnouncementTargetType;
+  targetId?: string;
+  linkUrl?: string;
+  ctaText?: string;
+  placement?: AnnouncementPlacement;
+  isPinned?: boolean;
+  isDismissible?: boolean;
+  priority: number;
+  startDate?: string;
+  endDate?: string;
   status: ContentStatus;
+  isEnabled: boolean;
 }
 
 export interface TrendingDestinationItem {
   id: string;
   name: string;
+  destinationName?: string;
   country: string;
-  description: string;
+  region?: string;
+  description?: string;
   imageUrl: string;
   priority: number;
   isTrending: boolean;
-  displayOrder: number;
   isEnabled: boolean;
 }
 
 export interface FeaturedAgencyItem {
   id: string;
+  agencyDocId?: string;
+  agencyId: string;
   agencyName: string;
-  agencyLogo: string;
-  rating: number;
-  isVerified: boolean;
-  featuredUntil: string;
+  agencyLogo?: string;
+  rating?: number;
+  isVerified?: boolean;
+  featuredBadge?: string;
+  featuredUntil?: string;
   priority: number;
-  sortOrder: number;
   isEnabled: boolean;
 }
 
 export interface FeaturedTripItem {
   id: string;
+  packageDocId?: string;
+  packageId: string;
   tripTitle: string;
-  agencyName: string;
+  agencyName?: string;
   bannerImage: string;
+  price?: number;
+  duration?: string;
+  destination?: string;
   discountBadge?: string;
-  isTrending: boolean;
-  isFeatured: boolean;
   priority: number;
-  schedule: string;
-  displayOrder: number;
+  featuredUntil?: string;
   isEnabled: boolean;
 }
 
-export type CampaignApplicableTo = 'homepage' | 'agency' | 'customer' | 'both';
+export type CampaignType = 'Discount' | 'Festival' | 'Seasonal' | 'Referral';
 
 export interface PromotionalCampaignItem {
   id: string;
+  campaignId?: string;
   title: string;
-  description: string;
+  slug?: string;
+  description?: string;
+  campaignType: CampaignType;
   bannerImage: string;
-  ctaText: string;
-  ctaLink: string;
-  startDate: string;
-  endDate: string;
+  landingUrl?: string;
+  couponId?: string;
+  couponCode?: string;
+  discountPercentage?: number;
+  startDate?: string;
+  endDate?: string;
   status: ContentStatus;
   priority: number;
-  applicableTo: CampaignApplicableTo;
+  isEnabled: boolean;
 }
 
-export type PopupAudience = 'all' | 'first_time' | 'registered' | 'agencies';
-export type PopupFrequency = 'once_per_session' | 'always' | 'once_per_user';
+export type PopupFrequency = 'once_per_session' | 'always_show' | 'once_per_user';
+export type PopupMediaType = 'image' | 'video';
 
 export interface PromoPopupItem {
   id: string;
+  popupId?: string;
   title: string;
-  description: string;
+  description?: string;
+  mediaType: PopupMediaType;
   imageUrl: string;
+  mediaUrl?: string;
   buttonText: string;
-  buttonLink: string;
+  buttonLink?: string;
+  targetType?: string;
+  targetId?: string;
   hasCloseButton: boolean;
   delaySeconds: number;
-  audience: PopupAudience;
   frequency: PopupFrequency;
+  priority?: number;
+  startDate?: string;
+  endDate?: string;
+  status?: ContentStatus;
   isEnabled: boolean;
 }
 
-export interface HomepageSectionItem {
-  id: string;
-  key: string;
-  name: string;
-  description: string;
-  isEnabled: boolean;
-  order: number;
-}
+export type CMSSEOPageKey =
+  | 'home'
+  | 'destination'
+  | 'package'
+  | 'agency'
+  | 'car-rental'
+  | 'about'
+  | 'privacy'
+  | 'terms'
+  | 'contact';
 
 export interface HomepageSEOData {
+  pageKey?: CMSSEOPageKey;
   title: string;
   description: string;
-  ogImage: string;
-  keywords: string;
+  keywords: string[] | string;
+  canonicalUrl?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string;
+  twitterCard?: string;
+  robots?: string;
 }
 
 export interface CMSKPIStats {
-  publishedContent: { value: number; label: string; growth: string };
-  activeCampaigns: { value: number; label: string; growth: string };
-  liveAnnouncements: { value: number; label: string; growth: string };
-  activeBanners: { value: number; label: string; growth: string };
-  scheduledItems: { value: number; label: string; growth: string };
-  mediaStorage: { value: string; label: string; growth: string };
+  publishedBanners: { value: number; label: string; growth: string; subtitle: string };
+  liveAnnouncements: { value: number; label: string; growth: string; subtitle: string };
+  publishedCampaigns: { value: number; label: string; growth: string; subtitle: string };
+  publishedPopups: { value: number; label: string; growth: string; subtitle: string };
+  activeCoupons: { value: number; label: string; growth: string; subtitle: string };
+  totalShowcases: { value: number; label: string; growth: string; subtitle: string };
 }
 
 export interface CMSScheduledItem {
@@ -159,4 +212,81 @@ export interface CMSRecentChangeItem {
   action: string;
   target: string;
   timestamp: string;
+}
+
+export interface SearchDatabaseResult {
+  packages: Array<{
+    id: string;
+    packageId: string;
+    title: string;
+    destination: string;
+    price: number;
+    imageUrl: string;
+    agencyName: string;
+  }>;
+  agencies: Array<{
+    id: string;
+    agencyId: string;
+    name: string;
+    rating: number;
+    logo: string;
+    isVerified: boolean;
+  }>;
+  destinations: Array<{
+    name: string;
+    imageUrl: string;
+  }>;
+  coupons: Array<{
+    id: string;
+    code: string;
+    discountText: string;
+  }>;
+}
+
+export type CMSSelectionType = 'packages' | 'agencies' | 'destinations' | 'trips' | 'vehicles';
+
+export interface CMSSelectItem {
+  id: string;
+  name: string;
+  title?: string;
+  packageId?: string;
+  agencyId?: string;
+  tripId?: string;
+  agencyName?: string;
+  ownerName?: string;
+  destination?: string;
+  destinationCountry?: string;
+  category?: string;
+  city?: string;
+  country?: string;
+  region?: string;
+  duration?: string;
+  price?: number;
+  dailyPrice?: number;
+  originalPrice?: number;
+  rating?: number;
+  reviewCount?: number;
+  bookingsCount?: number;
+  packageCount?: number;
+  travelerCount?: number;
+  capacity?: number;
+  coverImage?: string;
+  logo?: string;
+  status?: string;
+  isFeatured?: boolean;
+  updatedAt?: string;
+  createdAt?: string;
+  departureDate?: string;
+  raw?: any;
+}
+
+export interface CMSSelectResponse {
+  items: CMSSelectItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
 }

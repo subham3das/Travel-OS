@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, MessageSquare, User as UserIcon, LogOut, ChevronDown } from 'lucide-react';
 import { useAgencyAuth } from '../../hooks/useAgencyAuth';
+import { useActiveBusiness } from '../../context/ActiveBusinessContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from '../../../theme/ThemeContext';
+import { BrandLogo } from '../../../common/brand';
+
 
 interface DashboardHeaderProps {
   unreadCount?: number;
@@ -17,7 +21,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { agency, agencyUser, logoutAgency } = useAgencyAuth();
+  const { activeBusiness } = useActiveBusiness();
   const [showDropdown, setShowDropdown] = useState(false);
+
+  const messagesPath = activeBusiness === 'car_rental' ? '/agency/car-rental/messages' : '/agency/messages';
+  const notificationsPath = activeBusiness === 'car_rental' ? '/agency/car-rental/notifications' : '/agency/notifications';
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on click outside
@@ -65,39 +73,39 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       ? `${nameWords[0][0]}${nameWords[1][0]}`.toUpperCase()
       : rawName.slice(0, 2).toUpperCase();
 
+  const { theme, setTheme } = useTheme();
+
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between shadow-2xs select-none">
-      {/* Left: Brand Logo */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/agency/dashboard')}>
-          <div className="w-8 h-8 rounded-full bg-[#583BE8] flex items-center justify-center shadow-md shadow-[#583BE8]/25 shrink-0">
-            <svg className="w-4.5 h-4.5 text-white" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 21.5C12 21.5 19 15.5 19 10C19 6.13401 15.866 3 12 3C8.13401 3 5 6.13401 5 10C5 15.5 12 21.5 12 21.5Z"
-                fill="white"
-                fillOpacity="0.25"
-              />
-              <circle cx="12" cy="9.5" r="3.5" stroke="white" strokeWidth="1.8" />
-              <path d="M12 7.5L13.5 11L12 10L10.5 11L12 7.5Z" fill="white" />
-            </svg>
-          </div>
-          <span className="text-xl sm:text-2xl font-extrabold text-[#0F172A] tracking-tight">
-            Apna<span className="text-[#583BE8]">Trip</span>
-          </span>
+      {/* Left: Brand Logo (Visible only on mobile where DesktopSidebar is hidden) */}
+      <div className="flex items-center gap-3 md:hidden">
+        <div
+          className="flex items-center cursor-pointer"
+          onClick={() => navigate(activeBusiness === 'car_rental' ? '/agency/car-rental/dashboard' : '/agency/dashboard')}
+          aria-label="ApnaTrip Agency Dashboard"
+        >
+          <BrandLogo
+            theme="light"
+            className="h-8 w-auto max-w-[150px]"
+            alt="ApnaTrip"
+          />
         </div>
       </div>
+
+      {/* Desktop Left Spacer */}
+      <div className="hidden md:block" />
 
       {/* Right: Notifications Bell & Avatar */}
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => navigate('/agency/messages')}
+          onClick={() => navigate(messagesPath)}
           className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
           aria-label="View messages"
         >
-          <MessageSquare className="w-4.5 h-4.5 text-[#583BE8]" />
+          <MessageSquare className="w-4.5 h-4.5 text-[#2563EB]" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#583BE8] text-white text-[9px] font-black flex items-center justify-center border-2 border-white">
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#2563EB] text-white text-[9px] font-black flex items-center justify-center border-2 border-white">
               {unreadCount}
             </span>
           )}
@@ -105,7 +113,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
         <button
           type="button"
-          onClick={() => navigate('/agency/notifications')}
+          onClick={() => navigate(notificationsPath)}
           className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
           aria-label="View notifications"
         >
@@ -127,14 +135,14 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <img
                 src={agency.logo}
                 alt="Agency Logo"
-                className="w-9 h-9 rounded-full object-cover border-2 border-[#583BE8] shadow-xs"
+                className="w-9 h-9 rounded-full object-cover border-2 border-[#2563EB] shadow-xs"
               />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-[#583BE8] text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
+              <div className="w-9 h-9 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
                 {initials}
               </div>
             )}
-            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 hidden sm:block transition-transform duration-150 ${showDropdown ? 'rotate-180 text-[#583BE8]' : ''}`} />
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 hidden sm:block transition-transform duration-150 ${showDropdown ? 'rotate-180 text-[#2563EB]' : ''}`} />
           </button>
 
           {showDropdown && (
@@ -144,9 +152,9 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 className="fixed inset-0 z-40 bg-transparent"
                 onClick={() => setShowDropdown(false)}
               />
-              <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl border border-slate-100 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="px-4 py-2 border-b border-slate-100">
-                  <p className="text-xs font-bold text-[#0F172A] truncate">{rawName}</p>
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-4 py-2 border-b border-slate-100 dark:border-white/10">
+                  <p className="text-xs font-bold text-[#0F172A] dark:text-white truncate">{rawName}</p>
                   <p className="text-[10px] font-semibold text-slate-400 truncate">{ownerEmail}</p>
                 </div>
 
@@ -156,16 +164,43 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     setShowDropdown(false);
                     navigate('/agency/profile');
                   }}
-                  className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-[#583BE8] flex items-center gap-2 transition-colors cursor-pointer"
+                  className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-[#2563EB] flex items-center gap-2 transition-colors cursor-pointer"
                 >
                   <UserIcon className="w-3.5 h-3.5" />
                   <span>Agency Profile</span>
                 </button>
 
+                {/* Theme Selector */}
+                <div className="px-4 py-2 border-t border-b border-slate-100 dark:border-white/10 my-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                    Theme
+                  </span>
+                  <div className="grid grid-cols-3 gap-1 bg-slate-50 dark:bg-slate-900 p-1 rounded-xl">
+                    {[
+                      { id: 'Light', label: '☀️ Light' },
+                      { id: 'Dark', label: '🌙 Dark' },
+                      { id: 'System', label: '💻 Auto' },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setTheme(t.id as any)}
+                        className={`py-1 text-[10px] font-bold rounded-lg transition-colors cursor-pointer text-center ${
+                          theme === t.id
+                            ? 'bg-white dark:bg-slate-800 text-[#2563EB] shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full px-4 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors cursor-pointer"
+                  className="w-full px-4 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center gap-2 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Logout</span>

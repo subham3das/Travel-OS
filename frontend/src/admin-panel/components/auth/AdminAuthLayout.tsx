@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, CheckCircle2, Building2, UserCheck, Sliders } from 'lucide-react';
+import { BrandLogo } from '../../../common/brand';
 import { AdminLoginCard } from './AdminLoginCard';
 import { AdminDesktopOnly } from './AdminDesktopOnly';
 
@@ -23,26 +24,11 @@ export const AdminAuthLayout: React.FC = () => {
           <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-purple-600/20 blur-3xl pointer-events-none" />
 
           {/* Top Brand Logo */}
-          <div className="relative z-10 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg shadow-black/20 shrink-0">
-              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 21.5C12 21.5 19 15.5 19 10C19 6.13401 15.866 3 12 3C8.13401 3 5 6.13401 5 10C5 15.5 12 21.5 12 21.5Z"
-                  fill="white"
-                  fillOpacity="0.3"
-                />
-                <circle cx="12" cy="9.5" r="3.5" stroke="white" strokeWidth="1.8" />
-                <path d="M12 7.5L13.5 11L12 10L10.5 11L12 7.5Z" fill="white" />
-              </svg>
-            </div>
-            <div>
-              <span className="text-xl font-extrabold tracking-tight text-white block leading-none">
-                Apna<span className="text-purple-300">Trip</span>
-              </span>
-              <span className="text-[10px] font-black tracking-widest uppercase text-purple-300/80 block mt-0.5">
-                Admin Control Portal
-              </span>
-            </div>
+          <div className="relative z-10 flex flex-col gap-1 items-start">
+            <BrandLogo theme="dark" className="h-9 w-auto" alt="ApnaTrip" />
+            <span className="text-[10px] font-black tracking-widest uppercase text-purple-300/80 block">
+              Admin Control Portal
+            </span>
           </div>
 
           {/* Middle Content Section */}

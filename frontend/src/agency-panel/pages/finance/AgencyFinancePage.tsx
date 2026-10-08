@@ -12,8 +12,57 @@ import { RefundsCard } from '../../components/finance/RefundsCard';
 import { TaxInfoCard } from '../../components/finance/TaxInfoCard';
 import { ExportReportsCard } from '../../components/finance/ExportReportsCard';
 import { TransactionDetailsModal } from '../../components/finance/TransactionDetailsModal';
-import { MOCK_FINANCE_DATA, TransactionItem, CompleteFinanceData } from '../../data/finance';
+import { MarketplaceSettlementsView } from '../../components/finance/MarketplaceSettlementsView';
+import { PaymentSetupReminderModal } from '../../components/payment/PaymentSetupReminderModal';
+import { TransactionItem, CompleteFinanceData } from '../../data/finance';
 import { agencyFinanceService } from '../../services/agencyFinance.service';
+
+const ZERO_FINANCE_DATA: CompleteFinanceData = {
+  summary: [
+    { id: 'revenue', title: 'Total Revenue', amount: 0, formattedAmount: '₹0', growth: '0%', isPositive: true, type: 'revenue' },
+    { id: 'balance', title: 'Available Balance', amount: 0, formattedAmount: '₹0', growth: '0%', isPositive: true, type: 'balance' },
+    { id: 'settlement', title: 'Pending Settlement', amount: 0, formattedAmount: '₹0', growth: '0%', isPositive: true, type: 'settlement' },
+    { id: 'refunds', title: 'Total Refunds', amount: 0, formattedAmount: '₹0', growth: '0%', isPositive: false, type: 'refunds' },
+    { id: 'commission', title: 'Platform Fee (10%)', amount: 0, formattedAmount: '₹0', growth: '0%', isPositive: false, type: 'commission' },
+    { id: 'earnings', title: 'Net Earnings', amount: 0, formattedAmount: '₹0', growth: '0%', isPositive: true, type: 'earnings' },
+  ],
+  revenueTrend30D: [],
+  paymentBreakdown: [],
+  recentTransactions: [],
+  settlement: {
+    lastSettlement: { amount: 0, formattedAmount: '₹0', date: 'N/A', status: 'Completed' },
+    nextSettlement: { amount: 0, formattedAmount: '₹0', date: 'N/A', status: 'Upcoming' },
+    settlementFrequency: 'Weekly',
+    bankAccountLast4: '0000',
+    bankName: 'N/A',
+  },
+  refundSummary: {
+    approvedCount: 0,
+    pendingCount: 0,
+    rejectedCount: 0,
+    totalCount: 0,
+    recentRequest: {
+      id: '',
+      bookingId: '',
+      packageName: '',
+      travelerName: '',
+      refundAmount: 0,
+      formattedAmount: '₹0',
+      reason: '',
+      status: 'Pending',
+      requestDate: '',
+    },
+  },
+  taxInfo: {
+    gstCollected: 0,
+    formattedGstCollected: '₹0',
+    platformFees: 0,
+    formattedPlatformFees: '₹0',
+    netTaxableRevenue: 0,
+    formattedNetTaxableRevenue: '₹0',
+    gstPercentage: 18,
+  },
+};
 
 /**
  * Full Finance Page for Agency Panel
@@ -21,9 +70,10 @@ import { agencyFinanceService } from '../../services/agencyFinance.service';
  * Accessed via: Analytics Page -> Financial Overview -> View Full Finance
  */
 export const AgencyFinancePage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'settlements' | 'overview'>('settlements');
   const [dateRange, setDateRange] = useState('01 May - 31 May 2025');
   const [selectedTx, setSelectedTx] = useState<TransactionItem | null>(null);
-  const [financeData, setFinanceData] = useState<CompleteFinanceData>(MOCK_FINANCE_DATA);
+  const [financeData, setFinanceData] = useState<CompleteFinanceData>(ZERO_FINANCE_DATA);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadFinance = useCallback(async () => {
@@ -33,6 +83,7 @@ export const AgencyFinancePage: React.FC = () => {
       setFinanceData(data);
     } catch (err) {
       console.error('Failed to load agency finance overview:', err);
+      setFinanceData(ZERO_FINANCE_DATA);
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +115,35 @@ export const AgencyFinancePage: React.FC = () => {
 
         {/* Main Body Grid */}
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 space-y-6 max-w-5xl mx-auto w-full">
-          {isLoading ? (
+          {/* View Mode Tab Switcher */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl w-fit">
+            <button
+              type="button"
+              onClick={() => setActiveTab('settlements')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                activeTab === 'settlements'
+                  ? 'bg-white text-[#583BE8] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Marketplace Settlements (Razorpay Route)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                activeTab === 'overview'
+                  ? 'bg-white text-[#583BE8] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Revenue & Financial Analytics
+            </button>
+          </div>
+
+          {activeTab === 'settlements' ? (
+            <MarketplaceSettlementsView />
+          ) : isLoading ? (
             <div className="space-y-6 animate-pulse">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -116,6 +195,9 @@ export const AgencyFinancePage: React.FC = () => {
         transaction={selectedTx}
         onClose={() => setSelectedTx(null)}
       />
+
+      {/* Login / Payout Account Reminder Modal */}
+      <PaymentSetupReminderModal />
     </div>
   );
 };

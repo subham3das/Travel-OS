@@ -311,7 +311,6 @@ export class AgencyProfileService {
       },
       booking: {
         bookingApproval: 'Automatic',
-        minTravelers: 1,
         maxTravelers: 24,
         bookingDeadlineDays: 3,
         waitlistEnabled: true,

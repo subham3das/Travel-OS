@@ -1,0 +1,229 @@
+.page {
+  min-height: 100vh;
+  padding-bottom: 8rem;
+}
+
+.hero {
+  position: relative;
+  padding: 8.5rem 0 5rem;
+  overflow: hidden;
+}
+
+.heroGlow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 400px;
+  background: radial-gradient(ellipse at top, rgba(37, 99, 235, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
+.heroContent {
+  max-width: 700px;
+}
+
+.heroTitle {
+  font-family: var(--font-sans);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.08;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.italic {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.heroSub {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 520px;
+  margin-bottom: 2rem;
+}
+
+.heroCtas {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Section */
+.section {
+  padding: 4rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sectionHead {
+  margin-bottom: 2.5rem;
+}
+
+/* Vehicle Cards */
+.vehicleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.vehicleCard {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-fast);
+}
+
+.vehicleCard:hover {
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.vehicleEmoji {
+  font-size: 2rem;
+}
+
+.vehicleInfo {
+  flex: 1;
+}
+
+.vehicleName {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.vehicleType {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.vehiclePrice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.vehiclePrice span {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+}
+
+.vehicleBtn {
+  padding: 6px 16px;
+  background: #2563EB;
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.vehicleBtn:hover {
+  background: #1D4ED8;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+/* Rental Grid */
+.rentalGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+.rentalCard {
+  padding: 1.75rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: var(--transition-fast);
+}
+
+.rentalEmoji {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.rentalName {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.rentalType {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.rentalMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.rentalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: auto;
+}
+
+.rentalPrice {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--brand-primary);
+}
+
+.rentalBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: var(--transition-fast);
+}
+
+.rentalBtn:hover {
+  background: var(--grad-brand);
+  color: #05050a;
+  border-color: transparent;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .rentalGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .vehicleGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .rentalGrid {
+    grid-template-columns: 1fr;
+  }
+}

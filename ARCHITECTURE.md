@@ -439,6 +439,101 @@ graph TD
 
 ---
 
+## 10.2 Traveler KYC & Identity Verification Workspace Architecture
+
+The Traveler KYC system governs identity verification across customer accounts (`users`), one-time travel profiles (`travel_profiles`), and compliance records (`user_kycs`).
+
+### Architecture Data Flow & State Machine
+
+```mermaid
+graph TD
+    subgraph Traveler PWA
+        TP[Travel Profile Form]
+        Card[TravelProfileDashboardCard - 4 States]
+        Cloud[Cloudinary CDN - Secure Storage]
+    end
+
+    subgraph Backend Services
+        TP_SVC[travelProfile.service.ts]
+        KYC_SVC[adminKyc.service.ts]
+        NOTIF_SVC[notification.model.ts]
+    end
+
+    subgraph MongoDB Atlas
+        U_COLL[(users)]
+        TP_COLL[(travel_profiles)]
+        KYC_COLL[(user_kycs)]
+        AUDIT_COLL[(audit_logs)]
+    end
+
+    subgraph Super Admin Workspace
+        Drawer[UserDetailsDrawer - Admin KYC Tab]
+        Header[AdminKycCard - Telemetry & Badges]
+        Summary[DocumentSummary - Real-time Counters]
+        Docs[KycDocumentCard - Review Actions]
+        Modal[DocumentPreviewModal - Inspection Stage]
+        Timeline[KycTimeline - Multi-Stage Audit Trail]
+    end
+
+    TP --> Cloud
+    Cloud --> TP_SVC
+    TP_SVC --> TP_COLL
+    TP_SVC --> KYC_COLL
+    KYC_SVC --> KYC_COLL & U_COLL & TP_COLL & AUDIT_COLL
+    Drawer & Header & Summary & Docs & Modal & Timeline --> KYC_SVC
+    KYC_SVC --> NOTIF_SVC
+    Card -. Reads Backend State .-> TP_SVC
+```
+
+### Complete KYC State Machine
+```text
+NOT_SUBMITTED ──► PROFILE_COMPLETED ──► DOCUMENTS_UPLOADED ──► UNDER_REVIEW ──► OCR_PROCESSING
+                                                                                    │
+                                                                                    ▼
+VERIFIED (Auto-Unlocks Silver Tier) ◄────────── ADMIN_REVIEW ──────────► REJECTED (With Reason)
+        ▲                                             │                               │
+        │                                             ▼                               ▼
+        └── Renewed ◄── EXPIRED                 SUSPENDED                 Re-upload CTA ──► PENDING
+```
+
+### Mathematical Parent Status Derivation Rules
+The parent status is computed strictly from document statuses:
+- **If no required documents exist** $\implies$ `None` (`NOT_SUBMITTED`).
+- **If ANY required document is `Rejected`** $\implies$ Overall KYC status is `Rejected`.
+- **Else if ANY required document is `Pending`** $\implies$ Overall KYC status is `Pending` (`UNDER_REVIEW`).
+- **Else if ALL required documents are `Verified`** $\implies$ Overall KYC status is `Verified`.
+- **Else if documents expire** $\implies$ Overall KYC status is `Expired`.
+
+### Document Collection Standards
+- **Mandatory (Either/Or):**
+  - **Aadhaar Card (Front + Back):** UIDAI format masking (`•••• •••• 4289`), QR code check, address match.
+  - **Voter ID (Front only):** ECI serial masking (`WBC••••412`), full name match.
+- **Optional:**
+  - **Driving Licence (Front + Back):** Sarathi register match, expiry check.
+  - **Passport (Photo page only):** ICAO 9303 MRZ validation.
+- **Excluded:** Visa is NOT collected during traveler profile setup.
+
+### Admin Review Workspace
+- **Header:** Displays status badge, verification ID, dates, reviewer, risk score (0-100), biometric face match %, document match %, fraud detection, and government gateway status.
+- **Document Summary Bar:** Dynamic counters (`Uploaded`, `Verified`, `Pending`, `Rejected`, `Expired`) with interactive category filtering.
+- **Review Cards:** Masked numbers, expiry, country, OCR result, forgery check, and actions: `Preview`, `Approve`, `Reject`, `Re-upload`, `Download`, `Metadata`.
+- **Preview Modal:** Inspection stage with Zoom (+/-), 90° rotation, brightness/contrast filters, prev/next pagination, and quick review decision buttons.
+- **Audit Timeline:** Multi-stage breakdown: `Submitted` $\to$ `OCR Completed` $\to$ `Forgery Check` $\to$ `Face Match` $\to$ `Government Validation` $\to$ `Admin Viewed` $\to$ `Approved`.
+
+### Traveler App 4-State Lifecycle (`TravelProfileDashboardCard`)
+- **State 1 (In Progress):** Completion card with "Complete Travel Profile" CTA.
+- **State 2 (Pending Verification):** Compact informational card (~45% reduced height) without promotional clutter.
+- **State 3 (Verified):** Card returns `null` and is automatically removed from the Home screen, naturally reflowing the page.
+- **State 4 (Rejected):** "Verification Failed" warning with administrative reason and "Re-upload Documents" CTA.
+
+### Automated Membership Unlock
+Upon admin approval of KYC:
+- User is automatically upgraded from `Free` to **Silver Tier Membership** (`user.membership = 'Silver'`) with 1-year validity (`membershipValidTill`).
+- Unlocks 1-click booking, 5% discounts, and priority refund queues.
+- High-priority approval notifications dispatched to the traveler.
+
+---
+
 ## 11. Panel-Scoped Theme Architecture & Isolation Boundaries
 
 To guarantee complete independence across customer, agency, and super-admin portals, theme contexts are scoped per portal root rather than globally on `document.documentElement` or `<body>`.
@@ -979,6 +1074,675 @@ graph TD
 | **Community** | `POST` | `/api/community/posts/:id/like` | Increments post like counter. |
 | **Reviews** | `GET` | `/api/reviews` | Public verified customer reviews by package or agency. |
 | **Reviews** | `POST` | `/api/reviews` | Submits verified customer rating & review with agency alert dispatch. |
+| **Car Rental** | `GET` | `/api/cars` | Filterable vehicle marketplace (category, transmission, price sort). |
+| **Car Rental** | `GET` | `/api/cars/:id` | Single vehicle specifications, host agency, deposit, and features. |
+| **Car Rental** | `GET` | `/api/cars/:id/reviews` | Verified driver reviews and rating breakdown for specific car. |
+| **Car Rental** | `POST`| `/api/cars/:id/reviews` | Authenticated customer review submission for rented vehicle. |
+| **Car Rental** | `POST`| `/api/cars/bookings` | Creates vehicle rental reservation (Supports 100% full or 20% advance token). |
+| **Car Rental** | `GET` | `/api/cars/bookings/my` | Authenticated customer car rental reservations and voucher status. |
+
+---
+
+## 13. Car Rental Marketplace Architecture & Lifecycle
+
+The Car Rental module functions as a peer marketplace alongside Vacation Packages. It connects travelers with verified agency fleet operators and private vehicle hosts under strict booking verification.
+
+### End-to-End Car Rental Data Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as Traveler / Driver
+    participant Catalog as CarListingPage.tsx
+    participant Detail as VehicleDetailsPage (/car-rental/:id)
+    participant Modal as CarBookingModal.tsx
+    participant API as Express /api/cars
+    participant DB as MongoDB (cars, car_bookings, car_reviews)
+
+    Customer->>Catalog: 1. Search & Filter Fleet (SUV, Luxury, Electric, etc.)
+    Customer->>Catalog: 2. Click Vehicle Card or "View & Book"
+    Catalog->>Detail: 3. Navigate to /car-rental/:id (No premature checkout modal)
+    Detail->>API: 4. GET /api/cars/:id & GET /api/cars/:id/reviews
+    API->>DB: Query CarModel & CarReviewModel populated with host agency
+    DB-->>Detail: Return full specs, amenities, deposit rules, and reviews
+    Customer->>Detail: 5. Inspect specs, verified agency badge, reviews
+    Customer->>Detail: 6. Click "Book This Car" on sticky footer
+    Detail->>Modal: 7. Open CarBookingModal wizard
+    Customer->>Modal: 8. Step 1: Select Pickup/Dropoff Dates, Times & Locations
+    Modal->>Modal: Compute rental duration in days & total base price
+    Customer->>Modal: 9. Step 2: Input Driver License & Select Payment Schedule
+    Note over Customer,Modal: Full Payment (100%) vs Advance Token Deposit (20% upfront, 80% on pickup)
+    Modal->>API: 10. POST /api/cars/bookings (Auth JWT)
+    API->>DB: Check vehicle availability & save CarBookingModel
+    DB-->>Modal: Return confirmed booking with Reference ID (e.g. CR-98214)
+    Modal-->>Customer: Display digital rental confirmation voucher
+```
+
+### Car Rental Split-Payment Logic
+1. **Advance Token Payment**:
+   - Upfront Deposit: $20\%$ of total rental amount + security deposit.
+   - Status: `partial_advance`.
+   - Remaining Balance: $80\%$ collected by agency host during physical vehicle handover / key release.
+2. **Full Payment**:
+   - Upfront Deposit: $100\%$ of total rental amount + refundable security deposit.
+   - Status: `paid`.
+
+---
+
+## 14. Master MongoDB Database Architecture — All 30 Collections
+
+The database `travelos_db` runs on MongoDB Atlas and contains exactly 30 production Mongoose collections organized into 5 core functional clusters:
+
+```mermaid
+classDiagram
+    class User {
+        +ObjectId _id
+        +String email
+        +String role (customer/traveler)
+        +Object travelPreferences
+        +Boolean isVerified
+    }
+    class Agency {
+        +ObjectId _id
+        +String name
+        +String verificationStatus (PENDING/APPROVED/REJECTED)
+        +Array documents
+        +Object bankDetails
+    }
+    class Admin {
+        +ObjectId _id
+        +String email
+        +String role (super_admin/operations)
+        +Array permissions
+    }
+    class Package {
+        +ObjectId _id
+        +ObjectId agencyId
+        +String title
+        +Number price
+        +Array itinerary
+        +String status
+    }
+    class Booking {
+        +ObjectId _id
+        +ObjectId userId
+        +ObjectId packageId
+        +ObjectId agencyId
+        +Number totalAmount
+        +String status
+    }
+    class Trip {
+        +ObjectId _id
+        +ObjectId packageId
+        +ObjectId agencyId
+        +Array travelers
+        +Array guides
+        +String status
+    }
+    class Car {
+        +ObjectId _id
+        +ObjectId agencyId
+        +String category
+        +Number pricePerDay
+        +Boolean isAvailable
+    }
+    class CarBooking {
+        +ObjectId _id
+        +ObjectId carId
+        +ObjectId userId
+        +Date pickupDate
+        +Date dropoffDate
+        +String paymentStatus
+    }
+
+    User "1" --> "*" Booking : places
+    Agency "1" --> "*" Package : publishes
+    Package "1" --> "*" Booking : booked_via
+    Agency "1" --> "*" Trip : dispatches
+    Booking "1" --> "1" Trip : manifests_into
+    Agency "1" --> "*" Car : owns_fleet
+    Car "1" --> "*" CarBooking : rented_in
+    User "1" --> "*" CarBooking : books_vehicle
+```
+
+### Complete 30-Collection Directory
+
+| # | Collection Name | Mongoose Model | Primary Purpose & Schema Scope | Key Indexes & Partitioning |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | `users` | `UserModel` | Customer/Traveler credentials, Google OAuth profile, KYC, travel vibes, preferences. | `{ email: 1 }` (unique), `{ role: 1 }` |
+| 2 | `agencies` | `AgencyModel` | Agency business profile, GST/PAN compliance, verification status, bank payout setup. | `{ email: 1 }`, `{ applicationId: 1 }`, `{ status: 1 }` |
+| 3 | `admins` | `AdminModel` | Platform operators, super admin credentials, fine-grained RBAC permission matrix. | `{ email: 1 }` (unique), `{ role: 1 }` |
+| 4 | `packages` | `PackageModel` | Travel catalog, multi-day itineraries, seasonal pricing tiers, inclusions/exclusions. | `{ agencyId: 1 }`, `{ status: 1 }`, `{ slug: 1 }` |
+| 5 | `bookings` | `BookingModel` | Group reservations, passenger manifests, Razorpay order IDs, status machine. | `{ userId: 1 }`, `{ agencyId: 1 }`, `{ packageId: 1 }` |
+| 6 | `payments` | `PaymentModel` | Financial transaction ledger, Razorpay payment signatures, currency, payout receipts. | `{ bookingId: 1 }`, `{ razorpayOrderId: 1 }`, `{ status: 1 }` |
+| 7 | `trips` | `TripModel` | Live operational trip lifecycle, guide/driver rosters, vehicle allocation, attendance. | `{ agencyId: 1 }`, `{ packageId: 1 }`, `{ status: 1 }` |
+| 8 | `cars` | `CarModel` | Car rental vehicle fleet, pricing per day, transmission, fuel, specs, host agency. | `{ agencyId: 1 }`, `{ category: 1 }`, `{ isAvailable: 1 }` |
+| 9 | `car_bookings` | `CarBookingModel` | Car rental reservations, pickup/dropoff logs, driver license, advance token status. | `{ carId: 1 }`, `{ userId: 1 }`, `{ bookingStatus: 1 }` |
+| 10 | `car_reviews` | `CarReviewModel` | Customer reviews, ratings, vehicle feedback, verified driver reviews. | `{ carId: 1 }`, `{ userId: 1 }` |
+| 11 | `saved_travelers` | `SavedTravelerModel` | Companion profiles, passport numbers, dietary flags, emergency contacts. | `{ userId: 1 }` |
+| 12 | `conversations` | `ConversationModel` | Customer-to-Agency & Concierge chat threads, last message timestamp, unread counts. | `{ participants: 1 }`, `{ updatedAt: -1 }` |
+| 13 | `messages` | `MessageModel` | Individual chat messages, Cloudinary attachments, read receipts, sender role. | `{ conversationId: 1 }`, `{ createdAt: 1 }` |
+| 14 | `agency_private_notes` | `AgencyPrivateNoteModel` | Agency internal CRM notes on travelers (hidden from travelers). | `{ agencyId: 1 }`, `{ customerId: 1 }` |
+| 15 | `notifications` | `NotificationModel` | Omnichannel in-app activity notifications across User, Agency, and Admin panels. | `{ recipientId: 1 }`, `{ isRead: 1 }`, `{ createdAt: -1 }` |
+| 16 | `community_posts` | `CommunityPostModel` | User-generated travel stories, itineraries, travel photographs, like counters. | `{ authorId: 1 }`, `{ createdAt: -1 }` |
+| 17 | `reviews` | `ReviewModel` | Package and agency verified reviews, star breakdowns, official agency responses. | `{ packageId: 1 }`, `{ agencyId: 1 }`, `{ userId: 1 }` |
+| 18 | `audit_logs` | `AuditLogModel` | Immutable administrative actions, status changes, KYC audits, security events. | `{ entityId: 1 }`, `{ action: 1 }`, `{ createdAt: -1 }` |
+| 19 | `destinations` | `DestinationModel` | Platform destinations directory, highlights, best season to visit, geo coordinates. | `{ slug: 1 }` (unique), `{ name: 1 }` |
+| 20 | `payouts` | `PayoutModel` | Agency withdrawal requests, bank settlement states, admin approval lifecycle. | `{ agencyId: 1 }`, `{ status: 1 }` |
+| 21 | `coupons` | `CouponModel` | Promotional discount vouchers, minimum order thresholds, expiration timestamps. | `{ code: 1 }` (unique), `{ isActive: 1 }` |
+| 22 | `hero_banners` | `HeroBannerModel` | CMS homepage sliders, promotional campaign banners, active date windows. | `{ isActive: 1 }`, `{ priority: 1 }` |
+| 23 | `curated_collections` | `CuratedCollectionModel` | CMS curated themes ("Honeymoon Escapes", "Weekend Treks", "Luxury Villas"). | `{ slug: 1 }`, `{ isPublished: 1 }` |
+| 24 | `faqs` | `FAQModel` | Platform knowledge base articles, customer support FAQs, category tags. | `{ category: 1 }`, `{ order: 1 }` |
+| 25 | `trip_stories` | `TripStoryModel` | Editorial magazine stories, travel blogs, featured customer experiences. | `{ slug: 1 }`, `{ isPublished: 1 }` |
+| 26 | `system_settings` | `SystemSettingsModel` | Global platform parameters, commission percentages, maintenance flags, tax rates. | `{ key: 1 }` (unique) |
+| 27 | `agency_teams` | `AgencyTeamModel` | Tour guides, dispatch drivers, tour leaders, emergency field staff. | `{ agencyId: 1 }`, `{ role: 1 }` |
+| 28 | `agency_vehicles` | `AgencyVehicleModel` | Fleet assets used for operational package trips (buses, vans, jeeps). | `{ agencyId: 1 }`, `{ registrationNumber: 1 }` |
+| 29 | `trip_incidents` | `TripIncidentModel` | Emergency incident logging during active trips, medical alerts, resolution notes. | `{ tripId: 1 }`, `{ severity: 1 }` |
+| 30 | `activity_logs` | `ActivityLogModel` | Real-time operational user telemetry and session audit trails. | `{ userId: 1 }`, `{ timestamp: -1 }` |
+| 31 | `travel_profiles` | `TravelProfileModel` | Traveler personal details, emergency contact, Aadhaar, Voter ID, DL, Passport docs, verification status. | `{ userId: 1 }` (unique) |
+| 32 | `user_kycs` | `UserKycModel` | Traveler KYC compliance record, telemetry (risk score, face match %, doc match %), review timeline, document checklist. | `{ userId: 1 }` (unique), `{ verificationId: 1 }` (unique), `{ status: 1 }` |
+
+### Collections That Must NEVER Duplicate Data (Zero Duplication Rule)
+- **User profiles**: Customer details (name, email, phone) live solely in `users`. `bookings`, `messages`, and `car_bookings` store only `userId: ObjectId`.
+- **Agency compliance**: Bank details and documents live solely in `agencies`. Never copy bank routing or GST numbers into `payouts` or `packages`.
+- **Package descriptions**: Day-by-day itineraries live in `packages`. When a booking occurs, `bookings` references `packageId` and stores only a price snapshot for invoice integrity.
+
+---
+
+## 15. Real-Time Event & Presence Network (Socket.IO Mesh)
+
+Socket.IO is managed by `backend/src/services/socket.service.ts` and operates over an authenticated WebSocket connection.
+
+### Channel Topologies
+1. `user_{userId}`: Targeted customer channel for personal booking updates, trip status changes, payment notifications, and chat messages.
+2. `agency_{agencyId}`: Tenant channel for incoming bookings, customer inquiries, document verification alerts, and review submissions.
+3. `admin`: Global operational control room channel for pending agency applications, KYC submissions, system telemetry, and high-severity trip incidents.
+4. `conversation_{conversationId}`: Direct bi-directional messaging pipe between customer and assigned agency agent.
+
+### Socket Event Matrix
+
+| Event Name | Direction | Room Target | Payload |
+| :--- | :--- | :--- | :--- |
+| `notification:new` | Server $\rightarrow$ Client | `user_{id}` / `agency_{id}` | `{ id, title, message, category, actionUrl }` |
+| `notification:read` | Server $\rightarrow$ Client | `user_{id}` / `agency_{id}` | `{ notificationId }` |
+| `chat:message` | Server $\rightarrow$ Client | `conversation_{id}` | `{ id, senderId, text, attachments, createdAt }` |
+| `chat:typing` | Client $\leftrightarrow$ Server | `conversation_{id}` | `{ conversationId, isTyping, senderName }` |
+| `trip:status_change` | Server $\rightarrow$ Client | `user_{id}` | `{ tripId, status: 'Ongoing' | 'Delayed' }` |
+| `agency:booking_received` | Server $\rightarrow$ Client | `agency_{id}` | `{ bookingId, customerName, amount, packageName }` |
+
+---
+
+## 16. Codebase Topology & Knowledge Graph (Graphify Insights)
+
+Based on the topological analysis executed via Graphify:
+- **Total Graph Size**: 4,417 nodes, 9,257 edges, across 225 identified functional communities.
+- **Top 10 God Nodes (Core System Abstractions)**:
+  1. `usePackageWizard()` (87 edges) $\rightarrow$ Central multi-step package builder driving agency commerce catalog creation.
+  2. `useToast()` (55 edges) $\rightarrow$ Universal feedback abstraction used across all UI panels.
+  3. `AdminCMSManagementService` (35 edges) $\rightarrow$ Platform CMS governance hub (Hero banners, curated collections, FAQs).
+  4. `Destination` (33 edges) $\rightarrow$ Universal destination entity linking packages, search, homepage curation, and user preferences.
+  5. `AdvancedNotificationCenterService` (28 edges) $\rightarrow$ Omnichannel activity broadcaster bridging database mutations to Socket.IO.
+  6. `DesktopSidebar()` (28 edges) $\rightarrow$ Primary navigation shell for the Agency and Admin command centers.
+  7. `DashboardHeader()` (27 edges) $\rightarrow$ Universal telemetry, theme toggle, and notification bell header.
+  8. `AdminCommunityManagementService` (26 edges) $\rightarrow$ Content moderation and user-generated travel feed controller.
+  9. `AdminReportsManagementService` (26 edges) $\rightarrow$ Cross-collection financial and operational business intelligence aggregator.
+  10. `AdminSettingsManagementService` (26 edges) $\rightarrow$ System configuration, commission control, and platform maintenance toggles.
+
+---
+
+## 17. Multi-Panel Folder Responsibilities & Structure
+
+```text
+APNA_TRIPV4/
+├── backend/
+│   ├── src/
+│   │   ├── controllers/      # 50 controllers: HTTP input extraction, calling services, ResponseUtil
+│   │   ├── services/         # 54 services: Business logic, aggregation pipelines, transactions, events
+│   │   ├── models/           # 30 Mongoose models: Schemas, indexes, validations for MongoDB Atlas
+│   │   ├── routes/           # 24 router modules: Express route groupings mounted under /api
+│   │   ├── middlewares/      # 9 middlewares: Auth JWT, RBAC requireRole, Zod validation, RateLimit
+│   │   ├── validators/       # 15 Zod validation schemas for strict request payload verification
+│   │   ├── utils/            # Shared utilities: ResponseUtil, email sender, token helpers
+│   │   ├── types/            # TypeScript interfaces, custom Express Request augmentations
+│   │   ├── scripts/          # E2E test suites and MongoDB seeding scripts (seedCars, seedTravelers, etc.)
+│   │   ├── app.ts            # Express app assembly, middleware pipelines, route mounting
+│   │   └── server.ts         # HTTP + Socket.IO server initialization, graceful shutdown
+├── frontend/
+│   ├── src/
+│   │   ├── user-panel/       # 27 pages: Traveler PWA, Home, Explore, Packages, Car Rental, Trips, Chat
+│   │   ├── agency-panel/     # 17 pages: Agency Operations, Wizard, Live Trips, Manifests, Finance, CRM
+│   │   ├── admin-panel/      # 22 pages: Super Admin Command Center, KYC, Approvals, CMS, Reports, RBAC
+│   │   ├── components/       # Shared UI primitives (buttons, modals, badges, cards, sheets)
+│   │   ├── contexts/         # Theme providers, Auth contexts, Socket contexts
+│   │   ├── hooks/            # Custom reusable React hooks (useBookings, useToast, useSearch, etc.)
+│   │   ├── services/         # Axios API clients for User, Agency, and Admin endpoints
+│   │   └── types/            # Shared frontend TypeScript declarations
+```
+
+---
+
+## 18. Official Architecture Decision: Multi-Business Platform Architecture (Travel Agency + Car Rental)
+
+### 18.1 Multi-Business Model Concept
+ApnaTrip is officially architected as a **multi-business travel ecosystem**. A single registered business account can operate in one or more business verticals under a unified organization identity:
+1. **Travel Agency**: Curated tour packages, itineraries, group departures, traveler manifests.
+2. **Car Rental**: Fleet management, vehicle inventory, commercial chauffeurs, point-to-point and hourly reservations.
+3. **Both (Integrated Provider)**: Full-suite travel enterprise offering bundled flights, stays, tours, and personal transit.
+
+```mermaid
+graph TD
+    Account[Unified Business Account / Agency Document] --> Types{Business Verticals}
+    Types -->|Vertical 1| TA[Travel Agency Module]
+    Types -->|Vertical 2| CR[Car Rental Module]
+    Types -->|Future Vertical 3| ST[Stays & Accommodation]
+    Types -->|Future Vertical 4| EX[Activities & Experiences]
+
+    subgraph Core Shared Infrastructure
+        AUTH[Unified JWT / Auth System]
+        NOTIF[Omnichannel Notification Engine]
+        MSG[Real-Time Customer Messaging]
+        PAY[Payment & Settlement Gateway]
+        MEDIA[Cloudinary Media Pipeline]
+        AUDIT[Audit Logs & Activity Timeline]
+    end
+
+    TA -.-> Core Shared Infrastructure
+    CR -.-> Core Shared Infrastructure
+```
+
+---
+
+### 18.2 Single Authentication & Identity Invariance
+There is strictly **one authentication system** across the platform:
+- **No Secondary Portals**: Providers do not log into a separate car rental portal or separate agency URL.
+- **No Duplicate Tokens**: A single verified JWT (`req.agency.agencyId`) governs all vertical operations.
+- **Single Account Ownership**: One provider account owns multiple business capabilities.
+- **Role & Scope Resolution**: Verification status for each vertical is resolved independently (`agency.verificationStatus` for tour agency operations, `agency.carRentalVerificationStatus` for car rental operations).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Provider as Agency / Fleet Partner
+    participant Auth as Auth Middleware (JWT)
+    participant Switcher as Business Switcher Context
+    participant AgencyMod as Travel Agency Module
+    participant CarRentalMod as Car Rental Module
+
+    Provider->>Auth: POST /api/agencies/auth/login
+    Auth-->>Provider: JWT Token (Single Agency Identity)
+    Provider->>AgencyMod: Enters Dashboard (/agency/dashboard)
+    Provider->>Switcher: Clicks "Car Rental" in Header
+    Switcher->>Switcher: Inspects carRentalVerificationStatus
+    alt Status = NOT_REGISTERED
+        Switcher-->>Provider: Directs to /agency/car-rental/activate
+    else Status = PENDING / UNDER_REVIEW
+        Switcher-->>Provider: Directs to /agency/car-rental/pending
+    else Status = APPROVED
+        Switcher->>CarRentalMod: Swaps Workspace (Zero Reload)
+        CarRentalMod-->>Provider: Displays /agency/car-rental/dashboard
+    end
+```
+
+---
+
+### 18.3 Business Module Hierarchy
+
+Each module operates independently with dedicated operational tools while reusing platform-wide services:
+
+```text
+├── Travel Agency Module
+│   ├── Dashboard (/agency/dashboard)
+│   ├── Package Wizard & Catalog (/agency/packages)
+│   ├── Bookings & Reservations (/agency/bookings)
+│   ├── Dispatch & Trip Manifests (/agency/trips)
+│   ├── Customer CRM (/agency/customers)
+│   ├── Real-Time Inbox (/agency/messages) [SHARED]
+│   ├── Financial Telemetry (/agency/finance)
+│   ├── Notifications (/agency/notifications) [SHARED]
+│   └── Profile & Verification (/agency/profile)
+│
+└── Car Rental Module
+    ├── Fleet Overview Dashboard (/agency/car-rental/dashboard)
+    ├── Fleet Catalog & Listing CRUD (/agency/car-rental/cars)
+    ├── Reservations & Status Actions (/agency/car-rental/bookings)
+    ├── Schedule & Availability Grid (/agency/car-rental/calendar)
+    ├── Chauffeur Roster & Licenses (/agency/car-rental/drivers)
+    ├── Fleet Revenue & Utilization (/agency/car-rental/analytics)
+    ├── Real-Time Customer Chat (/agency/messages) [SHARED]
+    ├── Notifications Center (/agency/notifications) [SHARED]
+    └── Rental Brand & Dispatch Settings (/agency/car-rental/settings)
+```
+
+---
+
+### 18.4 Zero-Reload Workspace Switching Architecture
+Agencies with multiple business verticals switch workspaces dynamically within the UI without logging into separate accounts:
+1. **Dynamic Navigation**: `DesktopSidebar` and `BottomNavigation` adapt links, icons, and portal branding (`TRAVEL AGENCY PORTAL` vs `CAR RENTAL PORTAL`) based on `activeBusiness`.
+2. **Context Persistence**: `ActiveBusinessContext` persists current active workspace in session storage and synchronizes route changes bidirectionally.
+3. **Backend Alignment**: `POST /api/agencies/car-rental/switch-business` records active operational mode in the `agencies` document.
+4. **Zero Page Disruption**: No full page reloads, no loss of application state, no token regeneration.
+
+---
+
+### 18.5 Onboarding & Vertical Registration Standard
+New business registrations allow immediate or progressive vertical selection:
+
+```mermaid
+graph TD
+    Start[Agency Onboarding Portal] --> Choice{Select Business Type}
+    Choice -->|Travel Agency| RegTA[Agency Profile & Tour Documents]
+    Choice -->|Car Rental| RegCR[Fleet Profile & Commercial Licenses]
+    Choice -->|Both| RegBoth[Unified Agency & Car Rental Onboarding]
+
+    RegTA --> SuperAdmin[Super Admin Review Queue]
+    RegCR --> SuperAdmin
+    RegBoth --> SuperAdmin
+
+    SuperAdmin -->|Independent Decision| AppTA[Approve Tour Operations]
+    SuperAdmin -->|Independent Decision| AppCR[Approve Fleet Operations]
+```
+
+- Existing agencies can activate Car Rental at any time via the one-click **Activate Car Rental** workflow (`/agency/car-rental/activate`) without re-entering already-provided corporate details.
+- Super Admin verifies and approves each business vertical independently. Rejecting or approving Car Rental has zero impact on the provider's active Travel Agency status.
+
+---
+
+### 18.6 Shared Systems Architecture
+The following core infrastructure components are platform-wide singletons and must **never** be duplicated per vertical:
+- **Authentication**: Single JWT issuance, token verification, password recovery, session handling.
+- **Omnichannel Notification Center**: Universal notification dispatching to database, WebSockets, and email.
+- **Messaging System**: Reuses `conversations` and `messages` collections; customer conversations link seamlessly regardless of whether the inquiry is about a tour package or a car rental.
+- **Payment & Settlement Pipeline**: Unified payment gateways (advance token deposits, balance collection, payout bank routing).
+- **User Management**: Unified customer traveler accounts, KYC, saved companions.
+- **Cloudinary Storage**: Central media folder organization (`/agencies/:id/fleet`, `/agencies/:id/packages`).
+- **Audit Logs**: All vertical administrative actions log to the universal `audit_logs` collection.
+- **Roles & Permissions (RBAC)**: Common permission validation layers across API endpoints.
+
+---
+
+### 18.7 Database Architecture & Collection Boundaries
+
+#### Permanent Immutability Rule
+Existing collections must **never** be renamed, recreated, or restructured destructively:
+- `users`
+- `agencies`
+- `packages`
+- `bookings`
+- `notifications`
+- `messages`
+- `payments`
+
+#### Expansion Protocol
+When expanding capabilities:
+1. Prefer extending primary documents (`AgencyModel` extended with `businessTypes`, `activeBusiness`, `carRentalVerificationStatus`, `carRentalProfile`).
+2. Only introduce new collections when genuine schema differentiation is required:
+   - `cars`: Vehicle inventory, fuel types, transmission, seating, daily rates, availability.
+   - `car_bookings`: Vehicle reservation lifecycle, pickup/drop locations, split payment tracking, driver assignment.
+   - `car_reviews`: Vehicle-specific customer ratings and verified reviews.
+3. Maintain referential integrity: All new collections reference the root `agencyId` foreign key.
+
+---
+
+---
+
+### 18.9 Partner Onboarding Architecture Specification (One Business at a Time + In-Dashboard Expansion)
+
+Partners register for **one business vertical at a time** through dedicated, specialized onboarding flows. Multi-business ownership is achieved naturally via **in-dashboard expansion**:
+
+```
+                          ┌──────────────────────────┐
+                          │   Partner Landing Page   │
+                          │   /agency / /partner     │
+                          └─────────────┬────────────┘
+                                        │ Click "Get Started"
+                                        ▼
+                          ┌──────────────────────────┐
+                          │ Choose Business Vertical │
+                          │ /partner/select-business │
+                          └──────┬────────────┬──────┘
+                     ┌───────────┘            └───────────┐
+                     ▼                                    ▼
+           ① Travel Agency                        ② Car Rental Provider
+           ┌───────────────────────┐              ┌─────────────────────────┐
+           │ Agency Onboarding     │              │ Car Rental Onboarding   │
+           │ /agency/onboarding/*  │              │ /partner/car-rental/    │
+           │ - Pure tour questions │              │   onboarding            │
+           │ - KYC & Bank Details  │              │ - Fleet Specs & Permits │
+           └───────────┬───────────┘              └───────────┬─────────────┘
+                       │                                      │
+                       ▼                                      ▼
+           ┌───────────────────────┐              ┌─────────────────────────┐
+           │ Status: PENDING       │              │ Status: PENDING         │
+           │ Admin Verification    │              │ Admin Verification      │
+           └───────────┬───────────┘              └───────────┬─────────────┘
+                       │                                      │
+                       ▼                                      ▼
+           ┌───────────────────────┐              ┌─────────────────────────┐
+           │ Agency Dashboard      │              │ Car Rental Dashboard    │
+           │ /agency/dashboard     │              │ /agency/car-rental/dash │
+           └───────────┬───────────┘              └───────────┬─────────────┘
+                       │                                      │
+                       │ "Expand Your Business"               │ "Expand Your Business"
+                       │ [Start a Car Rental Business]        │ [Start a Travel Agency]
+                       ▼                                      ▼
+             Launches Car Rental                    Launches Travel Agency
+             Activation (/activate)                 Onboarding (/business)
+                       │                                      │
+                       └──────────────────┬───────────────────┘
+                                          │ Both Verified
+                                          ▼
+                            Unified Dashboard Switching
+                           [Agency | Car Rental Toggle]
+                             (Same Login, Same JWT)
+```
+
+#### Key Implementation Details:
+1. **Business Selection Gate (`/partner/select-business`, `/partner`)**:
+   - Zero "Both" option. Partners choose ① Travel Agency or ② Car Rental Provider.
+   - Clean, modern 2-column layout.
+2. **Agency Onboarding Isolation**:
+   - The "Business Type" dropdown is completely removed. Form state defaults `businessType = 'Travel Agency'`.
+   - Zero fleet, vehicle, or chauffeur questions appear in agency onboarding.
+3. **Standalone Car Rental Onboarding**:
+   - 4-step wizard at `/partner/car-rental/onboarding` submitting to public `POST /api/agencies/car-rental/onboard`.
+   - Generates tracking ID `ATP-CR-YYYY-XXXXXX`, hashes password with bcrypt, initializes status as `PENDING`.
+4. **In-Dashboard Expansion ("Expand Your Business")**:
+   - **Agency Dashboard**: Displays an "Expand Your Business — Start a Car Rental Business" card if car rental is not yet approved. Clicking navigates to `/agency/car-rental/activate` (or status tracking if under review).
+   - **Car Rental Dashboard**: Displays an "Expand Your Business — Start a Travel Agency" card if travel agency is not yet approved. Clicking navigates to `/agency/onboarding/business` (or status tracking if under review).
+   - Backend `submitOnboarding()` explicitly permits an existing Car Rental provider to expand into Travel Agency without duplicate account conflicts, merging `'agency'` into `businessTypes`.
+5. **Conditional Dashboard Switching**:
+   - `BusinessSwitcher` capsule appears in the header **ONLY** after the partner owns **both** businesses and both are verified (`verificationStatus === 'APPROVED'` and `carRentalStatus === 'APPROVED'`).
+   - Switches workspaces instantaneously with 0 reloads and 0 re-authentications under the same JWT.
+
+---
+
+### 18.10 Business Expansion UX Refinements & Settings Hub
+
+To provide a non-intrusive, production-grade multi-business experience, the business expansion UX adheres to the following standards:
+
+#### 1. Non-Intrusive & Dismissible Expansion Cards
+- **Soft Tone**: The expansion prompt uses friendly, optional copy (*"Reach more travelers by offering car rental services alongside your travel agency"*).
+- **Two-Action Controls**:
+  - `[Start Now]`: Directly routes to the activation/onboarding wizard.
+  - `[Maybe Later]`: Gracefully dismisses the banner immediately with smooth exit animations.
+- **Persistent Dismissal**: Dismissal state is saved to `localStorage` (`apnatrip_agency_dismiss_car_rental_expansion` / `apnatrip_car_rental_dismiss_agency_expansion`), preventing the prompt from repeatedly nagging users across sessions or page reloads.
+
+#### 2. Permanent "Business Services" Management in Settings
+Inside `AgencySettingsPage.tsx`, providers have a permanent centralized management hub (`BusinessServicesCard.tsx`) regardless of banner dismissal:
+- **Active Services**: Clear operational status badges (Active, In Review, Not Enabled).
+- **Service Activation**: Providers with un-enabled services can click `+ Add Service` anytime to launch vertical onboarding without needing a dashboard banner.
+- **Future Roadmap Verticals Display**:
+  - *Hotels & Resorts* (Beds, villas, inventory management)
+  - *Homestays & Villas* (Vacation rentals & guest hospitality)
+  - *Activities & Experiences* (Trekking, adventures, sightseeing tours)
+  - *Taxi Network* (Point-to-point city cabs & airport transfers)
+  - *Local Guides* (Expert tour escort and cultural host services)
+  - All future verticals render with disabled "Coming Soon" badges and informative value propositions.
+
+#### 3. Responsive Workspace Switcher & Mobile Bottom Sheet
+- **Desktop (`sm:block`)**: Elegant dropdown capsule displaying active vertical with checkmark and available vertical with swap action.
+- **Mobile (`< sm`)**: Clicking the switcher capsule triggers an accessible, thumb-friendly native **Bottom Sheet** modal (`Select Workspace`):
+  - Darkened backdrop overlay with touch-dismiss.
+  - Centered drag handle pill.
+  - Card-based workspace selectors with active green checkmarks and subtle ring borders.
+  - Full-width `Cancel` action button and background scroll locking.
+  - Zero page reload, zero re-authentication, instantaneous workspace transition.
+
+---
+
+### 18.11 Dedicated Admin Car Rental Approval Architecture
+
+To maintain strict operational boundary isolation between travel agency tour operations and commercial car rental fleets, the Super Admin Panel provides dedicated verification workflows for each vertical:
+
+#### 1. Isolated Admin Verification Queues
+- **Agency Approvals**: Available at `/admin/verification-pending` and `/super-admin/agency-requests`. Focuses on tour operator licenses, package itineraries, tour guide compliance, and traveler safety standards.
+- **Car Rental Approvals**: Dedicated at `/admin/car-rental-approvals` and `/super-admin/car-rental-approvals`. Focuses on commercial vehicle permits (All-India Tourist Permit, RTO permits), vehicle registration certificates (RC), fitness certificates, pollution certificates, comprehensive fleet insurance, and chauffeur driver licenses.
+- **Admin Sidebar Verification Section**:
+  - `Agency Approvals` with dynamic live count badge of pending agency requests.
+  - `Car Rental Approvals` with dynamic live count badge of pending commercial fleet requests.
+
+#### 2. Backend-Driven Architecture & Query Standard
+- **No Mock/Dummy Data**: 100% powered by live MongoDB collections (`agencies`, `cars`, `audit_logs`, `notifications`).
+- **Data Model Topology**:
+  - Provider record: `AgencyModel` where `businessTypes: 'car_rental'` or `carRentalVerificationStatus !== 'NOT_REGISTERED'`.
+  - Registered fleet inventory: `CarModel.find({ agencyId: agency._id })` dynamically joined to provide vehicle counts, vehicle cards with photos and specifications (fuel, transmission, seats, daily price, chauffeur assigned).
+  - Driver roster: Extracted from commercial vehicle assignments (`car.driver`) with verification statuses and license numbers.
+  - Uploaded documents: Queried from `carRentalProfile.documents` (RC, Fleet Insurance, Tourist Permits, Chauffeur Licenses, PAN, GST, Bank settlement details).
+
+#### 3. 4-Tab Approval Queue & Filter Matrix
+- **Queue Tabs**:
+  1. `Pending`: `carRentalVerificationStatus IN ['PENDING', 'UNDER_REVIEW']`
+  2. `Approved`: `carRentalVerificationStatus === 'APPROVED'`
+  3. `Needs Changes`: `carRentalVerificationStatus === 'CHANGES_REQUESTED'`
+  4. `Rejected`: `carRentalVerificationStatus === 'REJECTED'`
+  5. `All`: Universal queue
+- **Multi-Dimensional Filters**: Search by provider name, owner, email, phone, application ID (`ATP-CR-YYYY-XXXXXX`), city, state, and date range.
+
+#### 4. Multi-Stage Action Lifecycle & Real-Time Notifications
+- **Approve**: Sets `carRentalVerificationStatus = 'APPROVED'`, adds `'car_rental'` to `businessTypes`, sets `carRentalApprovedAt` and `carRentalApprovedBy`, activates partner account if needed, logs administrative audit record (`module: 'CarRental'`, `action: 'Car Rental Approved'`), and dispatches real-time in-app notification to provider.
+- **Reject**: Enforces mandatory rejection reason, sets status to `'REJECTED'`, logs audit record, and dispatches notification and email.
+- **Request Changes**: Admin flags specific compliance issues (`RC Expired`, `Fleet Insurance Missing`, `Chauffeur License Unclear`, `Commercial Permit Missing`, `Bank Details Incorrect`) with custom instructions. Sets status to `'CHANGES_REQUESTED'`, updates timeline, and notifies provider to edit and resubmit their submission.
+- **Suspend & Reopen Review**: Allows temporary freeze of fleet operations or resetting status back to active review queue.
+
+---
+
+## 25. Agency Dashboard Car Rental Integration Architecture (Phase 2)
+
+```mermaid
+graph TD
+    subgraph Agency Unified Frontend
+        TOGGLE[BusinessSegmentedToggle layoutId:businessSegmentedPill]
+        SIDEBAR[DesktopSidebar Dynamic Nav Menus]
+        DASH_A[Travel Agency Dashboard]
+        DASH_CR[Car Rental Command Center]
+        FLEET[Fleet & Vehicles Directory]
+        DRAWER_V[VehicleDetailsDrawer]
+        OVERVIEW[Fleet Overview & Matrix]
+        DRAWER_O[OwnerProfileDrawer]
+        BOOKINGS[Rental Reservations & Dispatch]
+        DRIVERS[Driver Directory]
+        DRAWER_D[DriverDetailsDrawer]
+        CUSTOMERS[Rental CRM]
+        ANALYTICS[Telemetry & Intelligence]
+    end
+
+    subgraph Backend Routing & Controller Layer
+        API[/api/agencies/car-rental/*]
+        CTRL[AgencyCarRentalController]
+        SVC[AgencyCarRentalService]
+    end
+
+    subgraph MongoDB Persistence Layer
+        M_CAR[(cars collection - CarModel)]
+        M_DRIVER[(drivers collection - DriverModel)]
+        M_BOOKING[(car_bookings collection - CarBookingModel)]
+        M_AGENCY[(agencies collection - AgencyModel)]
+    end
+
+    TOGGLE --> DASH_A
+    TOGGLE --> DASH_CR
+    SIDEBAR --> FLEET
+    SIDEBAR --> OVERVIEW
+    SIDEBAR --> BOOKINGS
+    SIDEBAR --> DRIVERS
+    SIDEBAR --> CUSTOMERS
+    SIDEBAR --> ANALYTICS
+
+    FLEET --> DRAWER_V
+    OVERVIEW --> DRAWER_O
+    DRIVERS --> DRAWER_D
+
+    DASH_CR --> API
+    FLEET --> API
+    OVERVIEW --> API
+    BOOKINGS --> API
+    DRIVERS --> API
+    CUSTOMERS --> API
+    ANALYTICS --> API
+
+    API --> CTRL --> SVC
+    SVC --> M_CAR
+    SVC --> M_DRIVER
+    SVC --> M_BOOKING
+    SVC --> M_AGENCY
+```
+
+### Key Architectural Tenets:
+1. **Single Account & Single Dashboard Shell**: Reuses the authenticated agency session and core dashboard layout without page reloads or layout duplication.
+2. **Context-Synchronized Navigation**: `ActiveBusinessContext` stores the active mode (`'agency'` | `'car_rental'`) with automatic sync to route changes and local storage persistence.
+3. **100% MongoDB-Backed Telemetry**: All 6 KPI tiles, fleet utilization matrices, customer CRM rows, driver rosters, and analytics telemetry query directly from MongoDB Atlas.
+4. **Slide-over Detailed Drawers**: Modular slide-over sheets for Vehicles (`VehicleDetailsDrawer`), Owners (`OwnerProfileDrawer`), and Drivers (`DriverDetailsDrawer`) provide instant inspection of RC, permits, compliance certs, and lifetime revenue without navigating away from tables.
+
+---
+
+## 32. Global Search & Deep Linking System Architecture
+
+The Global Search system functions as an ecosystem-wide navigation index spanning 8 distinct MongoDB collections:
+
+```mermaid
+graph TD
+    UI[Global Search Input / Top Navigation] --> USE_SEARCH[useSearch Hook]
+    USE_SEARCH --> API_SEARCH[GET /api/search?q=...]
+    API_SEARCH --> SVC[search.service.ts SearchService.globalSearch]
+    
+    subgraph Parallel Aggregation & Querying
+        SVC --> P_PKG[PackageModel]
+        SVC --> P_DEST[PackageModel - destinations]
+        SVC --> P_AGC[AgencyModel]
+        SVC --> P_CAR[CarModel]
+        SVC --> P_USR[UserModel]
+        SVC --> P_TRIP[TripModel]
+        SVC --> P_BKG[BookingModel]
+        SVC --> P_CBKG[CarBookingModel]
+        SVC --> P_CONV[ConversationModel]
+    end
+
+    SVC --> CANONICAL[Canonical Route Formatter]
+    CANONICAL --> RES[Standardized Unified Results JSON]
+    
+    RES --> SEARCH_PAGE[SearchPage.tsx & SearchResults.tsx]
+    SEARCH_PAGE --> CARDS[Result Cards: Package, Agency, Destination, Car, Traveler, Booking]
+    CARDS --> NAV[navigate item.route || item.targetUrl]
+    
+    NAV --> ROUTER[React Router v6 - UserRoutes.tsx]
+    ROUTER --> D_PKG[/packages/:id -> PackageDetailsPage]
+    ROUTER --> D_DEST[/destinations/:id -> DestinationDetailsPage]
+    ROUTER --> D_AGC[/agency/:id -> AgencyDetailsPage]
+    ROUTER --> D_CAR[/cars/:id -> VehicleDetailsPage]
+    ROUTER --> D_BKG[/bookings/:id -> BookingDetailsPage]
+    ROUTER --> D_USR[/traveler/:id -> TravelerProfilePage]
+    ROUTER --> D_TRIP[/trips/:id -> TripDetailsPage]
+    ROUTER --> D_CHAT[/chat/:id -> ChatModal / Messenger]
+```
+
+### Routing & Deep Linking Standard
+- **Direct Link Accessibility**: Every entity route supports direct browser navigation, bookmarks, and hard page refreshes (F5).
+- **Dual Param Resolution**: Destination pages support both singular and plural parameter bindings (`:id`, `:packageId`, `:destinationId`, `:agencyId`, `:userId`, `:bookingId`, `:tripId`).
+- **Zero Refresh Redirection**: Result cards bind directly to canonical route targets; `navigate()` never triggers a `/search` loop or empty state.
+
+
+
+
 
 
 

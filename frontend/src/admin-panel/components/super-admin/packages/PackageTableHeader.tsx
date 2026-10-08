@@ -57,6 +57,9 @@ export const PackageTableHeader: React.FC<PackageTableHeaderProps> = ({
           Status
         </th>
         <th className="py-3.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          Visibility
+        </th>
+        <th className="py-3.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
           Approval
         </th>
         {renderSortableHeader('Last Updated', 'lastUpdated')}

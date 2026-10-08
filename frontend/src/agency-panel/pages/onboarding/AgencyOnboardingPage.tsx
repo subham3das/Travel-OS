@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, Variants } from 'framer-motion';
 import { ArrowRight, ShieldCheck, Users, Briefcase, MessageSquare } from 'lucide-react';
 import deskElementImg from '../../../assets/images/agency-onbord-deskelement.jpg';
+import { BusinessSelectionModal } from '../../components/onboarding/BusinessSelectionModal';
 
 /**
  * Agency Onboarding — Welcome (Step 1)
@@ -12,6 +13,7 @@ import deskElementImg from '../../../assets/images/agency-onbord-deskelement.jpg
  */
 export const AgencyOnboardingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [showBusinessModal, setShowBusinessModal] = useState(false);
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -144,7 +146,7 @@ export const AgencyOnboardingPage: React.FC = () => {
         <motion.div variants={itemVariants} className="space-y-3 pt-1">
           {/* Primary CTA */}
           <button
-            onClick={() => navigate('/agency/onboarding/business')}
+            onClick={() => navigate('/agency/signup')}
             className="w-full py-4 px-6 rounded-2xl bg-[#583BE8] hover:bg-[#492de0] active:scale-[0.99] text-white font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-[#583BE8]/25 transition-all cursor-pointer"
           >
             <span>Get Started</span>
@@ -181,6 +183,12 @@ export const AgencyOnboardingPage: React.FC = () => {
           </div>
         </motion.div>
       </motion.div>
+
+      {/* Choose your business Modal */}
+      <BusinessSelectionModal
+        isOpen={showBusinessModal}
+        onClose={() => setShowBusinessModal(false)}
+      />
     </div>
   );
 };

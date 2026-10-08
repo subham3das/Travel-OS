@@ -34,7 +34,7 @@ export const PackageOverview: React.FC<PackageOverviewProps> = ({ pkg }) => {
             <div className="min-w-0 flex-1">
               <span className="text-[10px] font-bold text-purple-800 uppercase block">Traveler Group Capacity</span>
               <span className="text-xs font-black text-[#0F172A] truncate block">
-                Min: {pkg.minTravelers} • Max: {pkg.maxTravelers} Travelers
+                Up to {pkg.maxTravelers} Travelers
               </span>
             </div>
           </div>

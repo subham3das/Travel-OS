@@ -49,58 +49,83 @@ export const authenticateAgency = async (
     const email = decoded.email;
 
     let agency: IAgency | null = null;
-
-    if (agencyIdOrUserId && mongoose.Types.ObjectId.isValid(agencyIdOrUserId)) {
-      agency = await AgencyModel.findOne({ _id: agencyIdOrUserId, isDeleted: false });
+    const businessIdHeader = req.headers['x-business-id'] as string;
+    if (businessIdHeader && mongoose.Types.ObjectId.isValid(businessIdHeader)) {
+      agency = await AgencyModel.findOne({ _id: businessIdHeader, isDeleted: false });
     }
 
-    if (!agency && email) {
+    if (!agency && agencyIdOrUserId && mongoose.Types.ObjectId.isValid(agencyIdOrUserId)) {
       agency = await AgencyModel.findOne({
-        $or: [{ email: email.toLowerCase() }, { 'owner.email': email.toLowerCase() }],
+        $or: [{ _id: agencyIdOrUserId }, { ownerId: agencyIdOrUserId }],
         isDeleted: false,
       });
     }
 
-    if (!agency) {
-      return next(new UnauthorizedError('Agency account not found or has been deactivated.'));
+    if (!agency && email) {
+      agency = await AgencyModel.findOne({
+        $or: [
+          { email: email.toLowerCase() },
+          { loginEmail: email.toLowerCase() },
+          { 'owner.email': email.toLowerCase() },
+        ],
+        isDeleted: false,
+      });
     }
 
-    // Strict status enforcement: only APPROVED/ACTIVE agencies can access protected agency endpoints
-    const isApproved =
-      agency.verificationStatus === 'APPROVED' ||
-      agency.verificationStatus === 'VERIFIED' ||
-      agency.status === 'ACTIVE';
+    // Attach token payload to Request context
+    req.agencyUser = decoded;
 
-    if (!isApproved) {
-      return next(
-        new ForbiddenError(
-          `Your agency application status is "${agency.verificationStatus}". Only verified and approved agencies can access the operational dashboard.`
-        )
-      );
-    }
-
-    if (agency.status === 'SUSPENDED') {
-      return next(
-        new ForbiddenError('Your agency account has been suspended. Please contact Super Admin support.')
-      );
-    }
-
-    // Invalidate JWT sessions issued prior to recent password resets
-    if (agency.passwordChangedAt && decoded.iat) {
-      const changedTimestamp = Math.floor(agency.passwordChangedAt.getTime() / 1000);
-      if (decoded.iat < changedTimestamp) {
+    if (agency) {
+      if (agency.status === 'SUSPENDED' || agency.onboardingStatus === 'SUSPENDED') {
         return next(
-          new UnauthorizedError('Password was recently changed. Please log in again with your new credentials.')
+          new ForbiddenError('Your agency account has been suspended. Please contact Super Admin support.')
         );
       }
-    }
 
-    // Attach authenticated agency and token payload to Request context
-    req.agency = agency;
-    req.agencyUser = decoded;
+      // Invalidate JWT sessions issued prior to recent password resets
+      if (agency.passwordChangedAt && decoded.iat) {
+        const changedTimestamp = Math.floor(agency.passwordChangedAt.getTime() / 1000);
+        if (decoded.iat < changedTimestamp) {
+          return next(
+            new UnauthorizedError('Password was recently changed. Please log in again with your new credentials.')
+          );
+        }
+      }
+      req.agency = agency;
+    }
 
     next();
   } catch (error) {
     next(error);
   }
+};
+
+/**
+ * Middleware strictly protecting operational endpoints (bookings, packages, finance, fleet publish)
+ * Locks access until registration fee is verified and status is APPROVED.
+ */
+export const requireApprovedAgency = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const agency = req.agency;
+  if (!agency) {
+    return next(new UnauthorizedError('Agency context not found.'));
+  }
+
+  const isApproved =
+    agency.onboardingStatus === 'APPROVED' ||
+    agency.verificationStatus === 'APPROVED' ||
+    agency.verificationStatus === 'VERIFIED' ||
+    agency.status === 'ACTIVE';
+
+  if (!isApproved) {
+    return next(
+      new ForbiddenError(
+        `Operational access locked. Current onboarding status: "${agency.onboardingStatus || agency.verificationStatus}". Registration fee and approval required.`
+      )
+    );
+  }
+  next();
 };

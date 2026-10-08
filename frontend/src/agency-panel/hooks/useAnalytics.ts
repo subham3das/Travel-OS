@@ -48,7 +48,7 @@ const DEFAULT_ANALYTICS: AgencyAnalyticsPayload = {
     { id: 'kpi-bk', label: 'Total Bookings', value: '0', growth: '0%', growthPeriod: 'vs last 7 days', isPositive: true, type: 'bookings' },
     { id: 'kpi-trip', label: 'Active Trips', value: '0', growth: '0%', growthPeriod: 'vs last 7 days', isPositive: true, type: 'trips' },
     { id: 'kpi-trv', label: 'Total Travelers', value: '0', growth: '0%', growthPeriod: 'vs last 7 days', isPositive: true, type: 'travelers' },
-    { id: 'kpi-rtg', label: 'Avg. Rating', value: '5.0/5', growth: '0', growthPeriod: 'vs last 7 days', isPositive: true, type: 'rating' },
+    { id: 'kpi-rtg', label: 'Avg. Rating', value: '0.0/5', growth: '0', growthPeriod: 'vs last 7 days', isPositive: true, type: 'rating' },
   ],
   revenueOverview: {
     totalRevenue: '₹0',

@@ -53,8 +53,8 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       case 'Unauthorized':
         return {
           icon: <Lock className="w-8 h-8 text-rose-500" />,
-          defaultTitle: 'Authentication Required',
-          defaultDesc: 'Your session token is unauthenticated. Please log into your agency account.',
+          defaultTitle: 'Partner Session Required',
+          defaultDesc: 'Please sign in to access your partner onboarding and dashboard.',
         };
       case 'Forbidden':
         return {

@@ -8,12 +8,14 @@ import {
   StepDeparturesInfo,
   DepartureScheduleItem,
   INITIAL_DEPARTURE_ITEM,
+  StepAccommodationInfo,
+  PackageHotelEntry,
   Step6InclusionsInfo,
   Step7PoliciesInfo,
   Step8PublishInfo,
   AddOnState,
 } from '../types/packageWizard';
-import { Step4ItineraryInfo, ItineraryDay } from '../types/itinerary';
+import { Step4ItineraryInfo, ItineraryDay, ItineraryPlanItem, normalizeItineraryDays } from '../types/itinerary';
 import { Step5GalleryInfo, GalleryImage, VideoFile, CategoryTag } from '../types/gallery';
 import { FAQItem, CustomCancellationRule } from '../data/policies';
 
@@ -30,6 +32,11 @@ interface PackageWizardContextType {
   removeDepartureItem: (id: string) => void;
   updateDepartureItem: (id: string, updated: Partial<DepartureScheduleItem>) => void;
   updateStep4: (data: Partial<Step4ItineraryInfo>) => void;
+  updateStepAccommodation: (data: Partial<StepAccommodationInfo>) => void;
+  toggleAccommodationConfirmed: (confirmed: boolean) => void;
+  addHotel: (hotel: Omit<PackageHotelEntry, 'id'>) => void;
+  updateHotel: (id: string, hotel: Partial<PackageHotelEntry>) => void;
+  removeHotel: (id: string) => void;
   updateStep5: (data: Partial<Step5GalleryInfo>) => void;
   updateStep6: (data: Partial<Step6InclusionsInfo>) => void;
   updateStep7: (data: Partial<Step7PoliciesInfo>) => void;
@@ -38,6 +45,11 @@ interface PackageWizardContextType {
   deleteItineraryDay: (id: string) => void;
   duplicateItineraryDay: (id: string) => void;
   moveItineraryDay: (id: string, direction: 'up' | 'down') => void;
+  addPlanItem: (dayId: string, text?: string) => void;
+  updatePlanItem: (dayId: string, planId: string, updated: Partial<ItineraryPlanItem>) => void;
+  removePlanItem: (dayId: string, planId: string) => void;
+  movePlanItem: (dayId: string, planId: string, direction: 'up' | 'down') => void;
+  reorderPlanItems: (dayId: string, startIndex: number, endIndex: number) => void;
   setCoverImage: (url: string) => void;
   addGalleryImage: (url: string) => void;
   removeGalleryImage: (id: string) => void;
@@ -76,6 +88,7 @@ interface PackageWizardContextType {
   isStep3Valid: boolean;
   isStepDeparturesValid: boolean;
   isStep4Valid: boolean;
+  isStepAccommodationValid: boolean;
   isStep5Valid: boolean;
   isStep6Valid: boolean;
   isStep7Valid: boolean;
@@ -107,8 +120,12 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
                 : INITIAL_WIZARD_DRAFT.stepDepartures.departures,
             },
             step4: {
-              days: parsed?.step4?.days?.length ? parsed.step4.days : INITIAL_WIZARD_DRAFT.step4.days,
+              days: parsed?.step4?.days?.length ? normalizeItineraryDays(parsed.step4.days) : INITIAL_WIZARD_DRAFT.step4.days,
               activeDayId: parsed?.step4?.activeDayId || INITIAL_WIZARD_DRAFT.step4.activeDayId,
+            },
+            stepAccommodation: {
+              accommodationConfirmed: parsed?.stepAccommodation?.accommodationConfirmed ?? false,
+              hotels: Array.isArray(parsed?.stepAccommodation?.hotels) ? parsed.stepAccommodation.hotels : [],
             },
             step5: {
               coverImage: parsed?.step5?.coverImage || INITIAL_WIZARD_DRAFT.step5.coverImage,
@@ -232,7 +249,6 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
         reportingTime: '07:30 AM',
         bookingClosingDate: newClosingDateStr,
         bookingClosingTime: '23:59',
-        minimumTravelers: prev?.step3?.minTravelers || 8,
         maximumTravelers: prev?.step3?.maxTravelers || 20,
         bookedTravelers: 0,
         availableSeats: prev?.step3?.maxTravelers || 20,
@@ -311,6 +327,77 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
     }));
   };
 
+  const updateStepAccommodation = (data: Partial<StepAccommodationInfo>) => {
+    setDraft((prev) => ({
+      ...prev,
+      stepAccommodation: { ...(prev?.stepAccommodation || INITIAL_WIZARD_DRAFT.stepAccommodation), ...data },
+    }));
+  };
+
+  const toggleAccommodationConfirmed = (confirmed: boolean) => {
+    setDraft((prev) => {
+      const existingHotels = prev?.stepAccommodation?.hotels || [];
+      return {
+        ...prev,
+        stepAccommodation: {
+          accommodationConfirmed: confirmed,
+          hotels: confirmed && existingHotels.length === 0
+            ? [
+                {
+                  id: `hotel-${Date.now()}`,
+                  hotelName: '',
+                  hotelImages: [],
+                  category: 'Hotel',
+                  address: '',
+                  city: prev?.step2?.primaryDestination || '',
+                  amenities: ['Free WiFi', 'Breakfast Included'],
+                  roomType: 'Deluxe Room',
+                  checkIn: '12:00 PM',
+                  checkOut: '11:00 AM',
+                  shortDescription: '',
+                  dayRange: 'Day 1-2',
+                },
+              ]
+            : confirmed ? existingHotels : [],
+        },
+      };
+    });
+  };
+
+  const addHotel = (hotel: Omit<PackageHotelEntry, 'id'>) => {
+    const newEntry: PackageHotelEntry = {
+      ...hotel,
+      id: `hotel-${Date.now()}`,
+    };
+    setDraft((prev) => ({
+      ...prev,
+      stepAccommodation: {
+        accommodationConfirmed: true,
+        hotels: [...(prev?.stepAccommodation?.hotels || []), newEntry],
+      },
+    }));
+  };
+
+  const updateHotel = (id: string, hotel: Partial<PackageHotelEntry>) => {
+    setDraft((prev) => ({
+      ...prev,
+      stepAccommodation: {
+        ...(prev?.stepAccommodation || { accommodationConfirmed: true, hotels: [] }),
+        hotels: (prev?.stepAccommodation?.hotels || []).map((h) => (h.id === id ? { ...h, ...hotel } : h)),
+      },
+    }));
+  };
+
+  const removeHotel = (id: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      stepAccommodation: {
+        ...(prev?.stepAccommodation || { accommodationConfirmed: true, hotels: [] }),
+        hotels: (prev?.stepAccommodation?.hotels || []).filter((h) => h.id !== id),
+      },
+    }));
+  };
+
   const updateStep5 = (data: Partial<Step5GalleryInfo>) => {
     setDraft((prev) => ({
       ...prev,
@@ -348,10 +435,13 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
         id: newDayId,
         dayNumber: newDayNum,
         title: `Day ${newDayNum}`,
-        description: 'Describe today\'s activities and itinerary highlights...',
-        activities: [{ id: `act-${Date.now()}`, time: '09:00', title: 'Morning Exploration' }],
-        meals: ['Breakfast'],
+        description: '',
+        plans: [
+          { id: `plan-${Date.now()}-1`, text: 'Morning Sightseeing' },
+          { id: `plan-${Date.now()}-2`, text: 'Afternoon Exploration' },
+        ],
         stay: 'Hotel',
+        meals: ['Breakfast'],
         transportation: ['Cab'],
       };
       const updatedDays = [...currentDays, newDay];
@@ -404,9 +494,13 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
         ...targetDay,
         id: dupId,
         title: `${targetDay.title} (Copy)`,
-        activities: targetDay.activities.map((a, i) => ({
-          ...a,
+        plans: (targetDay.plans || []).map((p, i) => ({
+          ...p,
+          id: `plan-dup-${Date.now()}-${i}`,
+        })),
+        activities: (targetDay.plans || []).map((p, i) => ({
           id: `act-dup-${Date.now()}-${i}`,
+          title: p.text,
         })),
       };
 
@@ -422,6 +516,99 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
           days: updatedDays,
           activeDayId: dupId,
         },
+      };
+    });
+  };
+
+  const addPlanItem = (dayId: string, text: string = '') => {
+    setDraft((prev) => {
+      const currentDays = prev?.step4?.days || [];
+      const updatedDays = currentDays.map((d) => {
+        if (d.id !== dayId) return d;
+        const currentPlans = d.plans || [];
+        const newPlan: ItineraryPlanItem = {
+          id: `plan-${Date.now()}-${currentPlans.length + 1}`,
+          text,
+        };
+        return {
+          ...d,
+          plans: [...currentPlans, newPlan],
+        };
+      });
+      return {
+        ...prev,
+        step4: { ...prev.step4, days: updatedDays },
+      };
+    });
+  };
+
+  const updatePlanItem = (dayId: string, planId: string, updated: Partial<ItineraryPlanItem>) => {
+    setDraft((prev) => {
+      const currentDays = prev?.step4?.days || [];
+      const updatedDays = currentDays.map((d) => {
+        if (d.id !== dayId) return d;
+        const currentPlans = (d.plans || []).map((p) =>
+          p.id === planId ? { ...p, ...updated } : p
+        );
+        return { ...d, plans: currentPlans };
+      });
+      return {
+        ...prev,
+        step4: { ...prev.step4, days: updatedDays },
+      };
+    });
+  };
+
+  const removePlanItem = (dayId: string, planId: string) => {
+    setDraft((prev) => {
+      const currentDays = prev?.step4?.days || [];
+      const updatedDays = currentDays.map((d) => {
+        if (d.id !== dayId) return d;
+        return { ...d, plans: (d.plans || []).filter((p) => p.id !== planId) };
+      });
+      return {
+        ...prev,
+        step4: { ...prev.step4, days: updatedDays },
+      };
+    });
+  };
+
+  const movePlanItem = (dayId: string, planId: string, direction: 'up' | 'down') => {
+    setDraft((prev) => {
+      const currentDays = prev?.step4?.days || [];
+      const updatedDays = currentDays.map((d) => {
+        if (d.id !== dayId) return d;
+        const plans = [...(d.plans || [])];
+        const index = plans.findIndex((p) => p.id === planId);
+        if (index === -1) return d;
+        if (direction === 'up' && index === 0) return d;
+        if (direction === 'down' && index === plans.length - 1) return d;
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        const temp = plans[index];
+        plans[index] = plans[targetIndex];
+        plans[targetIndex] = temp;
+        return { ...d, plans };
+      });
+      return {
+        ...prev,
+        step4: { ...prev.step4, days: updatedDays },
+      };
+    });
+  };
+
+  const reorderPlanItems = (dayId: string, startIndex: number, endIndex: number) => {
+    setDraft((prev) => {
+      const currentDays = prev?.step4?.days || [];
+      const updatedDays = currentDays.map((d) => {
+        if (d.id !== dayId) return d;
+        const plans = [...(d.plans || [])];
+        const [removed] = plans.splice(startIndex, 1);
+        plans.splice(endIndex, 0, removed);
+        return { ...d, plans };
+      });
+      return {
+        ...prev,
+        step4: { ...prev.step4, days: updatedDays },
       };
     });
   };
@@ -836,7 +1023,7 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const nextStep = () => {
-    setCurrentStep((prev) => Math.min(prev + 1, 9));
+    setCurrentStep((prev) => Math.min(prev + 1, 10));
   };
 
   const prevStep = () => {
@@ -844,7 +1031,7 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const goToStep = (step: number) => {
-    if (step >= 1 && step <= 9) {
+    if (step >= 1 && step <= 10) {
       setCurrentStep(step);
     }
   };
@@ -889,7 +1076,7 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
           dep.departureDate &&
           dep.departureTime &&
           dep.bookingClosingDate &&
-          dep.minimumTravelers <= dep.maximumTravelers &&
+          dep.maximumTravelers > 0 &&
           new Date(dep.bookingClosingDate) <= new Date(dep.departureDate)
       )
   );
@@ -901,12 +1088,13 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
   const isStep4Valid = Boolean(
     itineraryDaysCount > 0 &&
       isItineraryDurationValid &&
-      draft?.step4?.days?.every(
-        (day) =>
-          day.title.trim().length > 0 &&
-          day.description.trim().length > 0 &&
-          day.activities.length > 0
-      )
+      draft?.step4?.days?.every((day) => day.title && day.title.trim().length > 0)
+  );
+
+  const isStepAccommodationValid = Boolean(
+    !draft?.stepAccommodation?.accommodationConfirmed ||
+    ((draft?.stepAccommodation?.hotels?.length ?? 0) > 0 &&
+      draft.stepAccommodation.hotels.every((h) => (h.hotelName?.trim()?.length ?? 0) > 0))
   );
 
   const isStep5Valid = Boolean(
@@ -943,6 +1131,7 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
     isStep3Valid &&
     isStepDeparturesValid &&
     isStep4Valid &&
+    isStepAccommodationValid &&
     isStep5Valid &&
     isStep6Valid &&
     isStep7Valid &&
@@ -966,15 +1155,18 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
       isCurrentStepValid = isStep4Valid;
       break;
     case 6:
-      isCurrentStepValid = isStep5Valid;
+      isCurrentStepValid = isStepAccommodationValid;
       break;
     case 7:
-      isCurrentStepValid = isStep6Valid;
+      isCurrentStepValid = isStep5Valid;
       break;
     case 8:
-      isCurrentStepValid = isStep7Valid;
+      isCurrentStepValid = isStep6Valid;
       break;
     case 9:
+      isCurrentStepValid = isStep7Valid;
+      break;
+    case 10:
       isCurrentStepValid = isStep8Valid;
       break;
   }
@@ -992,6 +1184,11 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
         removeDepartureItem,
         updateDepartureItem,
         updateStep4,
+        updateStepAccommodation,
+        toggleAccommodationConfirmed,
+        addHotel,
+        updateHotel,
+        removeHotel,
         updateStep5,
         updateStep6,
         updateStep7,
@@ -1000,6 +1197,11 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
         deleteItineraryDay,
         duplicateItineraryDay,
         moveItineraryDay,
+        addPlanItem,
+        updatePlanItem,
+        removePlanItem,
+        movePlanItem,
+        reorderPlanItems,
         setCoverImage,
         addGalleryImage,
         removeGalleryImage,
@@ -1038,6 +1240,7 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
         isStep3Valid,
         isStepDeparturesValid,
         isStep4Valid,
+        isStepAccommodationValid,
         isStep5Valid,
         isStep6Valid,
         isStep7Valid,

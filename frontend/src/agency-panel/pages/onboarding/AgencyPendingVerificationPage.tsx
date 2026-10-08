@@ -27,7 +27,9 @@ import {
 } from '../../services/agencyOnboarding.service';
 import { useAgencyAuthContext } from '../../services/agencyAuth.service';
 import { AgencyVerificationStatus } from '../../types/agency';
+import { BrandLogo } from '../../../common/brand';
 import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
+import { UniversalImageUploader } from '../../../components/common/UniversalImageUploader';
 
 export const AgencyPendingVerificationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -88,7 +90,7 @@ export const AgencyPendingVerificationPage: React.FC = () => {
         setIsApproved(true);
         setStatusMessage('Congratulations! Your application has been approved.');
         setTimeout(() => {
-          navigate('/agency/dashboard');
+          navigate('/agency/onboarding/submitted');
         }, 1800);
         return;
       } else if (statusRes.status === AgencyVerificationStatus.REJECTED) {
@@ -255,22 +257,7 @@ export const AgencyPendingVerificationPage: React.FC = () => {
     <div className="min-h-screen bg-[#FBFBFE] text-[#0F172A] flex flex-col justify-between font-sans select-none p-4 sm:p-6">
       {/* Top Header */}
       <header className="py-4 px-2 flex justify-center items-center">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[#583BE8] flex items-center justify-center shadow-md shadow-[#583BE8]/25 shrink-0">
-            <svg className="w-4.5 h-4.5 text-white" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 21.5C12 21.5 19 15.5 19 10C19 6.13401 15.866 3 12 3C8.13401 3 5 6.13401 5 10C5 15.5 12 21.5 12 21.5Z"
-                fill="white"
-                fillOpacity="0.25"
-              />
-              <circle cx="12" cy="9.5" r="3.5" stroke="white" strokeWidth="1.8" />
-              <path d="M12 7.5L13.5 11L12 10L10.5 11L12 7.5Z" fill="white" />
-            </svg>
-          </div>
-          <span className="text-2xl font-extrabold text-[#0F172A] tracking-tight">
-            Apna<span className="text-[#583BE8]">Trip</span>
-          </span>
-        </div>
+        <BrandLogo theme="light" className="h-8 w-auto" alt="ApnaTrip" />
       </header>
 
       {/* Main Content */}
@@ -403,69 +390,30 @@ export const AgencyPendingVerificationPage: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Dropzone or Uploaded File Card */}
-                      {staged?.cloudinaryUrl ? (
-                        <div className="p-3 rounded-xl bg-white border border-emerald-200 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <span className="text-xs font-bold text-[#0F172A] truncate">
-                              {staged.file?.name}
-                            </span>
-                            <span className="text-[10px] font-semibold text-slate-400 shrink-0">
-                              ({((staged.file?.size || 0) / (1024 * 1024)).toFixed(2)} MB)
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStaged(doc.documentId)}
-                            className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                            title="Remove and select another file"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div>
-                          <input
-                            type="file"
-                            accept=".pdf,.png,.jpg,.jpeg"
-                            ref={(el) => {
-                              fileInputRefs.current[doc.documentId] = el;
-                            }}
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files[0]) {
-                                handleFileSelect(doc.documentId, e.target.files[0]);
-                              }
-                            }}
-                            className="hidden"
-                            id={`file-input-${doc.documentId}`}
-                          />
-
-                          <label
-                            htmlFor={`file-input-${doc.documentId}`}
-                            className="w-full p-3 rounded-xl bg-white border border-dashed border-slate-300 hover:border-[#583BE8] flex items-center justify-center gap-2 text-xs font-bold text-slate-600 hover:text-[#583BE8] transition-all cursor-pointer"
-                          >
-                            {staged?.isUploading ? (
-                              <span className="flex items-center gap-2 text-[#583BE8]">
-                                <span className="w-3.5 h-3.5 border-2 border-[#583BE8]/30 border-t-[#583BE8] rounded-full animate-spin" />
-                                <span>Uploading file...</span>
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-2">
-                                <UploadCloud className="w-4 h-4 text-slate-400" />
-                                <span>Choose New File to Upload</span>
-                              </span>
-                            )}
-                          </label>
-
-                          {staged?.uploadError && (
-                            <p className="text-[10px] font-bold text-rose-600 mt-1">
-                              {staged.uploadError}
-                            </p>
-                          )}
-                        </div>
-                      )}
+                      {/* Universal Upload Box */}
+                      <UniversalImageUploader
+                        value={staged?.cloudinaryUrl}
+                        allowPdf={true}
+                        folder="travelos/agency/reuploads"
+                        placeholder="Upload Revised Document (PDF, JPG, PNG)"
+                        compact={true}
+                        onChange={(val) => {
+                          if (!val) {
+                            handleRemoveStaged(doc.documentId);
+                          } else {
+                            const url = typeof val === 'string' ? val : val.url;
+                            const fileName = typeof val === 'object' && val.publicId ? val.publicId.split('/').pop() : 'document.pdf';
+                            setStagedFiles((prev) => ({
+                              ...prev,
+                              [doc.documentId]: {
+                                file: new File([], fileName || 'document.pdf'),
+                                cloudinaryUrl: url,
+                                isUploading: false,
+                              },
+                            }));
+                          }
+                        }}
+                      />
                     </div>
                   );
                 })}

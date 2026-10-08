@@ -49,6 +49,7 @@ export interface IUser extends Document {
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   preferredLanguage?: string;
   country?: string;
+  theme?: 'Light' | 'Dark' | 'System';
 
   // Account State & Verification
   status: 'Active' | 'Suspended' | 'Disabled' | 'Pending';
@@ -92,6 +93,9 @@ export interface IUser extends Document {
 
   lastLogin?: Date;
 
+  // Saved / Wishlist Vehicles
+  savedVehicles?: mongoose.Types.ObjectId[];
+
   // Soft Delete & Timestamps
   isDeleted: boolean;
   deletedAt?: Date;
@@ -103,7 +107,7 @@ export interface IUser extends Document {
 const UserSchema = new Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true, maxlength: 100 },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, sparse: true, trim: true, index: true },
     password: { type: String, select: false },
     avatar: { type: String, default: '' },
@@ -119,12 +123,16 @@ const UserSchema = new Schema<IUser>(
     },
     preferredLanguage: { type: String, default: 'English' },
     country: { type: String, default: 'India' },
+    theme: {
+      type: String,
+      enum: ['Light', 'Dark', 'System'],
+      default: 'System',
+    },
 
     status: {
       type: String,
       enum: ['Active', 'Suspended', 'Disabled', 'Pending'],
       default: 'Active',
-      index: true,
     },
     isEmailVerified: { type: Boolean, default: false },
     emailVerifiedAt: { type: Date },
@@ -153,7 +161,7 @@ const UserSchema = new Schema<IUser>(
     membershipValidTill: { type: Date },
 
     authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
-    googleId: { type: String, sparse: true },
+    googleId: { type: String, sparse: true, index: true },
     profileImage: { type: String },
     profileImagePublicId: { type: String },
     coverImage: { type: String },
@@ -209,7 +217,9 @@ const UserSchema = new Schema<IUser>(
       showOnlineStatus: { type: Boolean, default: true },
     },
 
-    isDeleted: { type: Boolean, default: false, index: true },
+    savedVehicles: [{ type: Schema.Types.ObjectId, ref: 'Car' }],
+
+    isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
     deletedBy: { type: String },
   },

@@ -10,6 +10,7 @@ import { RoleModel, IRole } from '../models/role.model.js';
 import { PermissionModel } from '../models/permission.model.js';
 import { AdminSessionModel } from '../models/adminSession.model.js';
 import { AccessRequestModel } from '../models/accessRequest.model.js';
+import { AuditLogModel } from '../models/auditLog.model.js';
 import { DateUtil } from '../utils/date.util.js';
 import { NotFoundError, ForbiddenError, ConflictError } from '../utils/errors.util.js';
 import { logger } from '../config/logger.config.js';
@@ -572,16 +573,36 @@ export class AdminRolesService {
   }
 
   /**
-   * 13. Real-Time Admin Activity Feed
+   * 13. Real-Time Admin Activity Feed (from Audit Logs collection)
    */
   public async getActivity(limit = 15) {
-    const activities = await adminActivityRepository.findRecent(limit);
-    return activities.map((act) => ({
-      id: act._id.toString(),
-      admin: act.adminName,
-      avatar: act.adminAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      action: act.action,
-      timeAgo: DateUtil.getRelativeTime(act.createdAt),
+    const auditLogs = await AuditLogModel.find({
+      $or: [
+        { module: { $in: ['ROLES', 'PERMISSIONS', 'AUTH', 'ADMIN', 'PROFILE', 'SECURITY', 'SETTINGS', 'SystemMonitoring'] } },
+        { action: { $regex: /login|permission|role|profile|password|session|token|settings/i } },
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    if (!auditLogs || auditLogs.length === 0) {
+      const activities = await adminActivityRepository.findRecent(limit);
+      return activities.map((act) => ({
+        id: act._id.toString(),
+        admin: act.adminName || 'Admin',
+        avatar: act.adminAvatar || '',
+        action: act.action,
+        timeAgo: DateUtil.getRelativeTime(act.createdAt),
+      }));
+    }
+
+    return auditLogs.map((log: any) => ({
+      id: String(log._id),
+      admin: log.actor?.name || 'Administrator',
+      avatar: log.actor?.avatar || '',
+      action: log.description || log.action || 'Administrative activity',
+      timeAgo: DateUtil.getRelativeTime(log.createdAt),
     }));
   }
 
@@ -593,7 +614,7 @@ export class AdminRolesService {
     return requests.map((r) => ({
       id: r._id.toString(),
       user: r.adminName,
-      avatar: r.adminAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      avatar: r.adminAvatar || '',
       requestedRole: r.requestedRole,
       status: r.status,
       timeAgo: DateUtil.getRelativeTime(r.createdAt),
@@ -644,39 +665,49 @@ export class AdminRolesService {
   }
 
   /**
-   * 16. Audit Summary Statistics
+   * 16. Audit Summary Statistics (Backend-Driven from Role, Permission, Audit Collections)
    */
   public async getAuditSummary() {
-    const totalAdded = await permissionRepository.count();
-    const totalCustom = await roleRepository.count({ isSystemRole: false });
+    const [totalRoles, totalCustom, totalPermissions, activeAdmins, revokedCount] = await Promise.all([
+      RoleModel.countDocuments({}),
+      RoleModel.countDocuments({ isSystemRole: false }),
+      PermissionModel.countDocuments({}),
+      AdminModel.countDocuments({ isActive: true, isDeleted: false }),
+      AuditLogModel.countDocuments({
+        $or: [
+          { action: { $regex: /REVOKE|DELETE|REMOVE|TERMINAT/i } },
+          { description: { $regex: /revoke|delete|remove|terminat/i } },
+        ],
+      }),
+    ]);
 
     return [
       {
         category: 'Marketplace Core Permissions',
-        count: totalAdded,
-        growth: '+100%',
+        count: totalPermissions,
+        growth: totalPermissions > 0 ? `${totalPermissions} active` : '0 active',
         isPositive: true,
         type: 'added' as const,
       },
       {
         category: 'Custom Organizational Roles',
         count: totalCustom,
-        growth: '+2',
+        growth: `${totalCustom} custom`,
         isPositive: true,
         type: 'created' as const,
       },
       {
         category: 'Active Admin Access Rights',
-        count: await AdminModel.countDocuments({ isActive: true, isDeleted: false }),
-        growth: 'Synchronized',
+        count: activeAdmins,
+        growth: `${activeAdmins} active`,
         isPositive: true,
         type: 'updated' as const,
       },
       {
         category: 'Revoked Security Privileges',
-        count: 0,
-        growth: '0%',
-        isPositive: true,
+        count: revokedCount,
+        growth: `${revokedCount} revoked`,
+        isPositive: revokedCount === 0,
         type: 'removed' as const,
       },
     ];

@@ -22,6 +22,7 @@ import {
   CampaignItem,
   CampaignNotificationType,
 } from '../../../types/notificationsManagement';
+import { UniversalImageUploader } from '../../../../components/common/UniversalImageUploader';
 
 interface CampaignBuilderProps {
   campaign: CampaignItem;
@@ -188,38 +189,15 @@ export const CampaignBuilder: React.FC<CampaignBuilderProps> = ({
 
           {/* Add Media */}
           <div className="md:col-span-4 space-y-1">
-            <label className="text-[11px] font-bold text-slate-700">Add Media</label>
-            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col items-center justify-center text-center">
-              {campaign.bannerImage ? (
-                <div className="relative w-full h-24 rounded-xl overflow-hidden group">
-                  <img
-                    src={campaign.bannerImage}
-                    alt="Banner preview"
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    onClick={() => onChange({ bannerImage: undefined })}
-                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-slate-900/60 text-white flex items-center justify-center hover:bg-rose-500 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <div className="py-4 text-slate-400 space-y-1">
-                  <Image className="w-6 h-6 mx-auto opacity-50" />
-                  <p className="text-[10px] font-bold">No image attached</p>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={onUploadImage}
-                className="w-full py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-[11px] font-black flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-              >
-                <Upload className="w-3 h-3 text-slate-400" />
-                <span>Upload Image</span>
-              </button>
-            </div>
+            <label className="text-[11px] font-bold text-slate-700">Campaign Media</label>
+            <UniversalImageUploader
+              value={campaign.bannerImage}
+              onChange={(val) => onChange({ bannerImage: typeof val === 'string' ? val : val?.url })}
+              folder="travelos/campaigns"
+              aspectRatio="wide"
+              placeholder="Drag & Drop Media"
+              compact={true}
+            />
           </div>
         </div>
 

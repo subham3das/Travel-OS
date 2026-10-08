@@ -1,188 +1,404 @@
 @import "tailwindcss";
 
-/* ── Global TravelOS Theme Design Tokens ───────────────────────────────────────── */
-:root {
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── 1. Tailwind v4 Theme Extension ─────────────────────────────────────────── */
+@theme {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  --bg-app: #F8F9FC;
-  --bg-card: #FFFFFF;
-  --bg-surface: #F8FAFC;
-  --bg-surface-hover: #F1F5F9;
-  --border-subtle: #F1F5F9;
-  --border-strong: #E2E8F0;
-  --text-main: #0F172A;
-  --text-muted: #64748B;
-  --text-subtle: #94A3B8;
-  --brand-primary: #6356E5;
+
+  /* Primary Brand Tokens */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-primary-light: var(--brand-primary-light);
+
+  /* Accent Brand Tokens */
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-light: var(--brand-accent-light);
+
+  /* Semantic Theme Surfaces */
+  --color-app-bg: var(--bg-app);
+  --color-app-bg-secondary: var(--bg-app-secondary);
+  --color-card-bg: var(--bg-card);
+  --color-surface-hover: var(--bg-surface-hover);
+
+  /* Semantic Borders */
+  --color-border-card: var(--border-card);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  /* Semantic Typography */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  /* Status Colors */
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-error: var(--status-error);
+  --color-status-info: var(--status-info);
 }
 
+/* ── 2. Design Tokens: Light Theme (Default) ─────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Brand Palette (Royal Blue & Teal) */
+  --brand-primary: #2563EB;
+  --brand-primary-hover: #1D4ED8;
+  --brand-primary-light: #60A5FA;
+  --brand-accent: #06B6D4;
+  --brand-accent-light: #67E8F9;
+
+  /* Surfaces & Containers */
+  --bg-app: #F8FAFC;
+  --bg-app-secondary: #F1F5F9;
+  --bg-card: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-surface-hover: #F8FAFC;
+
+  /* Borders & Dividers */
+  --border-subtle: #F1F5F9;
+  --border-card: #E2E8F0;
+  --border-strong: #CBD5E1;
+
+  /* Typography */
+  --text-primary: #0F172A; /* Navy */
+  --text-secondary: #374151; /* Gray 700 */
+  --text-muted: #6B7280; /* Gray 500 */
+  --text-subtle: #9CA3AF;
+
+  /* Status Tokens */
+  --status-success: #22C55E;
+  --status-warning: #F59E0B;
+  --status-error: #EF4444;
+  --status-info: #2563EB;
+
+  /* Global Shadows */
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-dropdown: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+/* ── 3. Design Tokens: Dark Theme ────────────────────────────────────────────── */
+.dark,
+[data-theme="dark"] {
+  /* Brand Palette */
+  --brand-primary: #2563EB;
+  --brand-primary-hover: #1D4ED8;
+  --brand-primary-light: #60A5FA;
+  --brand-accent: #06B6D4;
+  --brand-accent-light: #67E8F9;
+
+  /* Dark Surfaces (Navy Background & Premium Slate Cards) */
+  --bg-app: #0F172A; /* Navy */
+  --bg-app-secondary: #111827; /* Gray 900 */
+  --bg-card: #1E293B; /* Slate 800 Card */
+  --bg-surface: #1E293B;
+  --bg-surface-hover: #334155;
+
+  /* Dark Borders */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-card: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  /* Typography */
+  --text-primary: #FFFFFF; /* Pure White */
+  --text-secondary: #D1D5DB; /* Gray 300 */
+  --text-muted: #9CA3AF; /* Gray 400 */
+  --text-subtle: #6B7280; /* Gray 500 */
+
+  /* Status Tokens */
+  --status-success: #22C55E;
+  --status-warning: #F59E0B;
+  --status-error: #EF4444;
+  --status-info: #2563EB;
+
+  /* Dark Shadows */
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-dropdown: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+}
+
+/* ── 4. Global Base Styles ──────────────────────────────────────────────────── */
 @layer base {
+  html,
   body {
     font-family: var(--font-sans);
     background-color: var(--bg-app);
-    color: var(--text-main);
+    color: var(--text-primary);
+    min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
-/* ── 1. Super Admin Panel Dark Mode Scoping (.super-admin-root.dark) ──────────── */
-/* Strictly scoped ONLY to #super-admin-root and never leaks to Agency or Website */
-
-.super-admin-root.dark,
-.super-admin-root[data-theme="dark"],
-[data-panel="super-admin"][data-theme="dark"] {
-  --bg-app: #090D16;
-  --bg-card: #111726;
-  --bg-surface: #161F33;
-  --bg-surface-hover: #1E293B;
-  --border-subtle: #1E293B;
-  --border-strong: #232F48;
-  --text-main: #F8FAFC;
-  --text-muted: #CBD5E1;
-  --text-subtle: #94A3B8;
-  --brand-primary: #7C70F2;
-  background-color: #090D16 !important;
-  color: #F8FAFC !important;
+/* ── 5. Standardized Unified Brand Palette Overrides ─────────────────────────── */
+/* Inconsistent purple CTAs unified into Royal Blue #2563EB */
+.bg-\[\#6356E5\],
+.bg-purple-600,
+.bg-indigo-600 {
+  background-color: #2563EB !important;
 }
 
-/* Surfaces & Containers */
-.super-admin-root.dark .bg-\[\#F8F9FC\],
-.super-admin-root.dark .bg-slate-100 {
-  background-color: #090D16 !important;
+.hover\:bg-\[\#5245d6\]:hover,
+.hover\:bg-purple-700:hover,
+.hover\:bg-indigo-700:hover {
+  background-color: #1D4ED8 !important;
 }
 
-.super-admin-root.dark .bg-white {
-  background-color: #111726 !important;
+.text-\[\#6356E5\],
+.text-purple-600,
+.text-indigo-600 {
+  color: #2563EB !important;
 }
 
-.super-admin-root.dark .bg-white\/95,
-.super-admin-root.dark .bg-white\/90,
-.super-admin-root.dark .bg-white\/80 {
-  background-color: rgba(17, 23, 38, 0.95) !important;
+.bg-purple-50,
+.bg-indigo-50 {
+  background-color: rgba(37, 99, 235, 0.08) !important;
 }
 
-.super-admin-root.dark .bg-slate-50,
-.super-admin-root.dark .bg-slate-50\/40,
-.super-admin-root.dark .bg-slate-50\/50,
-.super-admin-root.dark .bg-slate-50\/60,
-.super-admin-root.dark .bg-slate-50\/70,
-.super-admin-root.dark .bg-slate-50\/80 {
-  background-color: #161F33 !important;
+.border-purple-200,
+.border-indigo-200 {
+  border-color: rgba(37, 99, 235, 0.2) !important;
 }
 
-/* Text Colors */
-.super-admin-root.dark .text-\[\#0F172A\],
-.super-admin-root.dark .text-slate-900,
-.super-admin-root.dark .text-slate-800 {
-  color: #F8FAFC !important;
+/* ── 6. Comprehensive Dark Mode Standardization (User, Agency, Admin) ────────── */
+/* Backgrounds & Panels */
+.dark body,
+.dark .super-admin-root,
+.dark .agency-root,
+.dark .website-root,
+.dark .bg-\[\#F8F9FC\],
+.dark .bg-\[\#F8FAFC\],
+.dark .bg-slate-100 {
+  background-color: #0F172A !important;
+  color: #FFFFFF !important;
 }
 
-.super-admin-root.dark .text-slate-700,
-.super-admin-root.dark .text-slate-600 {
-  color: #CBD5E1 !important;
-}
-
-.super-admin-root.dark .text-slate-500 {
-  color: #94A3B8 !important;
-}
-
-.super-admin-root.dark .text-slate-400 {
-  color: #64748B !important;
-}
-
-/* Borders & Dividers */
-.super-admin-root.dark .border-slate-100,
-.super-admin-root.dark .border-slate-100\/80,
-.super-admin-root.dark .border-slate-100\/90,
-.super-admin-root.dark .border-slate-200,
-.super-admin-root.dark .border-slate-200\/60,
-.super-admin-root.dark .border-slate-200\/80,
-.super-admin-root.dark .border-slate-200\/90 {
-  border-color: #1E293B !important;
-}
-
-/* Inputs, Selects & Textareas */
-.super-admin-root.dark input:not([type="checkbox"]):not([type="radio"]),
-.super-admin-root.dark select,
-.super-admin-root.dark textarea {
-  background-color: #161F33 !important;
-  color: #F8FAFC !important;
-  border-color: #232F48 !important;
-}
-
-.super-admin-root.dark input::placeholder,
-.super-admin-root.dark textarea::placeholder {
-  color: #64748B !important;
-}
-
-.super-admin-root.dark input:focus,
-.super-admin-root.dark select:focus,
-.super-admin-root.dark textarea:focus {
-  border-color: #6356E5 !important;
-  background-color: #111726 !important;
-}
-
-/* Hover & Interactive States */
-.super-admin-root.dark .hover\:bg-slate-50:hover,
-.super-admin-root.dark .hover\:bg-slate-100:hover,
-.super-admin-root.dark .hover\:bg-slate-100\/80:hover,
-.super-admin-root.dark .hover\:bg-slate-200:hover {
+/* Cards & Surface Containers */
+.dark .bg-white {
   background-color: #1E293B !important;
 }
 
-.super-admin-root.dark .hover\:bg-purple-50:hover,
-.super-admin-root.dark .hover\:bg-purple-50\/70:hover {
-  background-color: rgba(99, 86, 229, 0.15) !important;
+.dark .bg-white\/95,
+.dark .bg-white\/90,
+.dark .bg-white\/80 {
+  background-color: rgba(30, 41, 59, 0.95) !important;
 }
 
-.super-admin-root.dark .bg-\[\#EEF2FF\],
-.super-admin-root.dark .bg-purple-50 {
-  background-color: rgba(99, 86, 229, 0.15) !important;
+.dark .bg-slate-50,
+.dark .bg-slate-50\/40,
+.dark .bg-slate-50\/50,
+.dark .bg-slate-50\/60,
+.dark .bg-slate-50\/70,
+.dark .bg-slate-50\/80 {
+  background-color: #111827 !important;
 }
 
-/* Shadows & Dropdowns */
-.super-admin-root.dark .shadow-2xs,
-.super-admin-root.dark .shadow-xs,
-.super-admin-root.dark .shadow-sm {
+.dark .bg-slate-200 {
+  background-color: #334155 !important;
+}
+
+/* Text Colors */
+.dark .text-\[\#0F172A\],
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: #FFFFFF !important;
+}
+
+.dark .text-slate-700,
+.dark .text-slate-600 {
+  color: #D1D5DB !important; /* Gray 300 */
+}
+
+.dark .text-slate-500 {
+  color: #9CA3AF !important;
+}
+
+.dark .text-slate-400 {
+  color: #6B7280 !important;
+}
+
+/* Borders & Dividers */
+.dark .border-slate-100,
+.dark .border-slate-100\/80,
+.dark .border-slate-100\/90,
+.dark .border-slate-200,
+.dark .border-slate-200\/60,
+.dark .border-slate-200\/80,
+.dark .border-slate-200\/90 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .border-slate-300 {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Form Inputs, Selects, & Textareas in Dark Mode */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: #111827 !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #6B7280 !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #2563EB !important;
+  background-color: #1E293B !important;
+  outline: none !important;
+}
+
+/* Interactive & Hover States */
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover,
+.dark .hover\:bg-slate-100\/80:hover,
+.dark .hover\:bg-slate-200:hover {
+  background-color: #334155 !important;
+}
+
+/* Status Badges & Pills Across All Panels */
+/* 1. Success / Active */
+.dark .bg-emerald-50,
+.dark .bg-emerald-50\/60,
+.dark .bg-green-50 {
+  background-color: rgba(34, 197, 94, 0.18) !important;
+  color: #4ADE80 !important;
+}
+.dark .border-emerald-200,
+.dark .border-emerald-100,
+.dark .border-green-200 {
+  border-color: rgba(34, 197, 94, 0.3) !important;
+}
+.dark .text-emerald-700,
+.dark .text-emerald-600,
+.dark .text-green-600 {
+  color: #4ADE80 !important;
+}
+
+/* 2. Warning / Draft / Pending */
+.dark .bg-amber-50,
+.dark .bg-amber-50\/60,
+.dark .bg-yellow-50 {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+  color: #FBBF24 !important;
+}
+.dark .border-amber-200,
+.dark .border-amber-100,
+.dark .border-yellow-200 {
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+.dark .text-amber-700,
+.dark .text-amber-600,
+.dark .text-yellow-600 {
+  color: #FBBF24 !important;
+}
+
+/* 3. Error / Cancelled / Rejected */
+.dark .bg-rose-50,
+.dark .bg-rose-50\/60,
+.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.18) !important;
+  color: #F87171 !important;
+}
+.dark .border-rose-200,
+.dark .border-rose-100,
+.dark .border-red-200 {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+.dark .text-rose-700,
+.dark .text-rose-600,
+.dark .text-red-600 {
+  color: #F87171 !important;
+}
+
+/* 4. Info / Upcoming */
+.dark .bg-blue-50,
+.dark .bg-blue-50\/60,
+.dark .bg-sky-50 {
+  background-color: rgba(37, 99, 235, 0.18) !important;
+  color: #60A5FA !important;
+}
+.dark .border-blue-200,
+.dark .border-blue-100,
+.dark .border-sky-200 {
+  border-color: rgba(37, 99, 235, 0.3) !important;
+}
+.dark .text-blue-700,
+.dark .text-blue-600,
+.dark .text-sky-600 {
+  color: #60A5FA !important;
+}
+
+/* 5. Inactive / Neutral Pills */
+.dark .bg-slate-100,
+.dark .bg-gray-100 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #D1D5DB !important;
+}
+
+/* Dark mode icon highlights */
+.dark .text-\[\#6356E5\],
+.dark .text-purple-600,
+.dark .text-indigo-600 {
+  color: #60A5FA !important;
+}
+
+.dark .bg-purple-50,
+.dark .bg-indigo-50 {
+  background-color: rgba(37, 99, 235, 0.15) !important;
+}
+
+/* Rings & Shadows */
+.dark .border-white {
+  border-color: #1E293B !important;
+}
+
+.dark .ring-white {
+  --tw-ring-color: #1E293B !important;
+}
+
+.dark .shadow-2xs,
+.dark .shadow-xs,
+.dark .shadow-sm {
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3) !important;
 }
 
-.super-admin-root.dark .shadow-xl,
-.super-admin-root.dark .shadow-2xl {
+.dark .shadow-xl,
+.dark .shadow-2xl {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Scrollbars in Dark Mode */
-.super-admin-root.dark ::-webkit-scrollbar {
+.dark ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.super-admin-root.dark ::-webkit-scrollbar-track {
-  background: #090D16;
+.dark ::-webkit-scrollbar-track {
+  background: #0F172A;
 }
 
-.super-admin-root.dark ::-webkit-scrollbar-thumb {
-  background: #1E293B;
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
   border-radius: 9999px;
 }
 
-.super-admin-root.dark ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
-/* ── 2. Website & User Panel Dark Mode Scoping (.website-root.dark) ──────────── */
-.website-root.dark,
-.website-root[data-theme="dark"],
-[data-panel="website"][data-theme="dark"] {
-  --bg-app: #0B1120;
-  --bg-card: #131D33;
-  --bg-surface: #1E293B;
-  --text-main: #F8FAFC;
-  background-color: #0B1120 !important;
-  color: #F8FAFC !important;
-}
-
-/* ── Custom Utilities ─────────────────────────────────────────────────────────── */
+/* ── 7. Custom Utilities ─────────────────────────────────────────────────────── */
 .shadow-soft {
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
 }
@@ -215,3 +431,43 @@ input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
   display: none !important;
 }
+
+/* ── 8. Phase 6: Animated Theme Shimmer for Skeletons ──────────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+.dark .shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+/* Fallback protection for any pulse elements rendered in dark mode */
+.dark .animate-pulse [class*="bg-slate-200"],
+.dark .animate-pulse .bg-slate-200 {
+  background-color: #334155 !important;
+}
+
+.dark .animate-pulse [class*="bg-slate-100"],
+.dark .animate-pulse .bg-slate-100 {
+  background-color: #1E293B !important;
+}
+
+/* ── 9. Phase 9 & 10: Smooth Transitions & WCAG Contrast Standards ─────────── */
+:focus-visible {
+  outline: 2px solid var(--brand-primary, #2563EB);
+  outline-offset: 2px;
+}
+

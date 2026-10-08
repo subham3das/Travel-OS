@@ -16,7 +16,7 @@ import { EmergencyContactCard } from '../../components/customers/EmergencyContac
 import { TravelPreferenceCard } from '../../components/customers/TravelPreferenceCard';
 import { CustomerQuickActionsBar } from '../../components/customers/CustomerQuickActionsBar';
 
-import { MOCK_CUSTOMERS, Customer } from '../../data/customers';
+import { Customer } from '../../data/customers';
 import { agencyCustomersService } from '../../services/agencyCustomers.service';
 
 /**
@@ -27,17 +27,22 @@ export const AgencyCustomerProfilePage: React.FC = () => {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
 
-  const [customer, setCustomer] = useState<Customer>(MOCK_CUSTOMERS[0]);
+  const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadCustomer = useCallback(async () => {
-    if (!customerId) return;
+    if (!customerId) {
+      setCustomer(null);
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
       const data = await agencyCustomersService.getCustomerById(customerId);
       setCustomer(data);
     } catch (err) {
       console.error('Failed to load customer dossier from backend:', err);
+      setCustomer(null);
     } finally {
       setIsLoading(false);
     }
@@ -49,43 +54,89 @@ export const AgencyCustomerProfilePage: React.FC = () => {
 
   // Note Handlers
   const handleAddNote = async (noteText: string) => {
-    if (!customerId) return;
+    if (!customerId || !customer) return;
     try {
       const newNote = await agencyCustomersService.addNote(customerId, noteText);
-      setCustomer((prev) => ({
-        ...prev,
-        notes: [newNote, ...prev.notes],
-      }));
+      setCustomer((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes: [newNote, ...prev.notes],
+            }
+          : null
+      );
     } catch (err) {
       console.error('Failed to add customer note in backend:', err);
     }
   };
 
   const handleEditNote = async (id: string, newText: string) => {
-    if (!customerId) return;
+    if (!customerId || !customer) return;
     try {
       const updatedNotes = await agencyCustomersService.editNote(customerId, id, newText);
-      setCustomer((prev) => ({
-        ...prev,
-        notes: updatedNotes,
-      }));
+      setCustomer((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes: updatedNotes,
+            }
+          : null
+      );
     } catch (err) {
       console.error('Failed to edit customer note in backend:', err);
     }
   };
 
   const handleDeleteNote = async (id: string) => {
-    if (!customerId) return;
+    if (!customerId || !customer) return;
     try {
       await agencyCustomersService.deleteNote(customerId, id);
-      setCustomer((prev) => ({
-        ...prev,
-        notes: prev.notes.filter((n) => n.id !== id),
-      }));
+      setCustomer((prev) =>
+        prev
+          ? {
+              ...prev,
+              notes: prev.notes.filter((n) => n.id !== id),
+            }
+          : null
+      );
     } catch (err) {
       console.error('Failed to delete customer note in backend:', err);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFE] flex items-center justify-center p-6 text-center">
+        <div className="space-y-3">
+          <div className="w-8 h-8 border-3 border-[#583BE8] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-bold text-slate-500">Loading customer profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <div className="min-h-screen bg-[#FBFBFE] flex items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-sm space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 text-[#583BE8] mx-auto flex items-center justify-center font-black">
+            !
+          </div>
+          <h3 className="text-base font-extrabold text-[#0F172A]">Customer Not Found</h3>
+          <p className="text-xs text-slate-500">
+            The requested customer profile could not be loaded or does not exist.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/agency/customers')}
+            className="w-full py-2.5 rounded-xl bg-[#583BE8] text-white text-xs font-extrabold hover:bg-[#472ec4] transition cursor-pointer"
+          >
+            Back to Customers
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FBFBFE] text-[#0F172A] font-sans select-none flex flex-col md:flex-row">

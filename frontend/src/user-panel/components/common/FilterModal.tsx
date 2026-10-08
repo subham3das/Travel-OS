@@ -5,18 +5,37 @@ interface FilterModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApply?: (filters: any) => void;
+  initialFilters?: {
+    category?: string;
+    adventureType?: string;
+    maxPrice?: number;
+    duration?: string;
+    sort?: string;
+  };
 }
 
-export const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, onApply }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [priceRange, setPriceRange] = useState<number>(30000);
-  const [selectedDuration, setSelectedDuration] = useState<string>('any');
-  const [sortBy, setSortBy] = useState<string>('recommended');
+export const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, onApply, initialFilters }) => {
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialFilters?.category || 'all');
+  const [selectedAdventureType, setSelectedAdventureType] = useState<string>(initialFilters?.adventureType || 'All');
+  const [priceRange, setPriceRange] = useState<number>(initialFilters?.maxPrice || 30000);
+  const [selectedDuration, setSelectedDuration] = useState<string>(initialFilters?.duration || 'any');
+  const [sortBy, setSortBy] = useState<string>(initialFilters?.sort || 'recommended');
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setSelectedCategory(initialFilters?.category || 'all');
+      setSelectedAdventureType(initialFilters?.adventureType || 'All');
+      setPriceRange(initialFilters?.maxPrice || 30000);
+      setSelectedDuration(initialFilters?.duration || 'any');
+      setSortBy(initialFilters?.sort || 'recommended');
+    }
+  }, [isOpen, initialFilters]);
 
   if (!isOpen) return null;
 
   const handleReset = () => {
     setSelectedCategory('all');
+    setSelectedAdventureType('All');
     setPriceRange(30000);
     setSelectedDuration('any');
     setSortBy('recommended');
@@ -26,6 +45,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, onApp
     if (onApply) {
       onApply({
         category: selectedCategory,
+        adventureType: selectedAdventureType,
         maxPrice: priceRange,
         duration: selectedDuration,
         sort: sortBy,
@@ -82,6 +102,53 @@ export const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, onApp
                 {cat.label}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Adventure Type Selection (Phase 6) */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-[#0F172A] block uppercase tracking-wider">
+              Adventure Type
+            </label>
+            {selectedAdventureType !== 'All' && (
+              <span className="text-[10px] font-bold text-[#583BE8]">
+                {selectedAdventureType}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 pr-1">
+            {[
+              'All',
+              'Trekking',
+              'Camping',
+              'Backpacking',
+              'Expedition',
+              'Road Trip',
+              'Wildlife Safari',
+              'Cycling',
+              'River Rafting',
+              'Snow Adventure',
+              'Scuba Diving',
+              'Paragliding',
+              'General Adventure',
+            ].map((adv) => {
+              const isSelected = selectedAdventureType.toLowerCase() === adv.toLowerCase();
+              return (
+                <button
+                  key={adv}
+                  type="button"
+                  onClick={() => setSelectedAdventureType(adv)}
+                  className={`px-3 py-1 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#583BE8] text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {adv}
+                </button>
+              );
+            })}
           </div>
         </div>
 

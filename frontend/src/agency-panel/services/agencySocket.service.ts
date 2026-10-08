@@ -102,6 +102,14 @@ class AgencySocketService {
     };
   }
 
+  public onPackageStatusUpdated(callback: (data: { packageId: string; id: string; status: any; isActive: boolean; title?: string }) => void) {
+    const s = this.getSocket();
+    s?.on('package:status-updated', callback);
+    return () => {
+      s?.off('package:status-updated', callback);
+    };
+  }
+
   public onCustomerPresence(
     onOnline: (data: { customerId: string }) => void,
     onOffline: (data: { customerId: string }) => void

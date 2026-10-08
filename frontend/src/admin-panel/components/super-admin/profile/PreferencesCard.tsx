@@ -17,7 +17,7 @@ export const PreferencesCard: React.FC<PreferencesCardProps> = ({
     <div className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-4 select-none">
       <div className="flex items-center justify-between pb-2 border-b border-slate-100/80">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-purple-50 text-[#6356E5] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center">
             <Sliders className="w-4 h-4" />
           </div>
           <h3 className="text-sm font-black text-[#0F172A]">Account Preferences</h3>
@@ -43,7 +43,7 @@ export const PreferencesCard: React.FC<PreferencesCardProps> = ({
                     }}
                     className={`py-2 px-2.5 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       isCurrent
-                        ? 'bg-[#6356E5] text-white border-[#6356E5] shadow-xs'
+                        ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
@@ -72,7 +72,7 @@ export const PreferencesCard: React.FC<PreferencesCardProps> = ({
                   onClick={() => onUpdate({ language: l })}
                   className={`py-2 px-2.5 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     preferences.language === l
-                      ? 'bg-[#6356E5] text-white border-[#6356E5] shadow-xs'
+                      ? 'bg-[#2563EB] text-white border-[#2563EB] shadow-xs'
                       : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                   }`}
                 >

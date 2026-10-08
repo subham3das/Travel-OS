@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, Award, MapPin, Grid, Camera } from 'lucide-react';
-import { TravelerPost } from '../../../components/community/TravelerPost';
+import { ArrowLeft, CheckCircle2, Award, MapPin } from 'lucide-react';
 import { FullUserProfileResponse } from '../../../services/userAuth.service';
 
 interface PublicProfilePreviewModalProps {
@@ -21,11 +20,7 @@ export const PublicProfilePreviewModal: React.FC<PublicProfilePreviewModalProps>
   const reputation = profile?.stats?.reputationScore ?? (isVerified ? 150 : 50);
   const levelTitle = profile?.stats?.levelTitle || (isVerified ? 'Explorer Level 2' : 'Explorer Level 1');
   const completedTrips = profile?.stats?.completedTrips ?? 0;
-  const postsCount = profile?.stats?.postsCount ?? 0;
-  const followersCount = profile?.stats?.followersCount ?? 0;
-  const followingCount = profile?.stats?.followingCount ?? 0;
   const badges = profile?.achievements || [];
-  const posts = profile?.mediaPosts || [];
 
   return (
     <motion.div
@@ -109,23 +104,15 @@ export const PublicProfilePreviewModal: React.FC<PublicProfilePreviewModalProps>
             {bio}
           </p>
 
-          {/* Public Stats Bar */}
-          <div className="grid grid-cols-4 gap-2 pt-2 text-center divide-x divide-slate-100">
+          {/* Public Stats Bar — travel-only metrics */}
+          <div className="grid grid-cols-2 gap-2 pt-2 text-center divide-x divide-slate-100">
             <div>
               <p className="text-base sm:text-lg font-black text-[#0F172A]">{completedTrips}</p>
-              <p className="text-[10px] font-bold text-slate-400">Trips</p>
+              <p className="text-[10px] font-bold text-slate-400">Trips Completed</p>
             </div>
             <div>
-              <p className="text-base sm:text-lg font-black text-[#0F172A]">{postsCount}</p>
-              <p className="text-[10px] font-bold text-slate-400">Posts</p>
-            </div>
-            <div>
-              <p className="text-base sm:text-lg font-black text-[#0F172A]">{followersCount}</p>
-              <p className="text-[10px] font-bold text-slate-400">Followers</p>
-            </div>
-            <div>
-              <p className="text-base sm:text-lg font-black text-[#0F172A]">{followingCount}</p>
-              <p className="text-[10px] font-bold text-slate-400">Following</p>
+              <p className="text-base sm:text-lg font-black text-[#0F172A]">{isVerified ? '✓' : '—'}</p>
+              <p className="text-[10px] font-bold text-slate-400">Verified Traveler</p>
             </div>
           </div>
         </div>
@@ -149,29 +136,12 @@ export const PublicProfilePreviewModal: React.FC<PublicProfilePreviewModalProps>
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Public Activity Stream */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-black text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 px-1">
-            <Grid className="w-4 h-4 text-[#6356E5]" />
-            <span>Recent Community Posts</span>
-          </h3>
-
-          {posts.length > 0 ? (
-            posts.map((post: any) => (
-              <TravelerPost key={post.id} post={post} />
-            ))
-          ) : (
-            <div className="p-8 rounded-3xl bg-white border border-slate-100 text-center space-y-2">
-              <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#6356E5] flex items-center justify-center mx-auto">
-                <Camera className="w-5 h-5" />
+            {badges.filter((b) => b.unlocked).length === 0 && (
+              <div className="col-span-4 py-6 text-center text-xs font-semibold text-slate-400">
+                Badges unlocked after completing trips will appear here.
               </div>
-              <p className="text-xs font-bold text-[#0F172A]">No public posts shared yet</p>
-              <p className="text-[11px] text-slate-400">Trips and stories shared by this traveler will appear here.</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
     </motion.div>

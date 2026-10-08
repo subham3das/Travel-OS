@@ -41,7 +41,14 @@ export class DatabaseConnection {
 
     mongoose.connection.on('disconnected', () => {
       this.isConnected = false;
-      logger.warn('⚠️ MongoDB: Disconnected from database cluster');
+      logger.warn('⚠️ MongoDB: Disconnected from database cluster. Attempting background reconnect...');
+      setTimeout(() => {
+        if (mongoose.connection.readyState === 0) {
+          this.connect().catch((err) => {
+            logger.warn('MongoDB background reconnect retry failed: %s', err.message);
+          });
+        }
+      }, 3000);
     });
 
     mongoose.connection.on('reconnected', () => {
@@ -86,8 +93,11 @@ export class DatabaseConnection {
     const options: mongoose.ConnectOptions = {
       autoIndex: envConfig.NODE_ENV !== 'production',
       maxPoolSize: envConfig.MONGODB_MAX_POOL_SIZE,
-      serverSelectionTimeoutMS: 8000,
+      minPoolSize: 2,
+      maxIdleTimeMS: 60000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
+      heartbeatFrequencyMS: 10000,
       retryWrites: true,
       family: 4,
     };

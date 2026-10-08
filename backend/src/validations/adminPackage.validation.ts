@@ -52,6 +52,15 @@ export const AdminCreatePackageSchema = z.object({
         day: z.number(),
         title: z.string(),
         description: z.string().optional(),
+        plans: z
+          .array(
+            z.object({
+              text: z.string(),
+              icon: z.string().optional(),
+              notes: z.string().optional(),
+            })
+          )
+          .optional(),
         meals: z.string().optional(),
         stay: z.string().optional(),
       })

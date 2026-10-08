@@ -94,3 +94,34 @@ export const requireAdminPermission = (requiredPermission: string) => {
     next();
   };
 };
+
+/**
+ * Optional Admin Authentication Middleware.
+ * Decodes Admin JWT and populates req.admin if present, but does not block requests if unauthenticated.
+ */
+export const optionalAdminAuth = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded: JwtTokenPayload = TokenUtil.verifyAccessToken(token);
+    if (decoded.userType === 'ADMIN') {
+      const admin = await adminRepository.findById(decoded.userId || decoded.adminId);
+      if (admin && admin.isActive && !admin.isDeleted) {
+        req.user = decoded;
+        req.admin = admin;
+      }
+    }
+  } catch {
+    // Ignore invalid/expired token in optional mode
+  }
+  next();
+};
+

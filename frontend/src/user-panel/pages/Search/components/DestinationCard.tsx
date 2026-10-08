@@ -13,14 +13,14 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({ item }) => {
 
   return (
     <div
-      onClick={() => navigate(item.targetUrl)}
+      onClick={() => navigate(item.route || item.targetUrl)}
       className="bg-white rounded-3xl p-3 border border-slate-100/90 shadow-2xs hover:shadow-md hover:scale-[1.02] hover:border-[#6356E5]/30 transition-all cursor-pointer flex items-center justify-between gap-3.5 group"
     >
       <div className="flex items-center gap-3.5 min-w-0">
         {/* Thumbnail Image */}
         <div className="relative w-24 sm:w-28 h-20 rounded-2xl overflow-hidden bg-slate-100 shrink-0">
           <img
-            src={item.image}
+            src={item.image || item.imageUrl}
             alt={item.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />

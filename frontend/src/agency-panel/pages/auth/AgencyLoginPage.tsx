@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Building2, Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { BrandLogo } from '../../../common/brand';
 import { useAgencyAuth } from '../../hooks/useAgencyAuth';
 import { agencyApiClient, AgencyApiResponse } from '../../services/agencyApiClient';
 import { AgencyVerificationStatus } from '../../types/agency';
@@ -29,42 +30,79 @@ export const AgencyLoginPage: React.FC = () => {
 
     try {
       const response = await agencyApiClient.post<{
-        token: string;
-        user: any;
-        agency: any;
+        token?: string;
+        user?: any;
+        agency?: any;
+        businesses?: any[];
+        requiresVerification?: boolean;
+        emailVerified?: boolean;
+        phoneVerified?: boolean;
+        userId?: string;
         mustChangePassword?: boolean;
       }>('/agencies/auth/login', {
         email: email.trim(),
         password: password.trim(),
       }, { requiresAuth: false });
 
+      if (response.data?.requiresVerification) {
+        // Direct partner to finish verification
+        navigate('/agency/signup', {
+          state: {
+            userId: response.data.userId,
+            email: email.trim(),
+            emailVerified: response.data.emailVerified,
+            step: 'VERIFY_EMAIL',
+          },
+        });
+        return;
+      }
+
       if (response.data && response.data.token) {
-        const { token, user, agency, mustChangePassword } = response.data;
-        loginAgency(user, agency, token);
+        const { token, user, agency, businesses } = response.data;
+        loginAgency(user, agency, token, undefined, businesses);
 
-        const status = agency.verificationStatus as AgencyVerificationStatus;
-        const isApproved =
-          status === AgencyVerificationStatus.APPROVED ||
-          (status as any) === 'VERIFIED' ||
-          agency.status === 'ACTIVE';
+        // No registered business yet → choose business type
+        const effectiveBusinesses = businesses || (agency ? [agency] : []);
+        if (effectiveBusinesses.length === 0) {
+          navigate('/agency/partner/select-business', { replace: true });
+          return;
+        }
 
-        if (isApproved) {
-          if (mustChangePassword || agency.passwordChanged === false) {
-            navigate('/agency/create-new-password', { replace: true });
+        const activeBiz = agency || effectiveBusinesses[0];
+        const businessTypes: string[] = activeBiz?.businessTypes || ['agency'];
+        const isOnlyCarRental = businessTypes.includes('car_rental') && !businessTypes.includes('agency');
+
+        // Backend is single source of truth — use onboardingStatus directly
+        const onboardingStatus: string = activeBiz?.onboardingStatus || 'PAYMENT_PENDING';
+
+        // Car Rental routing (separate approval track)
+        if (isOnlyCarRental) {
+          const crStatus = activeBiz.carRentalVerificationStatus || 'PENDING';
+          if (crStatus === 'APPROVED') {
+            navigate('/agency/car-rental/dashboard', { replace: true });
+          } else if (crStatus === 'REJECTED') {
+            navigate('/agency/application-rejected', { replace: true });
           } else {
-            const hasSeenAnim = localStorage.getItem('apnatrip_agency_seen_approval_anim') === 'true';
-            if (!hasSeenAnim) {
-              navigate('/agency/onboarding/submitted');
-            } else {
-              navigate('/agency/dashboard');
-            }
+            navigate('/agency/car-rental/dashboard', { replace: true });
           }
-        } else if (status === AgencyVerificationStatus.PENDING) {
-          navigate('/agency/onboarding');
-        } else if (status === AgencyVerificationStatus.REJECTED) {
-          navigate('/agency/application-rejected');
+          return;
+        }
+
+        // Agency lifecycle routing — backend status drives everything
+        if (onboardingStatus === 'APPROVED' || activeBiz?.verificationStatus === 'APPROVED' || activeBiz?.status === 'ACTIVE') {
+          // Show congratulations animation if not seen yet, else go to dashboard
+          const hasSeenAnim = localStorage.getItem('apnatrip_agency_seen_approval_anim') === 'true';
+          navigate(hasSeenAnim ? '/agency/dashboard' : '/agency/onboarding/submitted', { replace: true });
+        } else if (onboardingStatus === 'REJECTED' || activeBiz?.verificationStatus === 'REJECTED') {
+          navigate('/agency/application-rejected', { replace: true });
+        } else if (onboardingStatus === 'UNDER_REVIEW' || onboardingStatus === 'PENDING_APPROVAL' || onboardingStatus === 'DOCUMENTS_SUBMITTED') {
+          navigate('/agency/verification-pending', { replace: true });
+        } else if (onboardingStatus === 'PAYMENT_PENDING' || onboardingStatus === 'PAYMENT_COMPLETED') {
+          const bizType = isOnlyCarRental ? 'car_rental' : 'agency';
+          navigate(`/agency/onboarding/payment?type=${bizType}`, { replace: true });
         } else {
-          navigate('/agency/verification-pending');
+          // DRAFT or any onboarding step — resume wizard
+          navigate('/agency/onboarding/business', { replace: true });
         }
       } else {
         setError(response.message || 'Login failed. Please check your credentials.');
@@ -77,19 +115,20 @@ export const AgencyLoginPage: React.FC = () => {
     }
   };
 
+
   return (
     <div className="min-h-screen bg-[#F8F9FC] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans select-none">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         {/* Brand / Logo */}
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#583BE8] text-white shadow-lg shadow-[#583BE8]/30 mb-4">
-          <Building2 className="w-6 h-6" />
+        <div className="flex flex-col items-center mb-6">
+          <BrandLogo theme="light" className="h-10 w-auto mb-3" alt="ApnaTrip" />
+          <h2 className="text-2xl font-black tracking-tight text-[#0F172A]">
+            Partner Portal
+          </h2>
+          <p className="mt-1 text-xs font-semibold text-slate-500">
+            Access your verified agency command center & operations
+          </p>
         </div>
-        <h2 className="text-2xl font-black tracking-tight text-[#0F172A]">
-          ApnaTrip Partner Portal
-        </h2>
-        <p className="mt-1 text-xs font-semibold text-slate-500">
-          Access your verified agency command center & operations
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
@@ -183,8 +222,8 @@ export const AgencyLoginPage: React.FC = () => {
             </div>
             <p className="text-[11px] text-slate-400 font-medium">
               Want to partner with ApnaTrip?{' '}
-              <Link to="/agency/onboarding" className="text-[#583BE8] font-bold hover:underline">
-                Register Your Agency
+              <Link to="/agency/signup" className="text-[#583BE8] font-bold hover:underline">
+                Create Partner Account
               </Link>
             </p>
           </div>

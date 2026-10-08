@@ -14,7 +14,7 @@ class LiveActivityCenterService {
   private events: LiveEventItem[] = [];
   private serviceStatuses: PlatformServiceStatus[] = [];
   private metrics: LiveMetricsData = {
-    onlineUsers: 1,
+    onlineUsers: 0,
     liveAgencies: 0,
     bookingsToday: 0,
     tripsRunning: 0,
@@ -39,7 +39,7 @@ class LiveActivityCenterService {
     this.isFetching = true;
 
     try {
-      const [liveRes, tripsRes, paymentsRes, supportRes] = await Promise.all([
+      const [liveRes, tripsRes, paymentsRes, supportRes] = await Promise.allSettled([
         adminApiClient.get<{
           events: LiveEventItem[];
           serviceStatuses: PlatformServiceStatus[];
@@ -50,19 +50,19 @@ class LiveActivityCenterService {
         adminApiClient.get<SupportQueueItem[]>('/admin/dashboard/support-queue'),
       ]);
 
-      if (liveRes.data) {
-        this.events = liveRes.data.events || [];
-        this.serviceStatuses = liveRes.data.serviceStatuses || [];
-        this.metrics = liveRes.data.metrics || this.metrics;
+      if (liveRes.status === 'fulfilled' && liveRes.value?.data) {
+        this.events = liveRes.value.data.events || [];
+        this.serviceStatuses = liveRes.value.data.serviceStatuses || [];
+        this.metrics = liveRes.value.data.metrics || this.metrics;
       }
-      if (tripsRes.data) {
-        this.activeTrips = tripsRes.data || [];
+      if (tripsRes.status === 'fulfilled' && tripsRes.value?.data) {
+        this.activeTrips = tripsRes.value.data || [];
       }
-      if (paymentsRes.data) {
-        this.paymentQueue = paymentsRes.data || [];
+      if (paymentsRes.status === 'fulfilled' && paymentsRes.value?.data) {
+        this.paymentQueue = paymentsRes.value.data || [];
       }
-      if (supportRes.data) {
-        this.supportQueue = supportRes.data || [];
+      if (supportRes.status === 'fulfilled' && supportRes.value?.data) {
+        this.supportQueue = supportRes.value.data || [];
       }
 
       this.notify();

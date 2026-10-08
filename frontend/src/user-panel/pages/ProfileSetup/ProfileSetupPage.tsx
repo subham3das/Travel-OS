@@ -1,14 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Check, Sparkles, Loader2, Globe, User as UserIcon, UtensilsCrossed, Accessibility } from 'lucide-react';
+import { Check, Sparkles, Loader2, Globe, User as UserIcon, UtensilsCrossed, Accessibility } from 'lucide-react';
 import { Header } from '../../components/common/Header';
 import { AuthLayout } from '../../components/layouts/AuthLayout';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
-import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
 import { userAuthService } from '../../services/userAuth.service';
+import { UniversalImageUploader } from '../../../components/common/UniversalImageUploader';
 
 const GENDER_OPTIONS = [
   { id: 'male', label: 'Male', icon: '👨' },
@@ -58,10 +58,8 @@ export const ProfileSetupPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, completeProfile } = useAuth();
   const { showToast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatar || '');
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [gender, setGender] = useState<'male' | 'female' | 'other' | 'prefer_not_to_say'>(
     (user?.gender as any) || 'prefer_not_to_say'
   );
@@ -94,34 +92,6 @@ export const ProfileSetupPage: React.FC = () => {
       setSelectedStyles(selectedStyles.filter((s) => s !== style));
     } else {
       setSelectedStyles([...selectedStyles, style]);
-    }
-  };
-
-  const handleAvatarClick = () => {
-    if (fileInputRef.current && !uploadingPhoto) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      showToast('Image file size must be less than 10MB', 'error');
-      return;
-    }
-
-    setUploadingPhoto(true);
-    try {
-      const res = await cloudinaryUploadService.uploadProfileAvatar(file);
-      setAvatarUrl(res.avatarUrl);
-      completeProfile({ avatar: res.avatarUrl });
-      showToast('Profile photo uploaded to Cloudinary successfully!', 'success');
-    } catch (err: any) {
-      showToast(err.message || 'Failed to upload profile photo to Cloudinary', 'error');
-    } finally {
-      setUploadingPhoto(false);
     }
   };
 
@@ -218,50 +188,16 @@ export const ProfileSetupPage: React.FC = () => {
           </div>
 
           <form onSubmit={handleComplete} className="space-y-5">
-            {/* Hidden File Input */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/jpeg,image/png,image/webp,image/jpg"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-
-            {/* Avatar Upload Container */}
-            <div className="flex flex-col items-center justify-center gap-2">
-              <div
-                onClick={handleAvatarClick}
-                className="relative group cursor-pointer transition-transform hover:scale-105"
-                title="Click to upload profile photo to Cloudinary"
-              >
-                <div className="w-24 h-24 rounded-full bg-slate-100 border-4 border-white shadow-soft flex items-center justify-center overflow-hidden relative">
-                  {uploadingPhoto ? (
-                    <div className="w-full h-full bg-slate-900/60 flex items-center justify-center text-white">
-                      <Loader2 className="w-6 h-6 animate-spin text-white" />
-                    </div>
-                  ) : avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt="User Avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-tr from-rose-400 to-amber-300 flex items-center justify-center text-white font-extrabold text-2xl">
-                      {user?.name ? user.name.slice(0, 2).toUpperCase() : 'AT'}
-                    </div>
-                  )}
-                </div>
-                <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#FF4D6D] text-white shadow-md flex items-center justify-center group-hover:scale-110 transition-transform">
-                  {uploadingPhoto ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Camera className="w-4 h-4" />
-                  )}
-                </div>
-              </div>
-              <span className="text-xs font-semibold text-slate-500">
-                {uploadingPhoto ? 'Uploading to Cloudinary...' : 'Upload profile photo'}
-              </span>
+            {/* Universal Avatar Uploader */}
+            <div className="max-w-[200px] mx-auto">
+              <UniversalImageUploader
+                label="Profile Photo"
+                helpText="PNG, JPG, WEBP (Max 10MB)"
+                folder="travelos/customers/profile"
+                value={avatarUrl}
+                onChange={(url) => setAvatarUrl(url)}
+                aspectRatio="square"
+              />
             </div>
 
             {/* Travel Tagline */}

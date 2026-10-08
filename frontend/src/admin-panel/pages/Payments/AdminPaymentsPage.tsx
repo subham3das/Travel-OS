@@ -20,9 +20,15 @@ import { PaymentPagination } from '../../components/super-admin/payments/Payment
 import { PaymentDrawer } from '../../components/super-admin/payments/PaymentDrawer';
 import { PaymentActionConfirmModal } from '../../components/super-admin/payments/PaymentActionConfirmModal';
 import { PaymentInvoiceModal } from '../../components/super-admin/payments/PaymentInvoiceModal';
+import { AdminSellerOnboardingTable } from '../../components/super-admin/payments/AdminSellerOnboardingTable';
+import { AdminSettlementOverview } from '../../components/super-admin/payments/AdminSettlementOverview';
+import { AdminDisputesWorkspace } from '../../components/super-admin/payments/AdminDisputesWorkspace';
+import { AdminWebhookObservabilityWorkspace } from '../../components/super-admin/payments/AdminWebhookObservabilityWorkspace';
+import { AdminPaymentOperationsWorkspace } from '../../components/super-admin/payments/AdminPaymentOperationsWorkspace';
 
 export const AdminPaymentsPage: React.FC = () => {
   // ── 1. STATE MANAGEMENT ──
+  const [paymentTab, setPaymentTab] = useState<'transactions' | 'onboarding' | 'settlements' | 'disputes' | 'webhooks' | 'operations'>('transactions');
   const [payments, setPayments] = useState<AdminPaymentItem[]>([]);
   const [kpiStats, setKpiStats] = useState<PaymentKPIStats>(initialPaymentKPIStats);
   const [selectedPayment, setSelectedPayment] = useState<AdminPaymentItem | null>(null);
@@ -332,11 +338,103 @@ export const AdminPaymentsPage: React.FC = () => {
         onExportReport={handleExportCSV}
       />
 
-      {/* ── 2. KPI SUMMARY CARDS (7 CARDS) ── */}
-      <PaymentKPISection
-        stats={kpiStats}
-        onFilterByStatus={handleFilterByKPIStatus}
-      />
+      {/* ── MARKETPLACE NAVIGATION TABS (PHASE 4 & 13) ── */}
+      <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl w-fit">
+        <button
+          type="button"
+          onClick={() => setPaymentTab('transactions')}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            paymentTab === 'transactions'
+              ? 'bg-white text-[#6356E5] shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Customer Transactions &amp; Ledger
+        </button>
+        <button
+          type="button"
+          onClick={() => setPaymentTab('onboarding')}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            paymentTab === 'onboarding'
+              ? 'bg-white text-[#6356E5] shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Seller Payout Onboarding (Route)
+        </button>
+        <button
+          type="button"
+          onClick={() => setPaymentTab('settlements')}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            paymentTab === 'settlements'
+              ? 'bg-white text-[#6356E5] shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Settlements &amp; Daily Reconciliation
+        </button>
+        <button
+          type="button"
+          onClick={() => setPaymentTab('disputes')}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            paymentTab === 'disputes'
+              ? 'bg-white text-[#6356E5] shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Disputes &amp; Chargebacks
+        </button>
+        <button
+          type="button"
+          onClick={() => setPaymentTab('webhooks')}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            paymentTab === 'webhooks'
+              ? 'bg-white text-[#6356E5] shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Webhooks &amp; DLQ
+        </button>
+        <button
+          type="button"
+          onClick={() => setPaymentTab('operations')}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            paymentTab === 'operations'
+              ? 'bg-white text-[#6356E5] shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Operations &amp; Retries
+        </button>
+      </div>
+
+      {paymentTab === 'onboarding' && (
+        <AdminSellerOnboardingTable />
+      )}
+
+      {paymentTab === 'settlements' && (
+        <AdminSettlementOverview />
+      )}
+
+      {paymentTab === 'disputes' && (
+        <AdminDisputesWorkspace />
+      )}
+
+      {paymentTab === 'webhooks' && (
+        <AdminWebhookObservabilityWorkspace />
+      )}
+
+      {paymentTab === 'operations' && (
+        <AdminPaymentOperationsWorkspace />
+      )}
+
+      {paymentTab === 'transactions' && (
+        <>
+          {/* ── 2. KPI SUMMARY CARDS (7 CARDS) ── */}
+          <PaymentKPISection
+            stats={kpiStats}
+            onFilterByStatus={handleFilterByKPIStatus}
+          />
 
       {/* ── 3. FILTER PANEL (COLLAPSIBLE) ── */}
       <AnimatePresence>
@@ -415,6 +513,8 @@ export const AdminPaymentsPage: React.FC = () => {
             />
           )}
         </div>
+      )}
+      </>
       )}
 
       {/* ── 6. SLIDE-IN RIGHT DETAILS DRAWER OVERLAY ── */}

@@ -38,6 +38,19 @@ class CustomerChatService {
     }
     return res.data.message;
   }
+
+  /**
+   * Fetch agency registered contact (phone, whatsapp, socket presence, support message)
+   * Target can be bookingId, conversationId, or agencyId.
+   */
+  public async getAgencyContact(targetId: string): Promise<import('../data/chats').AgencyContactInfo | null> {
+    try {
+      const res = await apiClient.get<import('../data/chats').AgencyContactInfo>(`/chat/${encodeURIComponent(targetId)}/contact`);
+      return res.data || null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const customerChatService = new CustomerChatService();

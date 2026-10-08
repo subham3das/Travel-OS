@@ -77,9 +77,9 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
   };
 
   return (
-    <div className={`rounded-3xl bg-white p-5 sm:p-8 border border-slate-100 shadow-2xs ${className}`}>
+    <div className={`rounded-3xl bg-white dark:bg-slate-800 p-5 sm:p-8 border border-slate-100 dark:border-white/10 shadow-xs dark:shadow-none ${className}`}>
       {/* Title */}
-      <h3 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] tracking-tight mb-6 text-center">
+      <h3 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] dark:text-white tracking-tight mb-6 text-center">
         {title}
       </h3>
 
@@ -93,8 +93,8 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
               key={item.id}
               className={`rounded-2xl border transition-all overflow-hidden ${
                 isOpen
-                  ? 'border-[#FF4D6D]/30 bg-gradient-to-r from-rose-50/40 via-white to-pink-50/20 shadow-2xs'
-                  : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200'
+                  ? 'border-[#FF4D6D]/30 bg-gradient-to-r from-rose-50/40 via-white to-pink-50/20 dark:from-rose-950/20 dark:via-slate-800 dark:to-pink-950/10 shadow-xs dark:shadow-none'
+                  : 'border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:border-slate-200 dark:hover:border-white/20'
               }`}
             >
               {/* Question Dropdown Button */}
@@ -107,13 +107,13 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
                   {item.icon && (
                     <div
                       className={`w-10 h-10 rounded-xl ${
-                        item.iconBg || 'bg-rose-50'
+                        item.iconBg || 'bg-rose-50 dark:bg-rose-950/40'
                       } ${item.iconColor || 'text-[#FF4D6D]'} flex items-center justify-center shrink-0 transition-transform group-hover:scale-105`}
                     >
                       {item.icon}
                     </div>
                   )}
-                  <h4 className="text-sm sm:text-base font-bold text-[#0F172A] tracking-tight">
+                  <h4 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-white tracking-tight">
                     {item.question}
                   </h4>
                 </div>
@@ -122,7 +122,7 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
                 <motion.div
                   animate={{ rotate: isOpen ? 180 : 0 }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 shrink-0 shadow-2xs group-hover:text-[#FF4D6D]"
+                  className="w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-500 dark:text-slate-300 shrink-0 shadow-xs group-hover:text-[#FF4D6D]"
                 >
                   <ChevronDown className="w-4 h-4" />
                 </motion.div>
@@ -139,7 +139,7 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-slate-600 font-medium leading-relaxed border-t border-slate-100/60 ml-0 sm:ml-13">
+                    <div className="px-4 sm:px-5 pb-5 pt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed border-t border-slate-100/60 dark:border-white/10 ml-0 sm:ml-13">
                       {item.answer}
                     </div>
                   </motion.div>

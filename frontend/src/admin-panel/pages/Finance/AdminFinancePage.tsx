@@ -118,6 +118,8 @@ export const AdminFinancePage: React.FC = () => {
   // ── 3. HANDLERS ──
   const handleSelectAgencyForSidebar = async (agency: TopPerformingAgencyItem) => {
     const updated = await adminFinanceManagementService.getAgencySidebarData(agency.agencyName);
+    const revNum = parseInt(agency.revenue.replace(/[^0-9]/g, '') || '0', 10);
+    const avgCalc = agency.bookings > 0 ? `₹${Math.round(revNum / agency.bookings).toLocaleString('en-IN')}` : '₹0';
     setSidebarData({
       ...updated,
       agencyName: agency.agencyName,
@@ -126,7 +128,7 @@ export const AdminFinancePage: React.FC = () => {
       revenueOverview: {
         totalRevenue: agency.revenue,
         bookings: agency.bookings,
-        avgBookingValue: '₹21,474',
+        avgBookingValue: avgCalc,
         totalCommission: agency.commission,
       },
     });
@@ -223,72 +225,59 @@ export const AdminFinancePage: React.FC = () => {
         onCardClick={(id) => showToast(`Filtered analytics for ${id.toUpperCase()}`, 'info')}
       />
 
-      {/* ── 3. MAIN WORKSPACE: 3-ROW ANALYTICS GRID ── */}
-      <div className="space-y-5 w-full">
-        {/* ── FIRST ANALYTICS ROW (3 CARDS) ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 items-stretch">
-          {/* Revenue Overview */}
-          <div className="h-full min-w-0 md:col-span-2 2xl:col-span-1">
-            <RevenueOverviewChart
-              data={revenueChartData}
-              timeframe={timeframe}
-              onTimeframeChange={(tf) => setTimeframe(tf)}
-            />
+      {/* ── 3. MAIN WORKSPACE: VERTICAL STACKED LAYOUT ── */}
+      <div className="space-y-6 w-full">
+
+        {/* ── SETTLEMENT TABLE — PRIMARY WORKSPACE (FULL WIDTH) ── */}
+        <SettlementTable
+          settlements={settlements}
+          onViewDetails={(s) => setSelectedSettlementForModal(s)}
+          onDownloadStatement={(_s) => handleDownloadStatement()}
+          onApprove={handleApproveSettlement}
+          onReject={handleRejectSettlement}
+        />
+
+        {/* ── FINANCIAL TIMELINE — FULL WIDTH BELOW TABLE ── */}
+        <FinancialTimeline
+          events={timelineItems}
+          onViewAll={() => showToast('Full financial audit timeline loaded', 'info')}
+        />
+
+        {/* ── ANALYTICS CHARTS SECTION ── */}
+        <div className="space-y-4">
+          {/* Charts row 1 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
+            <div className="xl:col-span-1 h-full min-w-0">
+              <RevenueOverviewChart
+                data={revenueChartData}
+                timeframe={timeframe}
+                onTimeframeChange={(tf) => setTimeframe(tf)}
+              />
+            </div>
+            <div className="h-full min-w-0">
+              <CommissionBreakdown items={commissionItems} />
+            </div>
+            <div className="h-full min-w-0">
+              <RevenueDestinationChart destinations={destinationRevenues} />
+            </div>
           </div>
 
-          {/* Commission Breakdown */}
-          <div className="h-full min-w-0">
-            <CommissionBreakdown items={commissionItems} />
-          </div>
-
-          {/* Revenue by Destination */}
-          <div className="h-full min-w-0">
-            <RevenueDestinationChart destinations={destinationRevenues} />
-          </div>
-        </div>
-
-        {/* ── SECOND ANALYTICS ROW (3 CARDS) ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 items-stretch">
-          {/* Top Performing Agencies */}
-          <div className="h-full min-w-0 md:col-span-2 2xl:col-span-1">
-            <TopPerformingAgencies
-              agencies={topAgencies}
-              selectedAgencyName={sidebarData?.agencyName}
-              onSelectAgency={handleSelectAgencyForSidebar}
-              onViewAll={() => navigate('/admin/agencies')}
-            />
-          </div>
-
-          {/* Monthly Financial Summary */}
-          <div className="h-full min-w-0">
-            <FinancialSummary summary={financialSummary} />
-          </div>
-
-          {/* Refund Analytics */}
-          <div className="h-full min-w-0">
-            <RefundAnalytics refunds={refundAnalytics} />
-          </div>
-        </div>
-
-        {/* ── THIRD ANALYTICS ROW ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-          {/* Agency Settlement Overview (7 cols) */}
-          <div className="lg:col-span-7 h-full min-w-0">
-            <SettlementTable
-              settlements={settlements}
-              onViewDetails={(s) => setSelectedSettlementForModal(s)}
-              onDownloadStatement={(s) => handleDownloadStatement()}
-              onApprove={handleApproveSettlement}
-              onReject={handleRejectSettlement}
-            />
-          </div>
-
-          {/* Financial Timeline (5 cols) */}
-          <div className="lg:col-span-5 h-full min-w-0">
-            <FinancialTimeline
-              events={timelineItems}
-              onViewAll={() => showToast('Full financial audit timeline loaded', 'info')}
-            />
+          {/* Charts row 2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
+            <div className="xl:col-span-1 h-full min-w-0">
+              <TopPerformingAgencies
+                agencies={topAgencies}
+                selectedAgencyName={sidebarData?.agencyName}
+                onSelectAgency={handleSelectAgencyForSidebar}
+                onViewAll={() => navigate('/admin/agencies')}
+              />
+            </div>
+            <div className="h-full min-w-0">
+              <FinancialSummary summary={financialSummary} />
+            </div>
+            <div className="h-full min-w-0">
+              <RefundAnalytics refunds={refundAnalytics} />
+            </div>
           </div>
         </div>
       </div>

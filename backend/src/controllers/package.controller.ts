@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
 import { packageService } from '../services/package.service.js';
+import { reviewService } from '../services/review.service.js';
 
 export class PackageController {
   public async getPackages(req: Request, res: Response): Promise<void> {
     const filters = {
       search: (req.query.search as string) || (req.query.q as string),
       category: req.query.category as string,
+      adventureType: req.query.adventureType as string,
       destination: req.query.destination as string,
       agencyId: req.query.agencyId as string,
       minPrice: req.query.minPrice ? Number(req.query.minPrice) : undefined,
@@ -57,6 +59,26 @@ export class PackageController {
     res.status(200).json({
       success: true,
       data: { packages },
+    });
+  }
+
+  public async getPackageReviews(req: Request, res: Response): Promise<void> {
+    const id = String(req.params.id || req.params.packageId || '');
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const limit = req.query.limit ? Number(req.query.limit) : 20;
+    const result = await reviewService.getPackageReviews(id, page, limit);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  }
+
+  public async getPackageRating(req: Request, res: Response): Promise<void> {
+    const id = String(req.params.id || req.params.packageId || '');
+    const stats = await reviewService.getPackageRatingStats(id);
+    res.status(200).json({
+      success: true,
+      data: stats,
     });
   }
 }

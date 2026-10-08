@@ -38,12 +38,12 @@ export const SupportTicketQueue: React.FC<SupportTicketQueueProps> = ({
   onLoadMore,
 }) => {
   const filterPills = [
-    { id: 'All', label: 'All', count: '1,248' },
-    { id: 'Open', label: 'Open', count: '532' },
-    { id: 'Assigned', label: 'Assigned', count: '312' },
-    { id: 'Pending', label: 'Pending', count: '184' },
-    { id: 'Escalated', label: 'Escalated', count: '86' },
-    { id: 'Closed', label: 'Closed', count: '134' },
+    { id: 'All', label: 'All', count: String(tickets.length) },
+    { id: 'Open', label: 'Open', count: String(tickets.filter((t) => t.status === 'Open').length) },
+    { id: 'Assigned', label: 'Assigned', count: String(tickets.filter((t) => t.status === 'Assigned').length) },
+    { id: 'Pending', label: 'Pending', count: String(tickets.filter((t) => t.status === 'Pending').length) },
+    { id: 'Escalated', label: 'Escalated', count: String(tickets.filter((t) => t.status === 'Escalated').length) },
+    { id: 'Closed', label: 'Closed', count: String(tickets.filter((t) => t.status === 'Closed').length) },
   ];
 
   const getPriorityBadge = (priority: SupportTicketPriority) => {
@@ -145,8 +145,15 @@ export const SupportTicketQueue: React.FC<SupportTicketQueueProps> = ({
 
       {/* ── 5. Ticket Cards List ── */}
       <div className="space-y-2.5 overflow-y-auto max-h-[620px] pr-1 scrollbar-thin">
-        {tickets.map((ticket) => {
-          const isSelected = ticket.id === selectedTicketId;
+        {tickets.length === 0 ? (
+          <div className="py-16 text-center text-slate-400">
+            <MessageSquare className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+            <p className="text-sm font-bold text-slate-600">No support requests yet</p>
+            <p className="text-xs text-slate-400 mt-1">Platform support ticket queue is currently empty</p>
+          </div>
+        ) : (
+          tickets.map((ticket) => {
+            const isSelected = ticket.id === selectedTicketId;
 
           return (
             <div
@@ -202,7 +209,8 @@ export const SupportTicketQueue: React.FC<SupportTicketQueueProps> = ({
               </div>
             </div>
           );
-        })}
+        })
+      )}
       </div>
 
       {/* ── 6. Bottom Load More ── */}

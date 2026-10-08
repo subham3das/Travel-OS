@@ -27,6 +27,18 @@ export const InlineFilters: React.FC<InlineFiltersProps> = ({
   const destinationOptions = ['Meghalaya', 'Goa', 'Ladakh', 'Kerala', 'Andaman', 'Spiti'];
   const durationOptions = ['1–3 Days', '4–7 Days', '8–12 Days', '12+ Days'];
   const travelTypeOptions = ['Adventure', 'Nature', 'Luxury', 'Family', 'Solo', 'Couple', 'Road Trip', 'Wildlife'];
+  const adventureTypeOptions = [
+    'Trekking',
+    'Camping',
+    'Backpacking',
+    'Expedition',
+    'Road Trip',
+    'Wildlife Safari',
+    'River Rafting',
+    'Skiing',
+    'Scuba Diving',
+    'Paragliding',
+  ];
   const monthOptions = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   return (
@@ -75,6 +87,14 @@ export const InlineFilters: React.FC<InlineFiltersProps> = ({
           options={travelTypeOptions}
           selectedOptions={filters.selectedTravelTypes}
           onChange={(updated) => onFilterChange({ ...filters, selectedTravelTypes: updated })}
+        />
+
+        {/* 4.5. Adventure Type */}
+        <ChipGroup
+          title="Adventure Type"
+          options={adventureTypeOptions}
+          selectedOptions={filters.selectedAdventureTypes || []}
+          onChange={(updated) => onFilterChange({ ...filters, selectedAdventureTypes: updated })}
         />
 
         {/* 5. Rating Selector */}

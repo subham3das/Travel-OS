@@ -123,9 +123,18 @@ export const PackageDetailsDrawer: React.FC<PackageDetailsDrawerProps> = ({
                 </h2>
                 <div className="flex items-center justify-between text-xs text-white/90 font-bold mt-1">
                   <span className="font-mono text-[11px] text-white/80">{pkg.packageId}</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-white backdrop-blur-xs shadow-xs">
-                    {pkg.approvalStatus}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {pkg.visibilityStatus && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        pkg.visibilityStatus === 'Visible' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                      }`}>
+                        {pkg.visibilityStatus} {pkg.visibilityReason && pkg.visibilityReason !== 'Visible' ? `(${pkg.visibilityReason})` : ''}
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-white/20 text-white backdrop-blur-xs shadow-xs">
+                      {pkg.approvalStatus}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -210,6 +219,21 @@ export const PackageDetailsDrawer: React.FC<PackageDetailsDrawerProps> = ({
                         </div>
                         <span className="inline-block mt-0.5 text-[10px] font-bold text-emerald-600">
                           ▲ Available
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs pt-2.5 border-t border-slate-100">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 block">Category</span>
+                        <span className="inline-block mt-0.5 text-xs font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                          {pkg.category || 'Standard'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 block">Adventure Type</span>
+                        <span className="inline-block mt-0.5 text-xs font-black text-[#6356E5] bg-purple-50 px-2 py-0.5 rounded-md">
+                          {pkg.adventureType || 'General Adventure'}
                         </span>
                       </div>
                     </div>

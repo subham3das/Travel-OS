@@ -27,7 +27,7 @@ export interface ICampaign extends Document {
 
 const CampaignSchema = new Schema<ICampaign>(
   {
-    campaignId: { type: String, required: true, unique: true, index: true },
+    campaignId: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     type: {
       type: String,
@@ -57,12 +57,13 @@ const CampaignSchema = new Schema<ICampaign>(
     ctaText: { type: String, default: 'Explore Now' },
     deepLink: { type: String, default: '/packages' },
     timeZone: { type: String, default: '(GMT +05:30) Asia/Kolkata' },
-    isDeleted: { type: Boolean, default: false, index: true },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
 CampaignSchema.index({ createdAt: -1 });
+CampaignSchema.index({ status: 1, isDeleted: 1, createdAt: -1 });
 
 export const CampaignModel =
   mongoose.models.Campaign ||

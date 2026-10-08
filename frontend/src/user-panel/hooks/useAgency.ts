@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Agency } from '../types/agency';
 import { marketplaceService } from '../services/marketplace.service';
-import { agenciesData } from '../data/agencies';
 
 interface UseAgencyResult {
   agency: Agency | null;
@@ -34,29 +33,14 @@ export const useAgency = (agencyId?: string): UseAgencyResult => {
           setAgency(data);
           setError(null);
         } else {
-          // Fallback if legacy demo ID
-          const normalized = agencyId.toLowerCase().trim();
-          const fallback = agenciesData.find((a) => a.id.toLowerCase() === normalized);
-          if (fallback) {
-            setAgency(fallback);
-            setError(null);
-          } else {
-            setAgency(null);
-            setError(`Agency "${agencyId}" not found`);
-          }
+          setAgency(null);
+          setError(`Agency "${agencyId}" not found`);
         }
       })
       .catch((err) => {
         if (!isMounted) return;
-        const normalized = agencyId.toLowerCase().trim();
-        const fallback = agenciesData.find((a) => a.id.toLowerCase() === normalized);
-        if (fallback) {
-          setAgency(fallback);
-          setError(null);
-        } else {
-          setAgency(null);
-          setError(err?.message || `Agency "${agencyId}" not found`);
-        }
+        setAgency(null);
+        setError(err?.message || `Failed to load agency "${agencyId}"`);
       })
       .finally(() => {
         if (isMounted) setLoading(false);

@@ -6,13 +6,14 @@ import { DestinationStep } from '../../components/packageWizard/steps/Destinatio
 import { PricingStep } from '../../components/packageWizard/steps/PricingStep';
 import { DeparturesStep } from '../../components/packageWizard/steps/DeparturesStep';
 import { ItineraryStep } from '../../components/packageWizard/steps/ItineraryStep';
+import { AccommodationStep } from '../../components/packageWizard/steps/AccommodationStep';
 import { GalleryStep } from '../../components/packageWizard/steps/GalleryStep';
 import { InclusionsStep } from '../../components/packageWizard/steps/InclusionsStep';
 import { PoliciesStep } from '../../components/packageWizard/steps/PoliciesStep';
 import { PreviewStep } from '../../components/packageWizard/steps/PreviewStep';
 
 /**
- * Inner Step Switcher Component (9 Steps)
+ * Inner Step Switcher Component (10 Steps)
  */
 const WizardStepSwitcher: React.FC = () => {
   const { currentStep } = usePackageWizard();
@@ -29,12 +30,14 @@ const WizardStepSwitcher: React.FC = () => {
     case 5:
       return <ItineraryStep />;
     case 6:
-      return <GalleryStep />;
+      return <AccommodationStep />;
     case 7:
-      return <InclusionsStep />;
+      return <GalleryStep />;
     case 8:
-      return <PoliciesStep />;
+      return <InclusionsStep />;
     case 9:
+      return <PoliciesStep />;
+    case 10:
       return <PreviewStep />;
     default:
       return <BasicInformationStep />;

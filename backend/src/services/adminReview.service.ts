@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { ReviewModel, IReview } from '../models/review.model.js';
+import { ReviewModel } from '../models/review.model.js';
+import { AuditLogModel } from '../models/auditLog.model.js';
 import { AuditLoggerService } from './auditLogger.service.js';
 
 export class AdminReviewService {
@@ -10,7 +11,7 @@ export class AdminReviewService {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [total, approved, pending, reported, removed, todayCount, ratingsAgg] = await Promise.all([
+    const [total, approved, pending, reported, removed, todayCount, ratingsAgg, verifiedCount] = await Promise.all([
       ReviewModel.countDocuments({ isDeleted: false }),
       ReviewModel.countDocuments({ isDeleted: false, status: 'Approved' }),
       ReviewModel.countDocuments({ isDeleted: false, status: 'Pending' }),
@@ -21,25 +22,245 @@ export class AdminReviewService {
         { $match: { isDeleted: false, status: 'Approved' } },
         { $group: { _id: null, avgRating: { $avg: '$rating' } } },
       ]),
+      ReviewModel.countDocuments({ isDeleted: false, isVerifiedBooking: true }),
     ]);
 
-    const avg = ratingsAgg[0]?.avgRating ? ratingsAgg[0].avgRating.toFixed(2) : '4.85';
+    const avgNum = ratingsAgg[0]?.avgRating ? Number(ratingsAgg[0].avgRating.toFixed(2)) : 0.0;
+    const avgStr = total > 0 ? `${avgNum.toFixed(1)} ★` : '0.0 ★';
+    const verifiedPct = total > 0 ? `${((verifiedCount / total) * 100).toFixed(1)}%` : '0%';
 
     return {
-      totalReviews: { value: total.toLocaleString(), count: total, growth: '+14.2%', isPositive: true },
-      averageRating: { value: `${avg} ★`, score: parseFloat(avg), growth: '+0.12', isPositive: true },
-      avgRating: { value: `${avg} ★`, score: parseFloat(avg), growth: '+0.12', isPositive: true },
-      verifiedReviews: { value: '96.8%', percentage: 96.8, growth: '+2.1%', isPositive: true },
+      totalReviews: { value: total.toLocaleString(), count: total, growth: '0%', isPositive: true },
+      averageRating: { value: avgStr, score: avgNum, growth: '0%', isPositive: true },
+      avgRating: { value: avgStr, score: avgNum, growth: '0%', isPositive: true },
+      verifiedReviews: { value: verifiedPct, percentage: total > 0 ? Number(((verifiedCount / total) * 100).toFixed(1)) : 0, growth: '0%', isPositive: true },
       pendingModeration: { value: pending.toLocaleString(), count: pending, growth: pending > 0 ? `+${pending}` : '0%', isPositive: pending === 0 },
       reportedReviews: { value: reported.toLocaleString(), count: reported, growth: reported > 0 ? `+${reported}` : '0%', isPositive: false },
       flaggedReviews: { value: reported.toLocaleString(), count: reported, growth: reported > 0 ? `+${reported}` : '0%', isPositive: false },
-      removedReviews: { value: removed.toLocaleString(), count: removed, growth: removed > 0 ? `+${removed}` : '0%', isPositive: true },
-      reviewsToday: { value: todayCount.toLocaleString(), count: todayCount, growth: '+0.0%', isPositive: true },
+      removedReviews: { value: removed.toLocaleString(), count: removed, growth: '0%', isPositive: true },
+      reviewsToday: { value: todayCount.toLocaleString(), count: todayCount, growth: '0%', isPositive: true },
     };
   }
 
   /**
-   * 2. Paginated Reviews Query
+   * 2. Rating Distribution (1 - 5 Stars)
+   */
+  async getRatingDistribution() {
+    const [ratingsAgg, totalCountAgg] = await Promise.all([
+      ReviewModel.aggregate([
+        { $match: { isDeleted: false, status: 'Approved' } },
+        {
+          $group: {
+            _id: '$rating',
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+      ReviewModel.aggregate([
+        { $match: { isDeleted: false, status: 'Approved' } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            avg: { $avg: '$rating' },
+          },
+        },
+      ]),
+    ]);
+
+    const total = totalCountAgg[0]?.total || 0;
+    const avg = totalCountAgg[0]?.avg ? Number(totalCountAgg[0].avg.toFixed(1)) : 0.0;
+
+    const countsByStar = new Map<number, number>();
+    for (const r of ratingsAgg) {
+      countsByStar.set(Number(r._id), r.count);
+    }
+
+    const starConfigs = [
+      { star: 5, color: '#10B981' },
+      { star: 4, color: '#6356E5' },
+      { star: 3, color: '#F59E0B' },
+      { star: 2, color: '#FB923C' },
+      { star: 1, color: '#EF4444' },
+    ];
+
+    const stars = starConfigs.map(({ star, color }) => {
+      const count = countsByStar.get(star) || 0;
+      const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+      return { star, count, percentage, color };
+    });
+
+    return {
+      avgRating: avg,
+      totalCount: total,
+      stars,
+    };
+  }
+
+  /**
+   * 3. Review Trends (Daily / Weekly / Monthly)
+   */
+  async getReviewTrends(interval: 'Daily' | 'Weekly' | 'Monthly' = 'Daily') {
+    const days = interval === 'Weekly' ? 28 : interval === 'Monthly' ? 180 : 7;
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const trends = await ReviewModel.aggregate([
+      {
+        $match: {
+          isDeleted: false,
+          createdAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          reviews: { $sum: 1 },
+          approved: {
+            $sum: { $cond: [{ $eq: ['$status', 'Approved'] }, 1, 0] },
+          },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    if (!trends || trends.length === 0) {
+      return [];
+    }
+
+    return trends.map((t) => ({
+      date: t._id,
+      label: t._id,
+      reviews: t.reviews || 0,
+      approved: t.approved || 0,
+    }));
+  }
+
+  /**
+   * 4. Sentiment Breakdown (Positive, Neutral, Negative)
+   */
+  async getSentimentBreakdown() {
+    const sentiments = await ReviewModel.aggregate([
+      { $match: { isDeleted: false } },
+      {
+        $group: {
+          _id: '$sentiment',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const total = sentiments.reduce((sum, s) => sum + (s.count || 0), 0);
+
+    const sentimentMap = new Map<string, number>();
+    for (const s of sentiments) {
+      if (s._id) sentimentMap.set(String(s._id).toLowerCase(), s.count);
+    }
+
+    const configs = [
+      { name: 'Positive', key: 'positive', color: '#10B981' },
+      { name: 'Neutral', key: 'neutral', color: '#F59E0B' },
+      { name: 'Negative', key: 'negative', color: '#EF4444' },
+    ];
+
+    return configs.map((c) => {
+      const count = sentimentMap.get(c.key) || 0;
+      const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+      return {
+        name: c.name,
+        count,
+        percentage,
+        color: c.color,
+      };
+    });
+  }
+
+  /**
+   * 5. Recent Moderation Activity (from AuditLog)
+   */
+  async getRecentModeration() {
+    const logs = await AuditLogModel.find({
+      module: 'REVIEWS',
+    })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+
+    if (!logs || logs.length === 0) {
+      return [];
+    }
+
+    return logs.map((log: any) => ({
+      id: String(log._id),
+      type: log.action?.includes('APPROVE') ? 'approved' : log.action?.includes('DELETE') ? 'deleted' : 'flagged',
+      title: log.description || log.action || 'Moderation action',
+      targetId: log.resourceId || 'N/A',
+      actor: log.actor?.name || 'Admin',
+      timeAgo: new Date(log.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    }));
+  }
+
+  /**
+   * 6. Most Reported Agencies
+   */
+  async getReportedAgencies() {
+    const reported = await ReviewModel.aggregate([
+      { $match: { isDeleted: false, status: 'Reported' } },
+      {
+        $group: {
+          _id: '$agencyId',
+          agencyName: { $first: '$agencyName' },
+          reportsCount: { $sum: 1 },
+        },
+      },
+      { $sort: { reportsCount: -1 } },
+      { $limit: 5 },
+    ]);
+
+    if (!reported || reported.length === 0) {
+      return [];
+    }
+
+    return reported.map((r, idx) => ({
+      id: r._id ? String(r._id) : `ag-${idx + 1}`,
+      agencyName: r.agencyName || 'Unknown Agency',
+      reportsCount: r.reportsCount || 0,
+      riskLevel: r.reportsCount > 5 ? 'High' : r.reportsCount > 2 ? 'Medium' : 'Low',
+    }));
+  }
+
+  /**
+   * 7. Most Reported Travelers
+   */
+  async getReportedTravelers() {
+    const reported = await ReviewModel.aggregate([
+      { $match: { isDeleted: false, status: 'Reported' } },
+      {
+        $group: {
+          _id: '$userId',
+          travelerName: { $first: '$userName' },
+          avatar: { $first: '$userAvatar' },
+          reportsCount: { $sum: 1 },
+        },
+      },
+      { $sort: { reportsCount: -1 } },
+      { $limit: 5 },
+    ]);
+
+    if (!reported || reported.length === 0) {
+      return [];
+    }
+
+    return reported.map((r, idx) => ({
+      id: r._id ? String(r._id) : `usr-${idx + 1}`,
+      travelerName: r.travelerName || 'User',
+      avatar: r.avatar || '',
+      reportsCount: r.reportsCount || 0,
+      warningBadge: `${r.reportsCount} Report${r.reportsCount > 1 ? 's' : ''}`,
+    }));
+  }
+
+  /**
+   * 8. Paginated Reviews Query
    */
   async getReviews(query: {
     page?: number;
@@ -77,18 +298,19 @@ export class AdminReviewService {
       filter.agencyName = new RegExp(query.agency, 'i');
     }
 
-    if (query.rating && query.rating !== 'All') {
+    if (query.rating && query.rating !== 'All' && query.rating !== 'All Ratings') {
       const num = parseInt(query.rating.replace(/[^0-9]/g, ''));
       if (!isNaN(num)) filter.rating = num;
     }
 
-    const reviews = await ReviewModel.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean();
-
-    const total = await ReviewModel.countDocuments(filter);
+    const [reviews, total] = await Promise.all([
+      ReviewModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      ReviewModel.countDocuments(filter),
+    ]);
 
     const mapped = reviews.map((r: any) => this.mapReviewToFrontend(r));
 
@@ -104,7 +326,7 @@ export class AdminReviewService {
   }
 
   /**
-   * 3. Update Review Moderation Status
+   * 9. Update Review Moderation Status
    */
   async updateStatus(id: string, status: 'Approved' | 'Pending' | 'Reported' | 'Removed', admin: any) {
     const review = await ReviewModel.findOne({
@@ -135,7 +357,7 @@ export class AdminReviewService {
   }
 
   /**
-   * 4. Delete Review
+   * 10. Delete Review
    */
   async deleteReview(id: string, admin: any) {
     const review = await ReviewModel.findOne({
@@ -159,7 +381,7 @@ export class AdminReviewService {
       module: 'REVIEWS',
       action: 'DELETE_REVIEW',
       eventType: 'DELETE',
-      description: `Permanently removed spam review "${review.reviewId}"`,
+      description: `Permanently removed review "${review.reviewId}"`,
       severity: 'Medium',
     });
 
@@ -173,72 +395,65 @@ export class AdminReviewService {
     const createdAt = new Date(r.createdAt || Date.now());
 
     return {
-      id: r.reviewId || (r._id ? r._id.toString() : 'REV-12842'),
+      id: r.reviewId || (r._id ? r._id.toString() : ''),
       traveler: {
-        id: r.userId ? r.userId.toString() : 'usr-1',
-        name: r.userName || 'Verified Traveler',
-        avatar: r.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
-        email: r.userEmail || 'traveler@email.com',
-        location: 'New Delhi, India',
-        verified: true,
-        memberSince: 'Jan 2024',
-        totalReviews: 8,
+        id: r.userId ? r.userId.toString() : '',
+        name: r.userName || 'Traveler',
+        avatar: r.userAvatar || '',
+        email: r.userEmail || '',
+        location: '',
+        verified: r.isVerifiedBooking ?? false,
+        memberSince: '',
+        totalReviews: 1,
       },
       agency: {
-        id: r.agencyId ? r.agencyId.toString() : 'ag-1',
-        name: r.agencyName || 'ApnaTrip Partner Agency',
-        logo: r.agencyLogo || 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
-        rating: 4.8,
+        id: r.agencyId ? r.agencyId.toString() : '',
+        name: r.agencyName || 'Agency',
+        logo: r.agencyLogo || '',
+        rating: 0.0,
         verified: true,
       },
       package: {
-        id: r.packageId ? r.packageId.toString() : 'pkg-1',
-        name: r.packageName || 'Scenic Mountain Expedition',
-        destination: 'Himachal Pradesh, India',
-        thumbnail: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=400&auto=format&fit=crop',
+        id: r.packageId ? r.packageId.toString() : '',
+        name: r.packageName || '',
+        destination: '',
+        thumbnail: '',
       },
       booking: {
-        id: r.bookingId || 'BK-10455',
-        travelDates: 'May 20 – May 27, 2024',
-        travelerCount: '2 Travelers',
-        bookingAmount: '₹49,998',
+        id: r.bookingId || '',
+        travelDates: '',
+        travelerCount: '',
+        bookingAmount: '',
       },
-      rating: r.rating || 5,
-      reviewText: r.reviewText || 'Had an absolutely magnificent travel experience! The local guides were attentive, itineraries were flawlessly planned.',
-      images: r.images && r.images.length > 0 ? r.images : [
-        'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=600&auto=format&fit=crop',
-      ],
-      tags: ['Family Friendly', 'Clean Hotels', 'Expert Guide'],
-      sentiment: r.sentiment || 'Positive',
-      status: (r.status || 'Approved') as any,
-      helpfulVotes: r.helpfulCount || 14,
+      rating: r.rating || 0,
+      reviewText: r.reviewText || '',
+      images: Array.isArray(r.images) ? r.images : [],
+      tags: Array.isArray(r.tags) ? r.tags : [],
+      sentiment: r.sentiment || 'Neutral',
+      status: (r.status || 'Pending') as any,
+      helpfulVotes: r.helpfulCount || 0,
       reportsCount: r.reportsCount || (r.reportHistory?.length || 0),
       createdAt: createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       publishedDate: createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       publishedTime: createdAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       moderatorNotes: r.moderatorNotes || '',
-      isVerifiedBooking: r.isVerifiedBooking ?? true,
+      isVerifiedBooking: r.isVerifiedBooking ?? false,
       aiAnalysis: {
-        spamScore: r.spamScore || 4,
-        authenticity: '98.5% Verified',
-        sentiment: r.sentiment || 'Positive',
-        confidence: 96,
-        riskLevel: 'Very Low Risk' as const,
+        spamScore: r.spamScore || 0,
+        authenticity: 'Verified',
+        sentiment: r.sentiment || 'Neutral',
+        confidence: 0,
+        riskLevel: 'Low Risk' as const,
       },
-      agencyReply: r.agencyReply ? {
-        repliedBy: r.agencyReply.authorName || 'Agency Support',
-        repliedDate: new Date(r.agencyReply.repliedAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        text: r.agencyReply.text,
-      } : undefined,
+      agencyReply: r.agencyReply
+        ? {
+            repliedBy: r.agencyReply.authorName || 'Agency Support',
+            repliedDate: new Date(r.agencyReply.repliedAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            text: r.agencyReply.text,
+          }
+        : undefined,
       reportHistory: [],
-      actionHistory: [
-        {
-          id: 'act-1',
-          action: 'Automated Sentiment Analysis Completed',
-          actor: 'System AI Engine',
-          timestamp: createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        },
-      ],
+      actionHistory: [],
     };
   }
 }

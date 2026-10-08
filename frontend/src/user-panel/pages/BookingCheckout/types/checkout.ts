@@ -38,9 +38,11 @@ export interface TravelerSectionData {
   medicalNotes: string;
   travelPreferences: string;
   specialRequests: string;
+  selectedTravelerIds?: string[];
 }
 
 export interface BookingSummaryData {
+  departureId?: string;
   pickupPoint: string;
   dropPoint: string;
   tripDuration: string;

@@ -12,6 +12,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { OnboardingStepper } from '../../components/OnboardingStepper';
+import { registrationDraftClient } from '../../services/registrationDraftClient.service';
+import { useAgencyAuthContext, agencyAuthService } from '../../services/agencyAuth.service';
 
 export const INDIAN_STATES = [
   'Andhra Pradesh',
@@ -52,16 +54,6 @@ export const INDIAN_STATES = [
   'Puducherry',
 ];
 
-export const BUSINESS_TYPES = [
-  'Travel Agency',
-  'Tour Operator',
-  'Destination Management Company (DMC)',
-  'Adventure Travel',
-  'Pilgrimage Tours',
-  'Corporate Travel',
-  'Other',
-];
-
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS_LIST = Array.from({ length: 75 }, (_, i) => CURRENT_YEAR - i);
 
@@ -84,7 +76,7 @@ export interface BusinessInfoFormData {
 const initialFormData: BusinessInfoFormData = {
   legalBusinessName: '',
   agencyDisplayName: '',
-  businessType: '',
+  businessType: 'Travel Agency',
   yearEstablished: '',
   registrationNumber: '',
   gstNumber: '',
@@ -111,7 +103,16 @@ export const AgencyBusinessOnboardingPage: React.FC = () => {
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  // Auto save to localStorage
+  // Load from MongoDB draft on mount
+  useEffect(() => {
+    registrationDraftClient.getDraft().then((draft) => {
+      if (draft?.businessDetails && Object.keys(draft.businessDetails).length > 0) {
+        setFormData((prev) => ({ ...prev, ...draft.businessDetails }));
+      }
+    });
+  }, []);
+
+  // Auto save to localStorage backup
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
@@ -175,9 +176,43 @@ export const AgencyBusinessOnboardingPage: React.FC = () => {
     isPinCodeValid &&
     isYearValid;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { setActiveAgency } = useAgencyAuthContext();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isFormValid) {
+      try {
+        const res = await agencyAuthService.createBusiness({
+          businessType: 'agency',
+          name: formData.agencyDisplayName || formData.legalBusinessName,
+          agencyDisplayName: formData.agencyDisplayName || formData.legalBusinessName,
+          legalBusinessName: formData.legalBusinessName,
+          businessAddress: formData.businessAddress,
+          city: formData.city,
+          state: formData.state,
+          pinCode: formData.pinCode,
+          country: formData.country || 'India',
+          yearEstablished: formData.yearEstablished,
+          registrationNumber: formData.registrationNumber,
+          gstNumber: formData.gstNumber,
+        });
+        if (res.data?.business) {
+          setActiveAgency(res.data.business);
+        }
+      } catch (err) {
+        console.warn('Business creation save:', err);
+      }
+
+      try {
+        await registrationDraftClient.saveDraft({
+          serviceType: 'agency',
+          businessDetails: formData,
+          currentStep: 1,
+        });
+      } catch (err) {
+        console.warn('Draft save error:', err);
+      }
+
       navigate('/agency/onboarding/profile');
     }
   };
@@ -306,72 +341,37 @@ export const AgencyBusinessOnboardingPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Business Type & Year Established Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Business Type */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    Business Type <span className="text-rose-500">*</span>
-                  </label>
+              {/* Year Established */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  Year Established
+                </label>
+                <div className="relative">
                   <select
-                    name="businessType"
-                    value={formData.businessType}
+                    name="yearEstablished"
+                    value={formData.yearEstablished}
                     onChange={handleChange}
-                    onBlur={() => handleBlur('businessType')}
-                    className={`w-full px-4 py-3 rounded-2xl bg-slate-50/80 border text-sm font-medium text-[#0F172A] focus:outline-none transition-all cursor-pointer ${
-                      touched.businessType && !isBusinessTypeValid
-                        ? 'border-rose-300 bg-rose-50/30 focus:border-rose-500'
+                    onBlur={() => handleBlur('yearEstablished')}
+                    className={`w-full px-4 py-3 pr-10 rounded-2xl bg-slate-50/80 border text-sm font-medium text-[#0F172A] focus:outline-none transition-all cursor-pointer ${
+                      touched.yearEstablished && !isYearValid
+                        ? 'border-rose-300 bg-rose-50/30'
                         : 'border-slate-200 focus:border-[#583BE8] focus:bg-white'
                     }`}
                   >
-                    <option value="" disabled>
-                      Select business type
-                    </option>
-                    {BUSINESS_TYPES.map((bt) => (
-                      <option key={bt} value={bt}>
-                        {bt}
+                    <option value="">Select year</option>
+                    {YEARS_LIST.map((y) => (
+                      <option key={y} value={y.toString()}>
+                        {y}
                       </option>
                     ))}
                   </select>
-                  {touched.businessType && !isBusinessTypeValid && (
-                    <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3" /> Business type is required
-                    </p>
-                  )}
+                  <Calendar className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
-
-                {/* Year Established */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    Year Established
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="yearEstablished"
-                      value={formData.yearEstablished}
-                      onChange={handleChange}
-                      onBlur={() => handleBlur('yearEstablished')}
-                      className={`w-full px-4 py-3 pr-10 rounded-2xl bg-slate-50/80 border text-sm font-medium text-[#0F172A] focus:outline-none transition-all cursor-pointer ${
-                        touched.yearEstablished && !isYearValid
-                          ? 'border-rose-300 bg-rose-50/30'
-                          : 'border-slate-200 focus:border-[#583BE8] focus:bg-white'
-                      }`}
-                    >
-                      <option value="">Select year</option>
-                      {YEARS_LIST.map((y) => (
-                        <option key={y} value={y.toString()}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                    <Calendar className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                  {touched.yearEstablished && !isYearValid && (
-                    <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3" /> {getYearError(formData.yearEstablished)}
-                    </p>
-                  )}
-                </div>
+                {touched.yearEstablished && !isYearValid && (
+                  <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3 h-3" /> {getYearError(formData.yearEstablished)}
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -583,7 +583,7 @@ export const AgencyBusinessOnboardingPage: React.FC = () => {
           {/* Back Button */}
           <button
             type="button"
-            onClick={() => navigate('/agency/onboarding')}
+            onClick={() => navigate('/agency/partner/select-business')}
             className="w-1/2 py-3.5 px-6 rounded-2xl bg-white border border-[#583BE8]/30 hover:border-[#583BE8] active:scale-[0.99] text-[#583BE8] font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />

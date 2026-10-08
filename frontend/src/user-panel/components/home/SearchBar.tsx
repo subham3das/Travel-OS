@@ -47,16 +47,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           stiffness: 280,
           damping: 28,
         }}
-        className="relative flex-1 flex items-center bg-white rounded-2xl sm:rounded-full border border-slate-100 shadow-sm hover:border-slate-200 focus-within:border-[#6356E5] focus-within:ring-2 focus-within:ring-[#6356E5]/15 transition-all px-4 py-3 sm:py-3.5"
+        className="relative flex-1 flex items-center bg-white dark:bg-slate-800 rounded-2xl sm:rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs dark:shadow-none hover:border-slate-300 dark:hover:border-white/20 focus-within:border-[#2563EB] focus-within:ring-2 focus-within:ring-[#2563EB]/20 transition-all px-4 py-3 sm:py-3.5"
       >
-        <Search className="w-5 h-5 text-slate-400 shrink-0 mr-3" />
+        <Search className="w-5 h-5 text-slate-400 dark:text-slate-400 shrink-0 mr-3" />
         <input
           type="text"
           readOnly
           value={query}
           onChange={handleChange}
           placeholder={placeholder}
-          className="w-full bg-transparent text-sm sm:text-base font-medium text-[#0F172A] placeholder-slate-400 focus:outline-none cursor-pointer"
+          className="w-full bg-transparent text-sm sm:text-base font-medium text-[#0F172A] dark:text-white placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none cursor-pointer"
         />
         <button
           type="button"
@@ -65,7 +65,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             if (onFilterClick) onFilterClick();
             else navigate('/search');
           }}
-          className="p-1.5 rounded-xl text-[#6356E5] hover:bg-[#6356E5]/10 transition-colors shrink-0 ml-2 focus:outline-none cursor-pointer"
+          className="p-1.5 rounded-xl text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#2563EB]/10 dark:hover:bg-[#2563EB]/20 transition-colors shrink-0 ml-2 focus:outline-none cursor-pointer"
           aria-label="Voice Search"
         >
           <Mic className="w-5 h-5" />

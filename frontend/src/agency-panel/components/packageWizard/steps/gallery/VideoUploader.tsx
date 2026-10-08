@@ -9,20 +9,37 @@ export const VideoUploader: React.FC = () => {
 
   const videos = draft?.step5?.videos || [];
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (videos.length >= 2) {
+      alert('Maximum 2 videos allowed.');
+      return;
+    }
+
+    const videoObj: VideoFile = {
+      id: `vid-${Date.now()}`,
+      url: URL.createObjectURL(file),
+      name: file.name,
+      duration: '00:00',
+      sizeMB: Number((file.size / (1024 * 1024)).toFixed(1)),
+      thumbnail: '',
+    };
+    addVideo(videoObj);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleAddVideo = () => {
     if (videos.length >= 2) {
       alert('Maximum 2 videos allowed.');
       return;
     }
-    const mockVideo: VideoFile = {
-      id: `vid-${Date.now()}`,
-      url: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      name: `Tour_Highlight_${videos.length + 1}.mp4`,
-      duration: '02:10',
-      sizeMB: 38.2,
-      thumbnail: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=300&q=80',
-    };
-    addVideo(mockVideo);
+    fileInputRef.current?.click();
   };
 
   return (
@@ -55,6 +72,14 @@ export const VideoUploader: React.FC = () => {
           </button>
         )}
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="video/mp4,video/quicktime,video/webm"
+        onChange={handleFileChange}
+        className="hidden"
+      />
     </div>
   );
 };

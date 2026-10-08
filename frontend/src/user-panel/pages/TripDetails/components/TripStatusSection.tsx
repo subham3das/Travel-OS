@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -13,7 +13,8 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
-import { getTripStatusByTripId } from '../../../data/tripStatus';
+import { TripStatusData } from '../../../data/tripStatus';
+import { apiClient } from '../../../../services/apiClient';
 
 interface TripStatusSectionProps {
   tripId: string;
@@ -22,7 +23,27 @@ interface TripStatusSectionProps {
 
 export const TripStatusSection: React.FC<TripStatusSectionProps> = ({ tripId, agencyId }) => {
   const navigate = useNavigate();
-  const statusData = getTripStatusByTripId(tripId);
+  const [statusData, setStatusData] = useState<TripStatusData | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiClient
+      .get<TripStatusData>(`/trips/${tripId}/status`)
+      .then((res) => {
+        if (isMounted) setStatusData(res.data || null);
+      })
+      .catch(() => {
+        if (isMounted) setStatusData(null);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [tripId]);
+
+  if (!statusData) {
+    return null;
+  }
 
   const renderUpdateIcon = (type: string) => {
     switch (type) {
@@ -57,34 +78,34 @@ export const TripStatusSection: React.FC<TripStatusSectionProps> = ({ tripId, ag
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-5"
+      className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100/90 dark:border-white/10 shadow-xs dark:shadow-none space-y-5"
     >
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base sm:text-lg font-black text-[#0F172A] tracking-tight">
+          <h2 className="text-base sm:text-lg font-black text-[#0F172A] dark:text-white tracking-tight">
             Trip Status & Live Updates
           </h2>
-          <p className="text-xs font-semibold text-slate-500">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Stay updated with your upcoming journey.
           </p>
         </div>
 
         {/* Live Pulse Status Badge */}
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-[#6356E5] text-xs font-black shrink-0">
-          <span className="w-2 h-2 rounded-full bg-[#6356E5] animate-ping" />
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 text-[#2563EB] dark:text-[#60A5FA] text-xs font-black shrink-0">
+          <span className="w-2 h-2 rounded-full bg-[#2563EB] animate-ping" />
           <span>{statusData.statusBadge}</span>
         </div>
       </div>
 
       {/* Current Step Overview Banner */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-[#F4F0FF] via-[#F8F5FF] to-[#FAF8FF] border border-[#E2D8FF] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-[#F4F0FF] via-[#F8F5FF] to-[#FAF8FF] dark:from-slate-900 dark:via-blue-950/40 dark:to-slate-900 border border-[#E2D8FF] dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#6356E5] uppercase tracking-wider">Current Stage:</span>
-            <span className="text-xs font-black text-[#0F172A]">{statusData.nextStep}</span>
+            <span className="text-xs font-bold text-[#2563EB] dark:text-[#60A5FA] uppercase tracking-wider">Current Stage:</span>
+            <span className="text-xs font-black text-[#0F172A] dark:text-white">{statusData.nextStep}</span>
           </div>
-          <p className="text-xs font-semibold text-slate-500">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             {statusData.countdownText} • Last updated {statusData.lastUpdated}
           </p>
         </div>
@@ -92,7 +113,7 @@ export const TripStatusSection: React.FC<TripStatusSectionProps> = ({ tripId, ag
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => navigate(`/trips/${tripId}/documents`)}
-            className="px-3.5 py-1.5 rounded-xl bg-[#6356E5] text-white text-xs font-black shadow-xs hover:bg-[#5245d6] transition-all cursor-pointer"
+            className="px-3.5 py-1.5 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-xs hover:bg-[#1D4ED8] transition-all cursor-pointer"
           >
             Open Documents
           </button>
@@ -101,17 +122,17 @@ export const TripStatusSection: React.FC<TripStatusSectionProps> = ({ tripId, ag
 
       {/* Progress Stepper */}
       <div className="space-y-2">
-        <h3 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider">
+        <h3 className="text-xs font-extrabold text-[#0F172A] dark:text-white uppercase tracking-wider">
           Journey Progress
         </h3>
 
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           {statusData.steps.map((step) => {
-            let style = 'bg-slate-50 border-slate-200 text-slate-400';
+            let style = 'bg-slate-50 dark:bg-slate-700/40 border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-400';
             if (step.status === 'completed') {
               style = 'bg-emerald-500 border-emerald-500 text-white shadow-xs';
             } else if (step.status === 'current') {
-              style = 'bg-[#6356E5] border-[#6356E5] text-white ring-2 ring-[#6356E5]/20 shadow-xs';
+              style = 'bg-[#2563EB] border-[#2563EB] text-white ring-2 ring-[#2563EB]/20 shadow-xs';
             }
 
             return (
@@ -132,10 +153,10 @@ export const TripStatusSection: React.FC<TripStatusSectionProps> = ({ tripId, ag
       </div>
 
       {/* Live Updates Feed */}
-      <div className="space-y-3 pt-1 border-t border-slate-100">
+      <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-white/10">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-black text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#6356E5]" />
+          <h3 className="text-xs font-black text-[#0F172A] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#2563EB] dark:text-[#60A5FA]" />
             <span>Live Agency Updates</span>
           </h3>
           <span className="text-[11px] font-bold text-slate-400">{statusData.updates.length} Updates</span>
@@ -146,7 +167,7 @@ export const TripStatusSection: React.FC<TripStatusSectionProps> = ({ tripId, ag
             <motion.div
               key={update.id}
               whileHover={{ x: 2 }}
-              className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-start gap-3 transition-all"
+              className="p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-700/40 border border-slate-100 dark:border-white/10 flex items-start gap-3 transition-all"
             >
               <div className={`w-9 h-9 rounded-xl ${getUpdateBg(update.type)} flex items-center justify-center shrink-0 mt-0.5`}>
                 {renderUpdateIcon(update.type)}
@@ -154,14 +175,14 @@ export const TripStatusSection: React.FC<TripStatusSectionProps> = ({ tripId, ag
 
               <div className="flex-1 min-w-0 space-y-0.5">
                 <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-xs sm:text-sm font-extrabold text-[#0F172A] truncate">
+                  <h4 className="text-xs sm:text-sm font-extrabold text-[#0F172A] dark:text-white truncate">
                     {update.title}
                   </h4>
                   <span className="text-[10px] font-bold text-slate-400 shrink-0">
                     {update.timestamp}
                   </span>
                 </div>
-                <p className="text-xs font-medium text-slate-500 leading-snug">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-300 leading-snug">
                   {update.description}
                 </p>
               </div>
@@ -172,13 +193,13 @@ export const TripStatusSection: React.FC<TripStatusSectionProps> = ({ tripId, ag
 
       {/* Upcoming Reminder Box */}
       {statusData.reminder && (
-        <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-100/90 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-100/90 dark:border-amber-900/40 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <h4 className="text-xs font-black text-amber-900">
+            <h4 className="text-xs font-black text-amber-900 dark:text-amber-200">
               {statusData.reminder.title}
             </h4>
-            <ul className="text-xs font-semibold text-amber-800 space-y-1 list-disc list-inside">
+            <ul className="text-xs font-semibold text-amber-800 dark:text-amber-300 space-y-1 list-disc list-inside">
               {statusData.reminder.details.map((detail, idx) => (
                 <li key={idx}>{detail}</li>
               ))}
@@ -188,10 +209,10 @@ export const TripStatusSection: React.FC<TripStatusSectionProps> = ({ tripId, ag
       )}
 
       {/* Bottom Action Triggers */}
-      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-3">
+      <div className="pt-2 border-t border-slate-100 dark:border-white/10 flex items-center justify-between gap-3">
         <button
           onClick={() => navigate(`/trips/${tripId}/documents`)}
-          className="flex-1 py-2.5 px-3 rounded-2xl bg-[#6356E5] hover:bg-[#5245d6] text-white text-xs font-black shadow-md shadow-[#6356E5]/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          className="flex-1 py-2.5 px-3 rounded-2xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-black shadow-md shadow-[#2563EB]/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
         >
           <FileText className="w-4 h-4" />
           <span>View Documents</span>

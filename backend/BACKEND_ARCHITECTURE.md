@@ -490,7 +490,8 @@ Cloudinary CDN URL & PublicID saved in media_assets collection
 ### 9.2 Folder Hierarchy
 * `travelos/banners/` — Hero carousel slides & campaign banners
 * `travelos/packages/` — Package cover & gallery photos
-* `travelos/kyc/` — GST, PAN, and trade licenses (Private access)
+* `travelos/kyc/agencies/` — Agency GST, PAN, and trade licenses (Private access)
+* `travelos/kyc/travelers/` — Traveler Aadhaar, Voter ID, Driving Licence, Passport (Private access)
 * `travelos/avatars/` — User & agency profile photos
 * `travelos/popups/` — Storefront promotional popup graphics
 
@@ -573,3 +574,31 @@ AUTH_RATE_LIMIT_MAX_REQUESTS=5
 3. **No Direct Model Access:** Controllers must **never** import Mongoose models directly. All data access must pass through Services $\to$ Repositories.
 4. **Transactions:** Any operation modifying multiple related records (e.g. Booking + Payment + Seat inventory deduction) **must** use a MongoDB Mongoose session transaction (`session.withTransaction()`).
 5. **Soft Deletes by Default:** Core transactional records (`users`, `agencies`, `packages`, `bookings`) must never be hard-deleted from the database.
+
+---
+
+## 13. Traveler KYC & One-Time Travel Profile Subsystem
+
+### 13.1 Service Responsibilities
+* `travelProfile.service.ts`: Handles customer-facing profile updates, auto-initialization of self-traveler records in `saved_travelers`, missing field computations, and document upload synchronization.
+* `adminKyc.service.ts`: Manages the compliance review workspace in `UserDetailsDrawer`, executes document-level and parent-level decisions (`approveKyc`, `rejectKyc`, `approveDocument`, `rejectDocument`, `requestDocumentReupload`), auto-derives parent statuses via `deriveParentStatus()`, and auto-upgrades verified travelers to the Silver Membership tier.
+
+### 13.2 Status Derivation Guarantee
+The parent KYC status (`kyc.status`) is computed deterministically:
+```typescript
+public deriveParentStatus(documents: IKycDocument[]): KycStatus {
+  if (!documents || documents.length === 0) return 'None';
+  if (documents.some((d) => d.status === 'Rejected')) return 'Rejected';
+  if (documents.some((d) => d.status === 'Pending')) return 'Pending';
+  if (documents.every((d) => d.status === 'Verified')) return 'Verified';
+  return 'Pending';
+}
+```
+Under no circumstances does the frontend infer or compute KYC status.
+
+### 13.3 Auto-Membership Tiering
+On approval of KYC:
+* If `user.membership === 'Free'`, the user is upgraded to `Silver`.
+* `membershipSince` is stamped to the current timestamp.
+* `membershipValidTill` is set to 1 year in the future.
+* Booking permissions are unlocked for 1-click reservations.

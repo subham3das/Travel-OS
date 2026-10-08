@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { 
   Users, MapPin, Calendar, CheckCircle2, XCircle, ShieldCheck, 
-  Tag, Receipt, FileText, Edit3, Lock 
+  Tag, Receipt, FileText, Edit3, Lock, AlertTriangle, Clock 
 } from 'lucide-react';
 import { 
   TravelerSectionData, BookingSummaryData, PromoCodeData, PaymentSummaryData 
 } from '../types/checkout';
+import { PackageDepartureInfo } from '../../../types/package';
 
 interface ReviewSectionProps {
   travelerData: TravelerSectionData;
@@ -15,6 +16,9 @@ interface ReviewSectionProps {
   isUnlocked: boolean;
   isInsuranceSelected: boolean;
   termsAccepted: boolean;
+  availableDepartures?: PackageDepartureInfo[];
+  isDepartureUnavailable?: boolean;
+  onSelectDeparture?: (dep: PackageDepartureInfo) => void;
   onEditTravelers: () => void;
   onToggleInsurance: () => void;
   onApplyPromoCode: (code: string) => void;
@@ -29,6 +33,9 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   isUnlocked,
   isInsuranceSelected,
   termsAccepted,
+  availableDepartures = [],
+  isDepartureUnavailable = false,
+  onSelectDeparture,
   onEditTravelers,
   onToggleInsurance,
   onApplyPromoCode,
@@ -81,6 +88,90 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
             <span>Edit Travelers</span>
           </button>
         </div>
+
+        {/* Selected Departure Card & Unavailable Warning */}
+        {isDepartureUnavailable ? (
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs sm:text-sm font-black text-amber-950">
+                  This departure is no longer available.
+                </h4>
+                <p className="text-xs text-amber-800 font-medium mt-0.5">
+                  The selected departure date ({bookingSummary.departureDate || 'Selected date'}) is fully booked or closed. Please select an alternate departure date below to continue to payment.
+                </p>
+              </div>
+            </div>
+
+            {availableDepartures.length > 0 && onSelectDeparture && (
+              <div className="space-y-2 pt-2 border-t border-amber-200/60">
+                <p className="text-[11px] font-black uppercase tracking-wider text-amber-900">
+                  Choose an Alternate Departure Date:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {availableDepartures.map((d) => {
+                    const isAvail = (d.status === 'OPEN' || !d.status) && (d.availableSeats === undefined || d.availableSeats > 0);
+                    return (
+                      <button
+                        key={d.departureId || (d as any).id}
+                        type="button"
+                        disabled={!isAvail}
+                        onClick={() => onSelectDeparture(d)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                          bookingSummary.departureId === d.departureId
+                            ? 'bg-[#583BE8] text-white shadow-xs'
+                            : isAvail
+                            ? 'bg-white hover:bg-slate-100 text-[#0F172A] border border-amber-300'
+                            : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                        }`}
+                      >
+                        <Calendar className="w-3 h-3 shrink-0" />
+                        <span>{new Date(d.departureDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        {isAvail ? (
+                          <span className="text-[10px] opacity-80">({d.availableSeats} seats left)</span>
+                        ) : (
+                          <span className="text-[10px] text-red-500">(Full)</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-purple-50/50 border border-purple-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#583BE8]/10 text-[#583BE8] flex items-center justify-center shrink-0">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-slate-400 text-[10px] block font-bold uppercase tracking-wider">Scheduled Departure Date</span>
+                <span className="font-black text-sm text-[#0F172A]">
+                  {bookingSummary.departureDate
+                    ? new Date(bookingSummary.departureDate).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : 'Flexible Date'}
+                </span>
+                {bookingSummary.returnDate && (
+                  <span className="text-slate-500 text-[11px] block font-medium">
+                    Return: {new Date(bookingSummary.returnDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                Departure Confirmed ✓
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Pickup & Drop Points */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold">

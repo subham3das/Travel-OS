@@ -1,18 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Star, ThumbsUp, ThumbsDown, Smile, Sparkles, CheckCircle2, ImagePlus, ArrowRight } from 'lucide-react';
-import { getTripById } from '../../data/trips';
-import { addReputationPoints, getUserReputation } from '../../data/reputation';
 import { useToast } from '../../context/ToastContext';
 import { reviewService } from '../../services/review.service';
-import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
+import { tripService } from '../../services/trip.service';
+import { UniversalImageUploader } from '../../../components/common/UniversalImageUploader';
 
 export const TripReviewPage: React.FC = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const trip = getTripById(tripId || 'trip-001');
+  
+  const [trip, setTrip] = useState<any>(null);
+  const [loading, setLoading] = useState(Boolean(tripId));
+
+  useEffect(() => {
+    if (tripId) {
+      tripService.getTripById(tripId).then((res) => {
+        if (res) setTrip(res);
+      }).catch((err) => {
+        console.warn('Could not load trip for review:', err);
+      }).finally(() => {
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
+  }, [tripId]);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [overallRating, setOverallRating] = useState(5);
@@ -20,6 +35,7 @@ export const TripReviewPage: React.FC = () => {
   const [hotelRating, setHotelRating] = useState(5);
   const [guideRating, setGuideRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -35,25 +51,47 @@ export const TripReviewPage: React.FC = () => {
         packageId: trip?.packageId,
         agencyId: trip?.agencyId,
         rating: overallRating,
-        reviewText: comment || 'Amazing journey and unforgettable memories!',
+        reviewText: comment || '',
+        images: photos,
       });
-    } catch {
-      // Continue seamlessly
+      triggerToast('🎉 Review submitted successfully!');
+      setStep(2);
+    } catch (err: any) {
+      triggerToast(err?.message || 'Failed to submit review. Server is offline.');
     }
-    addReputationPoints(20, 'review');
-    triggerToast('🎉 +20 Reputation Earned for Review!');
-    setStep(2);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center space-y-3">
+        <div className="w-9 h-9 border-3 border-[#6356E5]/20 border-t-[#6356E5] rounded-full animate-spin" />
+        <p className="text-xs font-black text-slate-500">Loading trip details...</p>
+      </div>
+    );
+  }
+
+  if (!trip) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center p-6 text-center space-y-4">
+        <div className="w-16 h-16 rounded-3xl bg-rose-50 text-rose-500 flex items-center justify-center font-black text-2xl">✕</div>
+        <h2 className="text-xl font-black text-[#0F172A]">Trip Not Found</h2>
+        <p className="text-xs font-semibold text-slate-500 max-w-sm">
+          We could not load the trip for review. Please make sure the booking is completed.
+        </p>
+        <button onClick={() => navigate('/my-trips')} className="px-5 py-2.5 rounded-xl bg-[#6356E5] text-white text-xs font-bold cursor-pointer">
+          My Trips
+        </button>
+      </div>
+    );
+  }
+
   const handleRecommendation = (recommendType: 'definitely' | 'maybe' | 'no') => {
-    addReputationPoints(10, 'recommend');
-    triggerToast('⭐ +10 Reputation Earned for Recommendation!');
+    triggerToast('⭐ Thank you for your recommendation!');
     setStep(3);
   };
 
   const handleShareStory = () => {
-    addReputationPoints(15, 'story');
-    navigate('/community');
+    navigate('/my-trips');
   };
 
   return (
@@ -185,33 +223,29 @@ export const TripReviewPage: React.FC = () => {
               />
             </div>
 
-            {/* Photo Upload Trigger */}
-            <input
-              type="file"
-              id="review-photo-picker"
-              className="hidden"
-              accept="image/jpeg,image/png,image/webp,image/jpg"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  try {
-                    showToast('Uploading photo to Cloudinary...', 'info');
-                    const uploadRes = await cloudinaryUploadService.uploadImage(file, 'travelos/reviews');
-                    showToast(`Photo uploaded to Cloudinary! (+5 Reputation)`, 'success');
-                  } catch (err: any) {
-                    showToast(err.message || 'Failed to upload review photo', 'error');
+            {/* Universal Photo Uploader */}
+            <div className="space-y-1.5 pt-1">
+              <label className="text-xs font-extrabold text-[#0F172A] flex items-center justify-between">
+                <span>Trip Photos (+5 Reputation)</span>
+                <span className="text-[10px] font-semibold text-slate-400">Max 5 photos</span>
+              </label>
+              <UniversalImageUploader
+                multiple={true}
+                maxFiles={5}
+                value={photos}
+                onChange={(val) => {
+                  if (Array.isArray(val)) {
+                    setPhotos(val.map((item) => (typeof item === 'string' ? item : item.url)));
+                  } else if (val) {
+                    setPhotos([typeof val === 'string' ? val : val.url]);
+                  } else {
+                    setPhotos([]);
                   }
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => document.getElementById('review-photo-picker')?.click()}
-              className="w-full p-3 rounded-2xl border border-dashed border-purple-200 bg-purple-50/50 text-[#6356E5] text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <ImagePlus className="w-4 h-4" />
-              <span>Add Trip Photos (+5 Reputation)</span>
-            </button>
+                }}
+                folder="travelos/reviews"
+                placeholder="Drag & drop trip photos here"
+              />
+            </div>
 
             <button
               type="submit"
@@ -289,32 +323,32 @@ export const TripReviewPage: React.FC = () => {
 
             <div className="space-y-1">
               <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black">
-                Earn +15 Reputation
+                Review Complete
               </span>
               <h2 className="text-xl font-black text-[#0F172A] pt-2">
-                Share your travel story!
+                Thank you for your feedback!
               </h2>
               <p className="text-xs font-semibold text-slate-500">
-                Inspire thousands of travelers on ApnaTrip Community with your photos & memories.
+                Your review helps other travelers make better trip choices on ApnaTrip.
               </p>
             </div>
 
             <div className="space-y-3">
               <button
                 type="button"
-                onClick={handleShareStory}
-                className="w-full py-4 rounded-2xl bg-[#6356E5] hover:bg-[#5245d6] text-white text-sm font-black shadow-lg shadow-[#6356E5]/25 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                onClick={() => navigate('/my-trips')}
+                className="w-full py-4 rounded-2xl bg-[#FF4D6D] hover:bg-[#e03d5c] text-white text-sm font-black shadow-lg shadow-[#FF4D6D]/25 flex items-center justify-center gap-2 cursor-pointer transition-all"
               >
-                <span>Share Story (+15 Reputation)</span>
+                <span>Back to My Trips</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <button
                 type="button"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate('/home')}
                 className="w-full py-3 rounded-2xl text-slate-500 hover:text-slate-900 text-xs font-extrabold cursor-pointer transition-colors"
               >
-                Skip & View Reputation Profile
+                Return to Home
               </button>
             </div>
           </motion.div>

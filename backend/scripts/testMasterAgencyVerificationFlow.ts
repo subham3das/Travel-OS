@@ -119,13 +119,20 @@ async function runMasterVerificationTest() {
             uploadedAt: new Date().toISOString(),
           },
         ],
-        verificationStatus: 'PENDING',
+        verificationStatus: 'UNDER_REVIEW',
+        onboardingStatus: 'UNDER_REVIEW',
+        paymentStatus: 'PAID',
         status: 'PENDING',
         complianceScore: 94,
       });
       console.log(`   ✅ Created Test Agency: "${testAgency.name}" (${testAgency.applicationId})`);
     } else {
-      console.log(`   ✅ Found Existing Test Agency: "${testAgency.name}" (${testAgency.applicationId})`);
+      testAgency.onboardingStatus = 'UNDER_REVIEW';
+      testAgency.paymentStatus = 'PAID';
+      testAgency.verificationStatus = 'UNDER_REVIEW';
+      testAgency.status = 'PENDING';
+      await testAgency.save();
+      console.log(`   ✅ Found & Updated Test Agency: "${testAgency.name}" (${testAgency.applicationId})`);
     }
 
     const testAgencyId = testAgency._id.toString();

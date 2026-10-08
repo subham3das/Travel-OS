@@ -56,6 +56,10 @@ export const AgencyRequestDrawer: React.FC<AgencyRequestDrawerProps> = ({
   // Approve Bank Details State
   const [isApprovingBank, setIsApprovingBank] = useState(false);
 
+  // Independent Car Rental Approval State
+  const [isApprovingCarRental, setIsApprovingCarRental] = useState(false);
+  const [isRejectingCarRental, setIsRejectingCarRental] = useState(false);
+
   useEffect(() => {
     if (request) {
       setCurrentRequest(request);
@@ -126,6 +130,46 @@ export const AgencyRequestDrawer: React.FC<AgencyRequestDrawerProps> = ({
       showToast(err.message || 'Failed to approve bank details', 'error');
     } finally {
       setIsApprovingBank(false);
+    }
+  };
+
+  const handleApproveCarRental = async () => {
+    if (!activeData || isApprovingCarRental) return;
+    setIsApprovingCarRental(true);
+    try {
+      const res = await adminAgencyRequestService.approveCarRentalRequest(activeData.id);
+      if (res.success && res.agency) {
+        setCurrentRequest(res.agency);
+        if (onUpdateRequest) onUpdateRequest(res.agency);
+        showToast('Car Rental business approved successfully! 🚗', 'success');
+      } else {
+        showToast(res.message || 'Failed to approve Car Rental', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to approve Car Rental', 'error');
+    } finally {
+      setIsApprovingCarRental(false);
+    }
+  };
+
+  const handleRejectCarRental = async () => {
+    if (!activeData || isRejectingCarRental) return;
+    const reason = window.prompt('Enter rejection reason for Car Rental business:');
+    if (!reason || !reason.trim()) return;
+    setIsRejectingCarRental(true);
+    try {
+      const res = await adminAgencyRequestService.rejectCarRentalRequest(activeData.id, reason.trim());
+      if (res.success && res.agency) {
+        setCurrentRequest(res.agency);
+        if (onUpdateRequest) onUpdateRequest(res.agency);
+        showToast('Car Rental business rejected', 'info');
+      } else {
+        showToast(res.message || 'Failed to reject Car Rental', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to reject Car Rental', 'error');
+    } finally {
+      setIsRejectingCarRental(false);
     }
   };
 
@@ -399,6 +443,96 @@ export const AgencyRequestDrawer: React.FC<AgencyRequestDrawerProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* ── CAR RENTAL BUSINESS CAPABILITY & INDEPENDENT APPROVAL CARD ── */}
+                  {(activeData.businessTypes?.includes('car_rental') || activeData.carRentalVerificationStatus !== 'NOT_REGISTERED') && (
+                    <div className="bg-white rounded-2xl p-4 border border-slate-100/90 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-indigo-50 text-[#583BE8] flex items-center justify-center font-bold text-xs">
+                            🚗
+                          </div>
+                          <h4 className="text-[11px] font-black text-[#0F172A] uppercase tracking-wider">
+                            Car Rental Business Vertical
+                          </h4>
+                        </div>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                            activeData.carRentalVerificationStatus === 'APPROVED'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : activeData.carRentalVerificationStatus === 'REJECTED'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}
+                        >
+                          {activeData.carRentalVerificationStatus === 'APPROVED'
+                            ? 'Approved'
+                            : activeData.carRentalVerificationStatus === 'REJECTED'
+                            ? 'Rejected'
+                            : 'Under Review'}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 space-y-2">
+                        <div className="grid grid-cols-2 gap-2.5 text-xs font-semibold">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-bold">Rental Business</span>
+                            <span className="text-[#0F172A] font-extrabold text-[11px] leading-tight block truncate">
+                              {activeData.carRentalProfile?.businessName || activeData.agencyName}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-bold">Fleet Size</span>
+                            <span className="text-[#0F172A] font-bold text-[11px] leading-tight block">
+                              {activeData.carRentalProfile?.fleetSize || 1} Vehicle(s)
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-bold">Operating Cities</span>
+                            <span className="text-[#0F172A] font-bold text-[11px] leading-tight block truncate">
+                              {activeData.carRentalProfile?.operatingCities?.join(', ') || activeData.city || 'All India'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-bold">Emergency Contact</span>
+                            <span className="text-[#0F172A] font-bold text-[11px] leading-tight block">
+                              {activeData.carRentalProfile?.emergencyContact || activeData.ownerPhone || '—'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Independent Car Rental Approval Action Buttons */}
+                      <div className="pt-1 flex items-center gap-2">
+                        {activeData.carRentalVerificationStatus !== 'APPROVED' ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={handleApproveCarRental}
+                              disabled={isApprovingCarRental}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>{isApprovingCarRental ? 'Approving...' : 'Approve Car Rental'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRejectCarRental}
+                              disabled={isRejectingCarRental}
+                              className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        ) : (
+                          <div className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-extrabold">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Car Rental Capability Approved & Active</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Checklist & Documents Summary Grid (2 Columns) */}
                   <div className="grid grid-cols-2 gap-3">

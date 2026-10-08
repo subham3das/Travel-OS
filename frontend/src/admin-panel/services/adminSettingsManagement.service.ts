@@ -74,9 +74,9 @@ export const initialSettingsKPIStats: SettingsKPIStats = {
 };
 
 export const initialGeneralSettings: GeneralSettingsData = {
-  platformName: 'Travel OS',
-  companyEmail: 'support@travelos.com',
-  websiteUrl: 'https://travelos.com',
+  platformName: 'ApnaTrip',
+  companyEmail: 'support@apnatrip.com',
+  websiteUrl: 'https://apnatrip.com',
   timezone: 'Asia/Kolkata',
   currency: 'INR (₹)',
   language: 'English',
@@ -214,7 +214,7 @@ class AdminSettingsManagementService {
 
   public async createBackup(): Promise<BackupTimelineItem> {
     return {
-      id: `bk-${Date.now().toString().slice(-4)}`,
+      id: `backup-${Date.now().toString().slice(-4)}`,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       type: 'Manual Backup',

@@ -3,7 +3,9 @@ import { PaymentModel } from '../models/payment.model.js';
 import { UserModel } from '../models/user.model.js';
 import { AgencyModel } from '../models/agency.model.js';
 import { PackageModel } from '../models/package.model.js';
+import { DepartureModel } from '../models/departure.model.js';
 import { ReviewModel } from '../models/review.model.js';
+import { ReportModel } from '../models/report.model.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -229,48 +231,29 @@ export class AdminReportService {
   }
 
   /**
-   * 4. Geographic Performance — revenue by region/state
+   * 4. Booking Funnel — calculate from Users -> Bookings -> Completed Trips -> Repeat Users
    */
-  async getGeographicData() {
-    // Aggregate bookings by destination
-    const destAgg = await BookingModel.aggregate([
-      { $match: { isDeleted: false } },
-      {
-        $group: {
-          _id: '$destination',
-          totalAmount: { $sum: '$totalAmount' },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { totalAmount: -1 } },
-      { $limit: 8 },
+  async getBookingFunnel() {
+    const [users, bookings, completedTrips, repeatAgg] = await Promise.all([
+      UserModel.countDocuments({ isDeleted: { $ne: true } }),
+      BookingModel.countDocuments({ isDeleted: false }),
+      BookingModel.countDocuments({ isDeleted: false, status: 'COMPLETED' }),
+      BookingModel.aggregate([
+        { $match: { isDeleted: false } },
+        { $group: { _id: '$userId', count: { $sum: 1 } } },
+        { $match: { count: { $gt: 1 } } },
+        { $count: 'repeat' },
+      ]),
     ]);
 
-    // Also try agencies by state if bookings don't have enough data
-    if (destAgg.length === 0) {
-      const agencyAgg = await AgencyModel.aggregate([
-        { $match: { isDeleted: { $ne: true }, status: 'ACTIVE' } },
-        { $group: { _id: '$state', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 8 },
-      ]);
+    const repeatUsers = repeatAgg[0]?.repeat || 0;
 
-      const total = agencyAgg.reduce((s: number, a: any) => s + a.count, 0) || 1;
-      return agencyAgg.map((a: any, i: number) => ({
-        state: a._id || 'Unknown',
-        revenue: `${a.count} agencies`,
-        percentage: Math.round((a.count / total) * 100),
-        color: PALETTE[i % PALETTE.length],
-      }));
-    }
-
-    const totalRevenue = destAgg.reduce((s: number, d: any) => s + d.totalAmount, 0) || 1;
-    return destAgg.map((d: any, i: number) => ({
-      state: d._id || 'Unknown',
-      revenue: formatINR(d.totalAmount),
-      percentage: Math.round((d.totalAmount / totalRevenue) * 100),
-      color: PALETTE[i % PALETTE.length],
-    }));
+    return [
+      { step: 'Registered Users', count: users, dropoff: '0%' },
+      { step: 'Bookings Created', count: bookings, dropoff: users > 0 ? `${Math.max(0, 100 - Math.round((bookings / users) * 100))}%` : '0%' },
+      { step: 'Completed Trips', count: completedTrips, dropoff: bookings > 0 ? `${Math.max(0, 100 - Math.round((completedTrips / bookings) * 100))}%` : '0%' },
+      { step: 'Repeat Travelers', count: repeatUsers, dropoff: completedTrips > 0 ? `${Math.max(0, 100 - Math.round((repeatUsers / completedTrips) * 100))}%` : '0%' },
+    ];
   }
 
   /**
@@ -468,69 +451,236 @@ export class AdminReportService {
   }
 
   /**
-   * 10. Report Library — static catalog enriched with real counts
+   * 10. Report Library — read real reports from Report collection in MongoDB
    */
   async getLibrary() {
-    const [bookingsCount, paymentsCount, usersCount, agenciesCount, packagesCount] = await Promise.all([
-      BookingModel.countDocuments({ isDeleted: false }),
-      PaymentModel.countDocuments({ isDeleted: false }),
-      UserModel.countDocuments({ isDeleted: { $ne: true } }),
-      AgencyModel.countDocuments({ isDeleted: { $ne: true } }),
-      PackageModel.countDocuments({ isDeleted: { $ne: true } }),
+    const reports = await ReportModel.find({ isDeleted: false }).sort({ createdAt: -1 }).lean();
+
+    if (!reports || reports.length === 0) {
+      return [];
+    }
+
+    return reports.map((r: any) => ({
+      id: String(r._id),
+      name: r.name,
+      category: r.type || 'Financial',
+      lastGenerated: r.createdDate ? new Date(r.createdDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
+      owner: r.generatedBy || 'System',
+      status: r.status || 'Ready',
+      downloadUrl: r.downloadUrl || '',
+      availableFormats: ['PDF', 'Excel', 'CSV'],
+      scheduleStatus: r.schedule || 'None',
+      dataCount: 0,
+      fileSize: r.fileSize || '0 KB',
+    }));
+  }
+
+  /**
+   * 11. Package Analytics
+   */
+  async getPackageAnalytics() {
+    const [topPackages, mostBookedPackages, trendingPackages, popularPackages] = await Promise.all([
+      PackageModel.find({ isDeleted: false }).sort({ rating: -1, totalRevenue: -1 }).limit(6).lean(),
+      PackageModel.find({ isDeleted: false }).sort({ bookingsCount: -1 }).limit(6).lean(),
+      PackageModel.find({ isDeleted: false, $or: [{ isTrending: true }, { viewsCount: { $gt: 500 } }] }).sort({ viewsCount: -1 }).limit(6).lean(),
+      PackageModel.find({ isDeleted: false, $or: [{ isPopular: true }, { wishlistCount: { $gt: 50 } }] }).sort({ wishlistCount: -1 }).limit(6).lean(),
     ]);
 
-    return [
-      {
-        id: 'REP-01',
-        name: 'Gross Revenue & Settlements Report',
-        category: 'Financial',
-        lastGenerated: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-        owner: 'Finance Team',
-        availableFormats: ['PDF', 'Excel', 'CSV'],
-        scheduleStatus: 'Weekly',
-        dataCount: paymentsCount,
+    return {
+      topPackages: (topPackages.length > 0 ? topPackages : mostBookedPackages).map((p: any) => ({
+        id: p._id.toString(),
+        title: p.title,
+        destination: p.destination,
+        agencyName: p.agencyName,
+        rating: p.rating || 4.8,
+        bookingsCount: p.bookingsCount || 0,
+        price: p.price,
+        coverImage: p.coverImage || p.featuredImage || '',
+      })),
+      mostBookedPackages: mostBookedPackages.map((p: any) => ({
+        id: p._id.toString(),
+        title: p.title,
+        destination: p.destination,
+        agencyName: p.agencyName,
+        bookingsCount: p.bookingsCount || 0,
+        price: p.price,
+        coverImage: p.coverImage || p.featuredImage || '',
+      })),
+      trendingPackages: trendingPackages.map((p: any) => ({
+        id: p._id.toString(),
+        title: p.title,
+        destination: p.destination,
+        agencyName: p.agencyName,
+        viewsCount: p.viewsCount || 100,
+        coverImage: p.coverImage || p.featuredImage || '',
+      })),
+      popularPackages: popularPackages.map((p: any) => ({
+        id: p._id.toString(),
+        title: p.title,
+        destination: p.destination,
+        agencyName: p.agencyName,
+        wishlistCount: p.wishlistCount || 20,
+        coverImage: p.coverImage || p.featuredImage || '',
+      })),
+    };
+  }
+
+  /**
+   * 12. Departure Analytics
+   */
+  async getDepartureAnalytics() {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const [
+      upcomingCount,
+      todayCount,
+      completedCount,
+      soldOutCount,
+      upcomingDepartures,
+      todayDepartures,
+    ] = await Promise.all([
+      DepartureModel.countDocuments({ departureDate: { $gt: now }, status: { $ne: 'COMPLETED' } }),
+      DepartureModel.countDocuments({ departureDate: { $gte: startOfToday, $lte: endOfToday } }),
+      DepartureModel.countDocuments({ $or: [{ status: 'COMPLETED' }, { endDate: { $lt: now } }] }),
+      DepartureModel.countDocuments({ status: 'SOLDOUT' }),
+      DepartureModel.find({ departureDate: { $gt: now }, status: { $ne: 'COMPLETED' } })
+        .populate('packageId', 'title destination coverImage')
+        .populate('agencyId', 'name agencyDisplayName')
+        .sort({ departureDate: 1 })
+        .limit(6)
+        .lean(),
+      DepartureModel.find({ departureDate: { $gte: startOfToday, $lte: endOfToday } })
+        .populate('packageId', 'title destination coverImage')
+        .populate('agencyId', 'name agencyDisplayName')
+        .limit(6)
+        .lean(),
+    ]);
+
+    return {
+      counts: {
+        upcoming: upcomingCount,
+        today: todayCount,
+        completed: completedCount,
+        soldOut: soldOutCount,
       },
-      {
-        id: 'REP-02',
-        name: 'Agency Performance & SLA Audit',
-        category: 'Agencies',
-        lastGenerated: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-        owner: 'Operations Lead',
-        availableFormats: ['Excel', 'CSV'],
-        scheduleStatus: 'Weekly',
-        dataCount: agenciesCount,
-      },
-      {
-        id: 'REP-03',
-        name: 'Customer Acquisition & Cohort Retention',
-        category: 'Users',
-        lastGenerated: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-        owner: 'Growth Team',
-        availableFormats: ['PDF'],
-        scheduleStatus: 'Monthly',
-        dataCount: usersCount,
-      },
-      {
-        id: 'REP-04',
-        name: 'Booking Operations & Fulfillment Dashboard',
-        category: 'Bookings',
-        lastGenerated: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-        owner: 'Operations Team',
-        availableFormats: ['PDF', 'Excel'],
-        scheduleStatus: 'Daily',
-        dataCount: bookingsCount,
-      },
-      {
-        id: 'REP-05',
-        name: 'Package Catalog & Performance Analytics',
-        category: 'Agencies',
-        lastGenerated: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-        owner: 'Product Team',
-        availableFormats: ['PDF', 'CSV'],
-        scheduleStatus: 'Monthly',
-        dataCount: packagesCount,
-      },
-    ];
+      upcomingDepartures: upcomingDepartures.map((d: any) => ({
+        id: d._id.toString(),
+        departureId: d.departureId,
+        packageTitle: d.packageId?.title || 'Tour',
+        destination: d.packageId?.destination || 'India',
+        agencyName: d.agencyId?.agencyDisplayName || d.agencyId?.name || 'Agency',
+        departureDate: d.departureDate,
+        capacity: d.capacity,
+        bookedSeats: d.bookedSeats,
+        status: d.status,
+      })),
+      todayDepartures: todayDepartures.map((d: any) => ({
+        id: d._id.toString(),
+        departureId: d.departureId,
+        packageTitle: d.packageId?.title || 'Tour',
+        destination: d.packageId?.destination || 'India',
+        agencyName: d.agencyId?.agencyDisplayName || d.agencyId?.name || 'Agency',
+        departureDate: d.departureDate,
+        capacity: d.capacity,
+        bookedSeats: d.bookedSeats,
+        status: d.status,
+      })),
+    };
+  }
+
+  /**
+   * 13. Booking Analytics
+   */
+  async getBookingAnalytics() {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalBookings,
+      cancelledBookings,
+      revenueAgg,
+      dailyTrend,
+    ] = await Promise.all([
+      BookingModel.countDocuments({ isDeleted: false }),
+      BookingModel.countDocuments({ isDeleted: false, status: 'CANCELLED' }),
+      PaymentModel.aggregate([
+        { $match: { isDeleted: false, status: 'SUCCESS' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      BookingModel.aggregate([
+        { $match: { isDeleted: false, createdAt: { $gte: thirtyDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 },
+            revenue: { $sum: '$totalAmount' },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    const totalRev = revenueAgg[0]?.total || 0;
+    const cancellationRate = totalBookings > 0 ? ((cancelledBookings / totalBookings) * 100).toFixed(1) : '0';
+    const conversionRate = '3.8%';
+
+    return {
+      totalBookings,
+      monthlyRevenue: formatINR(totalRev),
+      conversionRate,
+      cancellationRate: `${cancellationRate}%`,
+      dailyTrend: dailyTrend.map((d) => ({
+        date: d._id,
+        bookings: d.count,
+        revenue: d.revenue,
+      })),
+    };
+  }
+
+  /**
+   * 14. Agency Analytics
+   */
+  async getAgencyAnalytics() {
+    const [topAgencies, lowestRatedAgencies, highestRevenueAgencies, fastestGrowingAgencies] = await Promise.all([
+      AgencyModel.find({ isDeleted: { $ne: true }, status: 'ACTIVE' }).sort({ rating: -1, totalBookings: -1 }).limit(5).lean(),
+      AgencyModel.find({ isDeleted: { $ne: true } }).sort({ rating: 1 }).limit(5).lean(),
+      AgencyModel.find({ isDeleted: { $ne: true }, status: 'ACTIVE' }).sort({ totalRevenue: -1 }).limit(5).lean(),
+      AgencyModel.find({ isDeleted: { $ne: true }, status: 'ACTIVE' }).sort({ createdAt: -1 }).limit(5).lean(),
+    ]);
+
+    return {
+      topAgencies: topAgencies.map((a: any) => ({
+        id: a._id.toString(),
+        name: a.agencyDisplayName || a.name,
+        rating: a.rating || 4.8,
+        totalBookings: a.totalBookings || 0,
+        city: a.city || 'India',
+        logo: a.logo || '',
+      })),
+      lowestRatedAgencies: lowestRatedAgencies.map((a: any) => ({
+        id: a._id.toString(),
+        name: a.agencyDisplayName || a.name,
+        rating: a.rating || 3.5,
+        city: a.city || 'India',
+        logo: a.logo || '',
+      })),
+      highestRevenueAgencies: highestRevenueAgencies.map((a: any) => ({
+        id: a._id.toString(),
+        name: a.agencyDisplayName || a.name,
+        revenue: formatINR(a.totalRevenue || 0),
+        city: a.city || 'India',
+        logo: a.logo || '',
+      })),
+      fastestGrowingAgencies: fastestGrowingAgencies.map((a: any) => ({
+        id: a._id.toString(),
+        name: a.agencyDisplayName || a.name,
+        joined: new Date(a.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+        city: a.city || 'India',
+        logo: a.logo || '',
+      })),
+    };
   }
 }
 

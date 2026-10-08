@@ -232,3 +232,196 @@ A task is considered complete ONLY when:
    - All chat attachments (PDF itineraries, vouchers, invoices, photos) must upload directly to Cloudinary and store permanent secure URLs and metadata. Never store local filesystem paths.
 7. **UI/UX Preservation**:
    - Maintain 100% of the approved UI layout, spacing, 3-column split view on desktop, full-screen mobile transitions, Framer Motion animations, typography, color tokens (`#583BE8`), and component hierarchy exactly.
+
+---
+
+## 12. Car Rental Marketplace & Vehicle Booking Protocol
+
+1. **Mandatory Inspection Route**:
+   - Clicking any vehicle card or "View & Book" button MUST navigate to `/car-rental/:id` (`VehicleDetailsPage.tsx`).
+   - Abruptly opening checkout modals directly from the public vehicle catalog is strictly prohibited.
+2. **Two-Step Checkout Validation**:
+   - Step 1 (Logistics): Pickup location, dropoff location, pickup date & time, return date & time, duration calculation.
+   - Step 2 (Driver & Settlement): Primary driver full name, contact information, driver's license number, and payment selection.
+3. **Driver's License Requirement**:
+   - A valid driver's license number is mandatory for all car bookings. Bookings cannot proceed without it.
+4. **Split-Payment & Token Advance Standard**:
+   - System must support both 100% full payment and 20% advance token deposit (`pay_on_pickup`).
+   - For token bookings, `paymentStatus` is recorded as `partial_advance` and `remainingAmount` is tracked in `CarBookingModel` for collection upon vehicle key release.
+5. **Layout Isolation & Viewport Anchoring**:
+   - The sticky pricing and checkout action bar on `VehicleDetailsPage` must anchor cleanly to `bottom-0 z-30` with `backdrop-blur-md`.
+   - Never render conflicting or overlapping bottom navigation bars on vehicle inspection screens.
+6. **Verified Vehicle Reviews**:
+   - All reviews must query from and persist to `car_reviews` (`CarReviewModel`) referencing valid `carId` and authenticated `userId`.
+
+---
+
+## 13. Multi-Business Provider Architecture & Database Evolution Protocol
+
+### 1. Unified Business Identity & Single Authentication
+1. **Single Authentication System Only**:
+   - Strictly prohibit creating a second login screen, a second JWT mechanism, secondary authentication routes, or duplicate provider accounts.
+   - One business account can own multiple business capabilities (`businessTypes: ('agency' | 'car_rental')[]`).
+2. **Zero-Reload Workspace Switching**:
+   - Providers operating multiple business verticals switch operational workspaces inside the agency portal via `BusinessSwitcher` and `ActiveBusinessContext`.
+   - Never force a full page reload or session re-authentication to switch vertical views.
+
+### 2. Operational Modularity & Shared Systems
+1. **Independent Vertical Tooling**:
+   - The Travel Agency vertical (packages, tour bookings, trip dispatch) and Car Rental vertical (fleet inventory, vehicle reservations, chauffeur rosters) operate independently.
+2. **Strict Prohibition of Shared System Duplication**:
+   - The following systems are platform singletons and must NEVER be re-implemented or duplicated for new business verticals:
+     - Authentication & JWT Token Verification
+     - Omnichannel Notification Center (Socket.IO + In-App + Email)
+     - Messaging & Customer Real-Time Chat (`conversations`, `messages`)
+     - Payment & Settlement Systems
+     - User Management & Customer Profiles
+     - Cloudinary Media Asset Pipeline
+     - System Activity & Administrative Audit Logs
+     - Roles & Permissions (RBAC)
+
+### 3. Existing Agency Preservation Rule
+1. **Zero Breaking Changes**:
+   - Existing agencies remain 100% unaffected.
+   - Default `businessTypes` to `['agency']` and `carRentalVerificationStatus` to `'NOT_REGISTERED'` to guarantee backwards compatibility.
+   - Never mutate or degrade existing travel agency routes, controllers, or database queries.
+
+### 4. Database Immutability & Expansion Rules
+1. **Permanent Collection Immutability**:
+   - The following core MongoDB collections must NEVER be renamed, deleted, or recreated:
+     - `users`
+     - `agencies`
+     - `packages`
+     - `bookings`
+     - `notifications`
+     - `messages`
+     - `payments`
+2. **Database Expansion Protocol**:
+   - When a new business capability requires persistence:
+     - Reuse existing collections whenever possible.
+     - Never duplicate existing data models or REST endpoints.
+     - Only create new collections when domain logic genuinely requires specialized schemas (`cars`, `car_bookings`, `car_reviews`).
+     - Always reference the parent `agencyId` foreign key with proper Mongoose indexes.
+
+### 5. Future Development Compliance
+1. Every future feature and commercial vertical must strictly integrate into this multi-business architecture.
+2. New business capabilities must extend existing infrastructure rather than introducing parallel systems.
+
+### 6. Partner Onboarding Separation Protocol (One Business at a Time + In-Dashboard Expansion)
+1. **Zero Cross-Contamination & No "Both" Option**:
+   - Prospective partners register for **one business vertical at a time**. The "Both" option is strictly prohibited on initial onboarding.
+   - Car Rental must NEVER appear as an option inside the Travel Agency onboarding wizard or any "Business Type" dropdown.
+2. **Dedicated Business Selection Gate**:
+   - Partner entry points (`/partner`, `/partner/select-business`, `/partner/select-type`) must offer exactly 2 choices:
+     - ① Travel Agency (`/agency/onboarding/business` or `/partner/agency/onboarding`)
+     - ② Car Rental Provider (`/partner/car-rental/onboarding`)
+3. **In-Dashboard Business Expansion**:
+   - Accounts expand into additional verticals from inside the dashboard:
+     - Travel Agency dashboard renders "Expand Your Business — Start a Car Rental Business".
+     - Car Rental dashboard renders "Expand Your Business — Start a Travel Agency".
+   - The unified account owns both verticals under a single identity, single email, and single JWT token.
+4. **Conditional Dashboard Switching**:
+   - The `BusinessSwitcher` capsule in the header appears **ONLY** after both businesses exist and both are verified.
+5. **Standalone Registration Standard**:
+   - Standalone car rental partners register via `POST /api/agencies/car-rental/onboard`.
+   - The system generates an application tracking ID (`ATP-CR-YYYY-XXXXXX`), securely hashes passwords, sets `businessTypes: ['car_rental']`, and initializes `carRentalVerificationStatus: 'PENDING'`.
+6. **Deterministic Post-Login Routing**:
+   - Pure car rental partners (`businessTypes === ['car_rental']`) must route immediately to the car rental domain: `/agency/car-rental/dashboard` when approved or `/agency/car-rental/pending` when awaiting verification.
+   - Never direct a pure car rental provider into travel agency dashboards or tour package wizards.
+
+### 7. Business Expansion UX & Settings Hub Standards
+1. **Soft, Non-Intrusive Onboarding Prompts**:
+   - Multi-business expansion prompts on dashboards must use gentle, optional phrasing ("Expand Your Business (Optional)").
+   - Prompts must provide two actions: `[Start Now]` to open onboarding/activation, and `[Maybe Later]` to dismiss.
+2. **Persistent Banner Dismissal**:
+   - When a user clicks `[Maybe Later]`, the preference MUST be stored in persistent client storage (`localStorage`) so the user is never repeatedly nagged across page reloads or subsequent sessions.
+3. **Permanent Settings Business Hub**:
+   - Providers must always have access to manage their active services and add new verticals (`+ Add Service`) from `AgencySettingsPage.tsx` via `BusinessServicesCard.tsx`, independent of dashboard banner visibility.
+4. **Future Verticals Preview**:
+   - The Business Services hub must display upcoming platform verticals (Hotels & Resorts, Homestays & Villas, Activities & Experiences, Taxi Network, Local Guides) with disabled "Coming Soon" indicators to convey the ecosystem roadmap.
+5. **Mobile-First Workspace Switcher (Bottom Sheet)**:
+   - For mobile viewports, the workspace switcher must render a native bottom sheet drawer rather than an overflowing desktop dropdown.
+   - It must include a centered drag handle, dim backdrop overlay, card-based workspace selection with checkmarks, and a cancel button. Switching must execute with zero page reloads.
+
+### 8. Admin Car Rental Approval Module Protocol
+1. **Queue Isolation**:
+   - Car Rental applications MUST be reviewed in their own dedicated queue (`/admin/car-rental-approvals`). Never merge car rental fleet applications into agency tour approvals.
+2. **Zero Mock/Dummy Data**:
+   - All statistics, queues, vehicle listings, chauffeur rosters, and documents MUST be queried directly from MongoDB collections (`agencies`, `cars`, `audit_logs`, `notifications`). Never use localStorage or hardcoded counts.
+3. **Mandatory Action Workflows**:
+   - Rejections MUST require a mandatory reason.
+   - Request Changes MUST allow selecting specific compliance issues (RC expired, insurance missing, chauffeur license unclear, commercial permit missing, bank details incorrect) with custom applicant instructions.
+   - All state transitions MUST generate an audit log (`AuditLoggerService.log`) and dispatch a real in-app notification to the provider.
+4. **Non-Breaking Invariance**:
+   - Agency approvals (`/admin/verification-pending`) and related services/controllers must NEVER be mutated or broken when updating or deploying car rental approval features.
+
+### 9. Agency Dashboard Car Rental Integration Protocol (Phase 2)
+1. **Single Account & Unified Dashboard Shell Invariance**:
+   - Do NOT create new accounts, duplicate layouts, or spawn separate dashboard shells.
+   - Travel Agency and Car Rental reside within the exact same account and dashboard framework.
+2. **Segmented Switcher Requirement**:
+   - Inside dashboard headers (`AgencyDashboardPage.tsx` and `AgencyCarRentalDashboardPage.tsx`), under the date card, render the `[ Travel Agency ] [ Car Rental ]` switch.
+   - Must feature slight glass effect, 3D pressed tactile feel, animated sliding pill (`layoutId="businessSegmentedPill"`), full responsiveness across 320px–414px+, and instant context switching without page reloads.
+3. **Dynamic Sidebar Switching**:
+   - The desktop sidebar must automatically transition between Travel Agency navigation items and Car Rental navigation items with smooth slide transitions.
+4. **100% Backend-Driven Operation**:
+   - All 6 KPI metrics, fleet listings, customer CRM profiles, driver rosters, and analytics telemetry MUST come directly from MongoDB Atlas. Zero dummy or mock data allowed.
+5. **Slide-over Detailed Drawers**:
+   - Vehicle inspection (`VehicleDetailsDrawer`), Owner inspection (`OwnerProfileDrawer`), and Driver inspection (`DriverDetailsDrawer`) must provide complete compliance and history telemetry in slide-over panels without navigating away from tables.
+6. **Zero Travel Agency Regressions**:
+   - Packages, bookings, trips, notifications, customer chats, and existing travel agency capabilities must continue functioning completely unchanged.
+
+### 10. Global Search & Deep Linking Protocol
+1. **Contract Invariance**:
+   - Every search result returned by backend `search.service.ts` MUST include canonical fields: `id`, `type`, `title`, `subtitle`, `route`, `targetUrl`, `slug`, `image`, `imageUrl`, `badge`, `rating`, `metadata`.
+   - Frontend search components MUST navigate using `navigate(item.route || item.targetUrl)`. Never invoke `navigate` with an undefined route or reload `/search`.
+2. **Canonical Route Schema**:
+   - Packages: `/packages/:packageId` (with alias `/packages/:id`, `/package/:id`)
+   - Destinations: `/destinations/:destinationId` (with alias `/destinations/:id`, `/destination/:id`)
+   - Agencies: `/agency/:agencyId` (with alias `/agency/:id`, `/agencies/:id`)
+   - Vehicles/Cars: `/cars/:id` (with alias `/cars/:vehicleId`, `/car/:id`, `/car-rental/:id`)
+   - Bookings: `/bookings/:bookingId` (with alias `/booking/:bookingId`, `/bookings/:id`)
+   - Public Travelers: `/traveler/:userId` (with alias `/travelers/:userId`, `/traveler/:id`)
+   - Trips: `/trips/:tripId` (with alias `/trips/:id`, `/trip/:id`)
+   - Messages/Chats: `/chat/:chatId`
+3. **Deep Link Resilience**:
+   - All destination pages MUST support direct URL access, full page refreshes (F5), and back/forward browser history.
+   - Every destination page must implement proper loading, not-found/empty fallback states, and safe ID resolution (`useParams`).
+
+---
+
+## 14. Traveler Identity Verification (KYC) & One-Time Travel Profile Protocol
+
+1. **Backend as Single Source of Truth**:
+   - The frontend NEVER derives, infers, or overrides traveler KYC status.
+   - Status state machine is strictly owned by `UserKycService` and `TravelProfileService`.
+   - State progression: `NOT_SUBMITTED` ➔ `PROFILE_COMPLETED` ➔ `DOCUMENTS_UPLOADED` ➔ `UNDER_REVIEW` ➔ `OCR_PROCESSING` ➔ `ADMIN_REVIEW` ➔ (`VERIFIED` | `REJECTED` | `EXPIRED` | `SUSPENDED`).
+2. **Deterministic Parent Status Derivation Formula**:
+   - The parent KYC status is calculated deterministically from the document states:
+     - If no required documents exist ➔ `NOT_SUBMITTED`
+     - If any required document is `REJECTED` ➔ `REJECTED`
+     - If any required document is `PENDING` ➔ `PENDING` (Pending Review)
+     - If all required documents are `VERIFIED` ➔ `VERIFIED`
+     - If validity date has elapsed ➔ `EXPIRED`
+3. **Strict Document Collection Standards**:
+   - **Mandatory (Choose 1)**:
+     - Aadhaar Card: Both Front & Back images required.
+     - Voter ID: Front image only.
+   - **Optional Supplements**:
+     - Driving Licence: Front & Back required (for self-drive car rentals).
+     - Passport: Photo & bio page only (for flights and international travel).
+   - **Strict Exclusion**:
+     - Visa documents are strictly NOT collected or accepted in the traveler verification workspace.
+4. **Traveler Dashboard 4-State Contract**:
+   - `TravelProfileDashboardCard` must implement 4 clean states:
+     - **State 1 (Draft/Incomplete)**: Completion wizard prompt.
+     - **State 2 (Under Review)**: Compact pending verification card with ~45% height reduction, reassuring copy, and status timeline.
+     - **State 3 (Verified)**: Card returns `null` with ZERO empty wrapper divs or ghost layout shifts. Natural DOM reflow.
+     - **State 4 (Rejected)**: Prominent "Verification Failed" warning card displaying the exact rejection reason and one-click re-upload action.
+5. **Automatic Silver Membership Upgrade**:
+   - Super Admin approval of traveler KYC must atomically upgrade the traveler's membership to **Silver Tier** (`tier: 'SILVER'`, `status: 'ACTIVE'`, `validity: 365 days`).
+   - Eliminates repetitive traveler detail requests on subsequent package or car rental bookings.
+6. **Super Admin Review Workspace Standard**:
+   - Admin reviews traveler KYC directly inside `UserDetailsDrawer.tsx` with zero page transitions.
+   - Must render: dynamic header badges, live counter summary bar (`DocumentSummary`), document cards with masked IDs (`•••• •••• 4289`), full modal stage with zoom/rotate/filter tools (`DocumentPreviewModal`), and immutable audit timeline (`KycTimeline`).
+   - Granular actions supported: Document Approve, Document Reject (mandatory reason), Request Re-upload, Overall Approve, Overall Reject, and Revoke Verification.

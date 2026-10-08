@@ -51,7 +51,7 @@ export const OnboardingCard: React.FC<OnboardingCardProps> = ({
 
           {/* Top Logo Component */}
           <div className="relative z-10 pt-16 sm:pt-20 flex flex-col items-center">
-            <Logo variant="light" size="md" showSubtitle />
+            <Logo variant="dark" size="md" showSubtitle />
           </div>
 
           {/* Bottom Overlay: Title, Subtitle, Get Started Button & Login Link */}
@@ -166,10 +166,10 @@ export const OnboardingCard: React.FC<OnboardingCardProps> = ({
           {/* Header Title & Subtitle */}
           <div className="space-y-2 pt-2">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-              Connect with Travelers
+              Reliable Rides & Car Rental
             </h2>
             <p className="text-sm sm:text-base text-slate-500 font-normal leading-relaxed">
-              Join a community of explorers, share stories, tips and travel together.
+              Book verified vehicles for outstation, local, and airport journeys with ease.
             </p>
           </div>
 

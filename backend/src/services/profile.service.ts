@@ -30,9 +30,6 @@ export class ProfileService {
       : 1;
     const lifetimeSpend = '₹0';
     const avgRatingGiven = 5.0;
-    const postsCount = 0;
-    const followersCount = 0;
-    const followingCount = 0;
     const reputationScore = isVerified ? 150 : 50;
     const levelTitle = isVerified ? 'Explorer Level 2' : 'Explorer Level 1';
 
@@ -116,15 +113,11 @@ export class ProfileService {
         countriesVisited,
         lifetimeSpend,
         avgRatingGiven,
-        postsCount,
-        followersCount,
-        followingCount,
         reputationScore,
         levelTitle,
       },
       currentTrip: null as any,
       achievements: badges,
-      mediaPosts: [] as any[],
       onboarding: {
         profileCompleted: user.profileCompleted,
         profileCompletedAt: user.profileCompletedAt,
@@ -138,6 +131,7 @@ export class ProfileService {
       travelPreferences: user.travelPreferences,
       notificationPreferences: user.notificationPreferences,
       privacySettings: user.privacySettings,
+      theme: user.theme || 'System',
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -161,6 +155,7 @@ export class ProfileService {
       accessibilityRequirements?: string;
       country?: string;
       isPublicProfile?: boolean;
+      theme?: 'Light' | 'Dark' | 'System';
     }
   ) {
     const existingUser = await userRepository.findById(userId);

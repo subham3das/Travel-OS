@@ -93,11 +93,13 @@ export const AgencyHero: React.FC<AgencyHeroProps> = ({ agency }) => {
 
             {/* Title Info */}
             <div className="space-y-1 pb-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-200 text-xs font-bold">
-                  ✓ {agency.featuredBadge || 'Verified Partner'}
-                </span>
-              </div>
+              {(agency.featuredBadge || agency.isVerified) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-3 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-200 text-xs font-bold">
+                    ✓ {agency.featuredBadge || 'Verified Partner'}
+                  </span>
+                </div>
+              )}
 
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
@@ -109,11 +111,15 @@ export const AgencyHero: React.FC<AgencyHeroProps> = ({ agency }) => {
               </div>
 
               <div className="flex items-center gap-3 text-xs sm:text-sm font-medium text-slate-300 flex-wrap">
-                <span className="flex items-center gap-1 font-bold text-amber-300">
-                  <Star className="w-4 h-4 fill-amber-300 text-amber-300" />
-                  <span>{agency.rating}</span>
-                  <span className="text-slate-300 font-normal">({agency.reviewCount} Reviews)</span>
-                </span>
+                {agency.rating > 0 ? (
+                  <span className="flex items-center gap-1 font-bold text-amber-300">
+                    <Star className="w-4 h-4 fill-amber-300 text-amber-300" />
+                    <span>{agency.rating}</span>
+                    <span className="text-slate-300 font-normal">({agency.reviewCount} Reviews)</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-400 font-medium text-xs">No ratings yet</span>
+                )}
                 <span className="text-slate-500">•</span>
                 <span>{agency.tripsCompleted} Trips Completed</span>
               </div>

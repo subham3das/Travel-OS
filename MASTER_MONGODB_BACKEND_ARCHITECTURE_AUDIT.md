@@ -57,6 +57,8 @@ The database consists of **27 distinct collections** in MongoDB Atlas (`travelos
 | 25 | `refreshtokens` | `RefreshTokenModel` | Cryptographic access token refresh hashes with TTL auto-expiration. | Auth Engine | ❌ No | `userId`, `tokenHash` (unique), `expiresAt` (TTL: 7d) |
 | 26 | `emailverifications` | `EmailVerificationModel` | One-time email verification tokens with TTL auto-expiration. | Customer Registration Flow | ❌ No | `userId`, `token` (unique), `expiresAt` (TTL: 24h) |
 | 27 | `passwordresets` | `PasswordResetModel` | Secure cryptographic password reset tokens with TTL auto-expiration. | Customer & Admin Password Recovery | ❌ No | `userId`, `token` (unique), `expiresAt` (TTL: 1h) |
+| 28 | `travel_profiles` | `TravelProfileModel` | Traveler personal details, emergency contact, dietary requirements, medical declarations, passport info, completion status. | Traveler App (`/travel-profile`), Admin User KYC Inspector | ❌ No | `userId` (unique), `status`, `completionPercentage` |
+| 29 | `user_kycs` | `UserKycModel` | Traveler KYC document records (Aadhaar, Voter ID, Driving Licence, Passport), OCR telemetry, admin verification reviews, audit history. | Traveler Verification (`/kyc`), Super Admin User KYC Workspace (`/admin/users/:id/kyc`) | ❌ No | `userId` (unique), `status`, `submittedAt`, `verifiedAt`, `documents.documentId`, `documents.status` |
 
 ---
 
@@ -64,6 +66,8 @@ The database consists of **27 distinct collections** in MongoDB Atlas (`travelos
 
 ```mermaid
 erDiagram
+    User ||--o| TravelProfile : maintains
+    User ||--o| UserKyc : submits
     User ||--o{ Booking : creates
     User ||--o{ SavedTraveler : saves
     User ||--o{ Review : writes

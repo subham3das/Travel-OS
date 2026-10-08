@@ -7,6 +7,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/my', userNotificationController.getMyNotifications);
+router.get('/header', userNotificationController.getMyNotifications);
 router.get('/unread-count', userNotificationController.getUnreadCount);
 router.patch('/read-all', userNotificationController.markAllAsRead);
 router.patch('/:id/read', userNotificationController.markAsRead);

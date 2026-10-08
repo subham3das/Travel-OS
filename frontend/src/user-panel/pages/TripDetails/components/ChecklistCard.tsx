@@ -7,10 +7,15 @@ interface ChecklistCardProps {
 }
 
 export const ChecklistCard: React.FC<ChecklistCardProps> = ({ trip }) => {
-  const [items, setItems] = useState(trip.checklist);
+  const initialChecklist = Array.isArray(trip?.checklist) ? trip.checklist : [
+    { id: 'chk-1', label: 'Valid Govt ID / License Proof', completed: true },
+    { id: 'chk-2', label: 'Booking Confirmation & Voucher', completed: true },
+    { id: 'chk-3', label: 'Emergency Contact Numbers Saved', completed: false },
+  ];
+  const [items, setItems] = useState(initialChecklist);
   const [expanded, setExpanded] = useState(false);
 
-  const completedCount = items.filter((i) => i.completed).length;
+  const completedCount = (items || []).filter((i) => i.completed).length;
 
   const toggleItem = (id: string) => {
     setItems((prev) =>

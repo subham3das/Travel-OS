@@ -54,6 +54,17 @@ router.patch(
 
 /**
  * @openapi
+ * /travelers/{id}/archive:
+ *   patch:
+ *     summary: Archive or Unarchive Saved Traveler
+ *     tags: [Saved Travelers]
+ *     security:
+ *       - BearerAuth: []
+ */
+router.patch('/:id/archive', authenticate, travelerController.archive);
+
+/**
+ * @openapi
  * /travelers/{id}:
  *   delete:
  *     summary: Remove Saved Traveler

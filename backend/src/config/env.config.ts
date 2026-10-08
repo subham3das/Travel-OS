@@ -59,15 +59,24 @@ const envSchema = z.object({
   EMAIL_FROM_NAME: z.string().default('Travel OS'),
   EMAIL_FROM_ADDRESS: z.string().default('support@travelos.com'),
 
-  // Payment Gateways
+  // Payment Gateways & Route Engine
   RAZORPAY_KEY_ID: z.string().default('rzp_test_sample'),
   RAZORPAY_KEY_SECRET: z.string().default('sample_secret'),
+  RAZORPAY_WEBHOOK_SECRET: z.string().default('rzp_whsec_sample'),
+  RAZORPAY_ROUTE_ENABLED: z
+    .union([z.boolean(), z.string()])
+    .default(true)
+    .transform((val) => val === true || val === 'true'),
+  PLATFORM_COMMISSION_DEFAULT: z
+    .union([z.number(), z.string()])
+    .default(10)
+    .transform((val) => (typeof val === 'number' ? val : parseFloat(val) || 10)),
   STRIPE_SECRET_KEY: z.string().default('sk_test_sample'),
   STRIPE_WEBHOOK_SECRET: z.string().default('whsec_sample'),
 
   // Rate Limiting & Logging
   RATE_LIMIT_WINDOW_MS: z.string().default('60000').transform((val) => parseInt(val, 10)),
-  RATE_LIMIT_MAX_REQUESTS: z.string().default('100').transform((val) => parseInt(val, 10)),
+  RATE_LIMIT_MAX_REQUESTS: z.string().default('2000').transform((val) => parseInt(val, 10)),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']).default('debug'),
 });
 

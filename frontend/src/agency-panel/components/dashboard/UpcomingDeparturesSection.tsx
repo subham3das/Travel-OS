@@ -22,7 +22,7 @@ export const UpcomingDeparturesSection: React.FC<UpcomingDeparturesSectionProps>
         <h3 className="text-sm sm:text-base font-black text-[#0F172A]">Upcoming Departures</h3>
         <button
           type="button"
-          onClick={() => navigate('/agency/trips')}
+          onClick={() => navigate('/agency/bookings')}
           className="text-xs font-black text-[#583BE8] hover:underline cursor-pointer"
         >
           View All
@@ -38,7 +38,7 @@ export const UpcomingDeparturesSection: React.FC<UpcomingDeparturesSectionProps>
             return (
               <div
                 key={dep.id}
-                onClick={() => navigate('/agency/trips')}
+                onClick={() => navigate('/agency/bookings')}
                 className="py-3.5 flex items-center justify-between gap-3 group cursor-pointer hover:bg-slate-50/60 rounded-2xl px-2 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">

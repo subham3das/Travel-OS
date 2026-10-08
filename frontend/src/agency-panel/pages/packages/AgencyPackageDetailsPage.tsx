@@ -38,6 +38,7 @@ export const AgencyPackageDetailsPage: React.FC = () => {
           packageId: raw.packageId || `PKG-${packageId.slice(-4).toUpperCase()}`,
           packageName: raw.title || raw.name || 'Himalayan Tour',
           status: raw.status || 'Active',
+          readiness: raw.readiness,
           destination: raw.destination || 'North India',
           duration: raw.duration || `${raw.itinerary?.length || 5} Days / ${Math.max(1, (raw.itinerary?.length || 5) - 1)} Nights`,
           packageType: raw.category === 'International' ? 'International' : 'Domestic',
@@ -54,7 +55,6 @@ export const AgencyPackageDetailsPage: React.FC = () => {
           description: raw.description || '',
           highlights: ['Scenic Himalayan routes', 'Guided cultural experiences', 'Comfortable accommodation'],
           bestSeason: 'May to October',
-          minTravelers: 4,
           maxTravelers: raw.totalSeats || 20,
           included: raw.inclusions || ['Accommodation', 'Guided tours', 'Breakfast & Dinner'],
           excluded: raw.exclusions || ['Personal expenses', 'Flight tickets'],
@@ -68,31 +68,34 @@ export const AgencyPackageDetailsPage: React.FC = () => {
             stay: item.stay || 'Premium Hotel / Resort',
             transportation: ['Private Tempo / SUV'],
           })),
-          accommodation: {
-            hotelName: 'The Grand Vista Resort',
-            roomType: 'Deluxe Valley View Room',
-            mealsIncluded: 'Breakfast & Dinner (MAP)',
-            vehicleType: 'Tempo Traveller AC',
-            pickupLocation: 'Airport / Railway Station',
-            dropLocation: 'Airport / Railway Station',
-          },
-          upcomingDepartures: [
-            {
-              id: 'dep-1',
-              departureDate: '2026-06-15',
-              returnDate: '2026-06-21',
-              seatsFilled: raw.bookingsCount || 6,
-              totalCapacity: raw.totalSeats || 20,
-              bookingDeadline: '2026-06-10',
-              status: 'OPEN',
-            },
-          ],
+          accommodation: raw.accommodationConfirmed && Array.isArray(raw.accommodations) && raw.accommodations.length > 0
+            ? {
+                hotelName: raw.accommodations[0].hotelName,
+                roomType: raw.accommodations[0].roomType || 'Standard Room',
+                mealsIncluded: (raw.accommodations[0].amenities || []).join(', ') || 'Meals as specified',
+                vehicleType: 'Private / Shared AC Vehicle',
+                pickupLocation: raw.destination || 'Arrival Point',
+                dropLocation: raw.destination || 'Departure Point',
+              }
+            : null,
+          upcomingDepartures: (raw.departures || raw.readiness?.upcomingDepartures || []).map((dep: any, idx: number) => ({
+            id: dep.departureId || dep.id || dep._id || `dep-${idx}`,
+            departureDate: dep.departureDate
+              ? (typeof dep.departureDate === 'string' ? dep.departureDate.split('T')[0] : new Date(dep.departureDate).toISOString().split('T')[0])
+              : 'Flexible',
+            returnDate: dep.endDate || dep.returnDate
+              ? (typeof (dep.endDate || dep.returnDate) === 'string' ? (dep.endDate || dep.returnDate).split('T')[0] : new Date(dep.endDate || dep.returnDate).toISOString().split('T')[0])
+              : 'Flexible',
+            seatsFilled: dep.bookedSeats ?? dep.seatsFilled ?? dep.seatsBooked ?? 0,
+            totalCapacity: dep.capacity ?? dep.totalCapacity ?? dep.seatsTotal ?? (raw.totalSeats || 20),
+            bookingDeadline: dep.bookingCloses || dep.bookingDeadline
+              ? (typeof (dep.bookingCloses || dep.bookingDeadline) === 'string' ? (dep.bookingCloses || dep.bookingDeadline).split('T')[0] : new Date(dep.bookingCloses || dep.bookingDeadline).toISOString().split('T')[0])
+              : 'Flexible',
+            status: dep.status || 'OPEN',
+          })),
           reviews: {
-            averageRating: raw.rating || 4.8,
-            ratingBreakdown: [
-              { stars: 5, count: 18, percentage: 80 },
-              { stars: 4, count: 4, percentage: 20 },
-            ],
+            averageRating: raw.rating || 0,
+            ratingBreakdown: [],
             latestReviews: [],
           },
           analytics: {
@@ -115,16 +118,6 @@ export const AgencyPackageDetailsPage: React.FC = () => {
 
   const handleEdit = () => {
     if (packageId) navigate(`/agency/packages/${packageId}/edit`);
-  };
-
-  const handleDuplicate = async () => {
-    if (!packageId) return;
-    try {
-      const cloned = await agencyPackagesService.duplicatePackage(packageId);
-      navigate(`/agency/packages/${cloned.id || cloned.packageId}`);
-    } catch (err) {
-      console.error('Error duplicating package:', err);
-    }
   };
 
   const handlePause = async () => {
@@ -200,10 +193,74 @@ export const AgencyPackageDetailsPage: React.FC = () => {
           <PackageHero
             pkg={pkg}
             onEdit={handleEdit}
-            onDuplicate={handleDuplicate}
             onPause={handlePause}
             onShare={handleShare}
           />
+
+          {/* Phase 5 & 6: Package Readiness Warning Banner */}
+          {pkg.readiness && !pkg.readiness.isBookable && (
+            <div className="p-5 sm:p-6 rounded-3xl bg-amber-50/90 border border-amber-200/90 shadow-xs space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 font-black text-lg">
+                    ⚠
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm sm:text-base font-black text-amber-950">
+                        Incomplete Setup — Hidden from Travelers
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200/60 text-amber-900">
+                        Needs Setup ⚠
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-800 font-medium mt-0.5">
+                      This package is hidden from traveler searches and cannot be booked until all requirements below are satisfied.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate(`/agency/departures?packageId=${pkg.packageId || pkg.id}`)}
+                  className="px-4 py-2.5 rounded-xl bg-[#583BE8] hover:bg-[#492de0] text-white text-xs font-black transition-all shadow-sm shadow-[#583BE8]/20 shrink-0 cursor-pointer self-start sm:self-auto"
+                >
+                  Schedule Departure →
+                </button>
+              </div>
+
+              {pkg.readiness.missingRequirements?.length > 0 && (
+                <div className="pt-3 border-t border-amber-200/60">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 mb-2">
+                    Missing Requirements:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {pkg.readiness.missingRequirements.map((req: string, i: number) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-amber-200 text-amber-950 text-xs font-bold shadow-2xs"
+                      >
+                        <span>❌</span>
+                        <span>{req}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {pkg.readiness && pkg.readiness.isBookable && (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between gap-3 text-xs font-bold text-emerald-900 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                <span>Ready to Sell ✅ — Package is active, departure is scheduled, and travelers can book!</span>
+              </div>
+              <span className="text-[10px] font-black text-emerald-700 uppercase bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                Live in Marketplace
+              </span>
+            </div>
+          )}
 
           <PackageOverview pkg={pkg} />
           <PackageGallery images={pkg.galleryImages} />
@@ -218,7 +275,6 @@ export const AgencyPackageDetailsPage: React.FC = () => {
 
         <StickyPackageActions
           onEdit={handleEdit}
-          onDuplicate={handleDuplicate}
           onCreateDeparture={handleCreateDeparture}
           onViewAnalytics={handleViewAnalytics}
         />

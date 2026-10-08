@@ -70,4 +70,6 @@ const AccessRequestSchema = new Schema<IAccessRequest>(
   }
 );
 
+AccessRequestSchema.index({ status: 1, createdAt: -1 });
+
 export const AccessRequestModel = mongoose.model<IAccessRequest>('AccessRequest', AccessRequestSchema);

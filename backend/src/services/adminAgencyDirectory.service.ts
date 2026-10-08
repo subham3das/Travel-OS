@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { AgencyModel, IAgency } from '../models/agency.model.js';
 import { PackageModel } from '../models/package.model.js';
 import { BookingModel } from '../models/booking.model.js';
+import { DepartureModel, computeDepartureStatus } from '../models/departure.model.js';
 import { AuditLogModel } from '../models/auditLog.model.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.util.js';
 import { logger } from '../config/logger.config.js';
@@ -415,9 +416,13 @@ export class AdminAgencyDirectoryService {
 
     const agencyObjId = agency._id;
 
-    // Fetch Packages, Bookings, Audit Logs in parallel
-    const [packages, bookings, auditLogs] = await Promise.all([
+    // Fetch Packages, Departures, Bookings, Audit Logs in parallel
+    const [packages, departures, bookings, auditLogs] = await Promise.all([
       PackageModel.find({ agencyId: agencyObjId, isDeleted: false }).sort({ createdAt: -1 }).lean(),
+      DepartureModel.find({ agencyId: agencyObjId })
+        .populate('packageId', 'title destination coverImage')
+        .sort({ departureDate: -1 })
+        .lean(),
       BookingModel.find({ agencyId: agencyObjId, isDeleted: false }).sort({ createdAt: -1 }).lean(),
       AuditLogModel.find({
         $or: [{ 'actor.id': agencyObjId.toString() }, { 'metadata.agencyId': agencyObjId.toString() }],
@@ -427,8 +432,23 @@ export class AdminAgencyDirectoryService {
         .lean(),
     ]);
 
-    const totalRevenueNum = bookings.reduce((sum, b: any) => sum + (b.totalAmount || 0), 0);
-    const completedTrips = bookings.filter((b: any) => b.status === 'COMPLETED').length;
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const totalPackages = packages.length;
+    const activePackages = packages.filter((p: any) => p.status === 'APPROVED' || p.status === 'ACTIVE' || p.isActive).length;
+    const scheduledDepartures = departures.length;
+    const todayDepartures = departures.filter((d: any) => new Date(d.departureDate) >= startOfToday && new Date(d.departureDate) <= endOfToday).length;
+    const completedDepartures = departures.filter((d: any) => d.status === 'COMPLETED' || new Date(d.endDate) < now).length;
+    const totalBookingsCount = bookings.length;
+    const monthlyBookings = bookings.filter((b: any) => new Date(b.createdAt) >= thirtyDaysAgo);
+    const monthlyRevenueNum = monthlyBookings.reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0);
+    const totalRevenueNum = bookings.reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0);
+    const cancelledBookings = bookings.filter((b: any) => b.status === 'CANCELLED').length;
+    const cancellationRate = totalBookingsCount > 0 ? `${((cancelledBookings / totalBookingsCount) * 100).toFixed(1)}%` : '0%';
+    const averageRating = agency.rating || 4.8;
 
     // Formatted Documents
     const documentsList = (agency.documents || []).map((doc: any) => ({
@@ -528,15 +548,17 @@ export class AdminAgencyDirectoryService {
         businessLicense: agency.registrationNumber ? 'Verified' : 'Pending',
         bankVerification: agency.bankDetails?.accountNumber ? 'Verified' : 'Under Review',
       },
-      performance: {
-        bookings: bookings.length,
-        bookingsGrowth: '12.4%',
-        trips: completedTrips,
-        tripsGrowth: '6.1%',
-        revenue: `₹${totalRevenueNum.toLocaleString('en-IN')}`,
-        revenueGrowth: '8.2%',
-        reviews: Math.max(1, bookings.length),
-        reviewsGrowth: '9.3%',
+      statistics: {
+        totalPackages,
+        activePackages,
+        scheduledDepartures,
+        todayDepartures,
+        completedDepartures,
+        totalBookings: totalBookingsCount,
+        monthlyRevenue: `₹${monthlyRevenueNum.toLocaleString('en-IN')}`,
+        totalRevenue: `₹${totalRevenueNum.toLocaleString('en-IN')}`,
+        cancellationRate,
+        averageRating,
       },
       documents: documentsList,
       packages: packages.map((pkg: any) => ({
@@ -548,8 +570,47 @@ export class AdminAgencyDirectoryService {
         price: pkg.price,
         formattedPrice: `₹${(pkg.price || 0).toLocaleString('en-IN')}`,
         status: pkg.status,
-        featuredImage: pkg.featuredImage || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=400',
+        featuredImage: pkg.featuredImage || pkg.coverImage || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=400',
         createdAt: pkg.createdAt,
+      })),
+      departures: departures.map((dep: any) => {
+        const pkg = dep.packageId || {};
+        const computedStatus = computeDepartureStatus({
+          status: dep.status,
+          isManualClosed: dep.isManualClosed,
+          departureDate: dep.departureDate,
+          endDate: dep.endDate,
+          bookingCloses: dep.bookingCloses,
+          capacity: dep.capacity,
+          bookedSeats: dep.bookedSeats,
+        });
+        return {
+          id: dep._id.toString(),
+          departureId: dep.departureId,
+          packageTitle: pkg.title || 'Tour Departure',
+          destination: pkg.destination || 'India',
+          coverImage: pkg.coverImage || '',
+          departureDate: dep.departureDate,
+          endDate: dep.endDate,
+          capacity: dep.capacity,
+          bookedSeats: dep.bookedSeats,
+          remainingSeats: Math.max(0, dep.capacity - dep.bookedSeats),
+          status: computedStatus,
+        };
+      }),
+      bookings: bookings.map((b: any) => ({
+        id: b._id.toString(),
+        bookingId: b.bookingId,
+        customerName: b.customerName,
+        customerEmail: b.customerEmail,
+        customerPhone: b.customerPhone,
+        packageName: b.packageName,
+        departureDate: b.tripStartDate,
+        travelersCount: b.travelersCount || 1,
+        totalAmount: b.totalAmount,
+        status: b.status,
+        paymentStatus: b.paymentStatus,
+        createdAt: b.createdAt,
       })),
       activities: combinedActivities,
     };

@@ -9,6 +9,12 @@ export interface SendEmailOptions {
   text?: string;
 }
 
+export const getEmailLogoHtml = (bgIsDark: boolean = true, height: number = 34): string => {
+  const baseUrl = (envConfig.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const logoFileName = bgIsDark ? 'logo-dark.png' : 'logo-light.png';
+  return `<img src="${baseUrl}/logo/${logoFileName}" alt="ApnaTrip" height="${height}" style="height:${height}px; width:auto; max-width:200px; display:inline-block; border:0; vertical-align:middle;" />`;
+};
+
 export class MailService {
   private transporter: nodemailer.Transporter | null = null;
 
@@ -38,9 +44,18 @@ export class MailService {
   }
 
   /**
-   * Generic Send Email Method
+   * Generic Send Email Method with Automatic Retry & Format Validation
    */
   public async sendMail(options: SendEmailOptions): Promise<nodemailer.SentMessageInfo> {
+    if (!options.to || typeof options.to !== 'string') {
+      throw new Error('Recipient email address is required.');
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(options.to.trim())) {
+      throw new Error(`Invalid email address format: ${options.to}`);
+    }
+
     if (!this.transporter) {
       this.initializeTransporter();
     }
@@ -53,19 +68,57 @@ export class MailService {
 
     const mailOptions = {
       from: fromAddress,
-      to: options.to,
+      to: options.to.trim(),
       subject: options.subject,
       text: options.text || options.html.replace(/<[^>]*>?/gm, ''),
       html: options.html,
     };
 
+    let lastError: any = null;
+    const maxRetries = 2; // Up to 3 attempts total
+
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+      try {
+        const info = await this.transporter.sendMail(mailOptions);
+        logger.info(
+          '✉️ Email delivered successfully to %s [Message ID: %s] (Attempt %d)',
+          options.to,
+          info.messageId,
+          attempt
+        );
+        return info;
+      } catch (err: any) {
+        lastError = err;
+        logger.warn(
+          '⚠️ SMTP send attempt %d/%d failed for %s: %s',
+          attempt,
+          maxRetries + 1,
+          options.to,
+          err.message
+        );
+        if (attempt <= maxRetries) {
+          // Exponential backoff
+          await new Promise((res) => setTimeout(res, attempt * 500));
+        }
+      }
+    }
+
+    logger.error('❌ SMTP Dispatch Error to %s after %d attempts: %s', options.to, maxRetries + 1, lastError?.message);
+    throw lastError;
+  }
+
+  /**
+   * Non-Throwing Safe Email Dispatcher (for non-blocking background notifications)
+   */
+  public async sendMailSafe(
+    options: SendEmailOptions
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      const info = await this.transporter.sendMail(mailOptions);
-      logger.info('✉️ Email delivered successfully to %s [Message ID: %s]', options.to, info.messageId);
-      return info;
-    } catch (error: any) {
-      logger.error('❌ SMTP Dispatch Error to %s: %s', options.to, error.message);
-      throw error;
+      const info = await this.sendMail(options);
+      return { success: true, messageId: info.messageId };
+    } catch (err: any) {
+      logger.error('❌ sendMailSafe suppressed background email failure for %s: %s', options.to, err.message);
+      return { success: false, error: err.message };
     }
   }
 
@@ -77,7 +130,7 @@ export class MailService {
     recipientName: string,
     resetLink: string
   ): Promise<nodemailer.SentMessageInfo> {
-    const subject = `[TravelOS] Administrator Password Reset Request`;
+    const subject = `[ApnaTrip] Administrator Password Reset Request`;
 
     const html = `
 <!DOCTYPE html>
@@ -184,12 +237,12 @@ export class MailService {
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1 class="logo">TravelOS</h1>
+        ${getEmailLogoHtml(true)}
       </div>
       <div class="content">
         <h2 class="greeting">Hello ${recipientName || 'Administrator'},</h2>
         <p class="message">
-          We received a request to reset the administrator password for your TravelOS account. Click the button below to create a new password.
+          We received a request to reset the administrator password for your ApnaTrip account. Click the button below to create a new password.
         </p>
         <div class="btn-container">
           <a href="${resetLink}" class="btn" target="_blank">Reset Password</a>
@@ -203,7 +256,7 @@ export class MailService {
         </div>
       </div>
       <div class="footer">
-        &copy; ${new Date().getFullYear()} TravelOS Platform Inc. All rights reserved.<br>
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.<br>
         Security Operations Center • Automated Verification System
       </div>
     </div>
@@ -217,6 +270,72 @@ export class MailService {
       subject,
       html,
     });
+  }
+
+  /**
+   * Send Professional Partner Email Verification OTP Email
+   */
+  public async sendPartnerOtpEmail(params: {
+    to: string;
+    recipientName: string;
+    otp: string;
+    expiresInMinutes?: number;
+  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    const { to, recipientName, otp, expiresInMinutes = 10 } = params;
+    const subject = `Verify your ApnaTrip Account - ${otp}`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify your ApnaTrip Account</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #f8fafc; padding: 40px 0; }
+    .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0; }
+    .header { background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #583BE8 100%); padding: 36px 32px; text-align: center; }
+    .content { padding: 36px 32px; }
+    .greeting { font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }
+    .otp-box { background: #F5F3FF; border: 2px dashed #583BE8; border-radius: 16px; padding: 24px; text-align: center; margin: 24px 0; }
+    .otp-code { font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 900; letter-spacing: 8px; color: #583BE8; margin: 0; }
+    .otp-hint { font-size: 12px; font-weight: 600; color: #64748B; margin-top: 8px; }
+    .info-box { background: #f8fafc; border-left: 4px solid #583BE8; padding: 14px 16px; border-radius: 8px; font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 24px; }
+    .footer { background: #f1f5f9; padding: 20px 32px; text-align: center; font-size: 11px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true, 36)}
+      </div>
+      <div class="content">
+        <h2 class="greeting">Welcome to ApnaTrip, ${recipientName || 'Partner'}!</h2>
+        <p class="message">
+          Thank you for starting your partner account registration. Please use the following 6-digit verification code to confirm your email address:
+        </p>
+        <div class="otp-box">
+          <div class="otp-code">${otp}</div>
+          <div class="otp-hint">Valid for ${expiresInMinutes} minutes</div>
+        </div>
+        <div class="info-box">
+          <strong>Security Notice:</strong> Never share this code with anyone. ApnaTrip will never ask for your verification code by phone or messaging apps.
+        </div>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Partner Platform. All rights reserved.<br>
+        Autonomous SaaS Onboarding Security
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMailSafe({ to, subject, html });
   }
 
   /**
@@ -296,7 +415,7 @@ export class MailService {
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1 class="logo">ApnaTrip</h1>
+        ${getEmailLogoHtml(true)}
         <div class="sub-badge">Official Partner Network</div>
       </div>
       <div class="content">
@@ -419,7 +538,7 @@ export class MailService {
     reason: string,
     reapplyLink: string
   ): Promise<nodemailer.SentMessageInfo> {
-    const subject = `Update Regarding Your Agency Application - TravelOS`;
+    const subject = `Update Regarding Your Agency Application - ApnaTrip`;
 
     const html = `
 <!DOCTYPE html>
@@ -447,7 +566,7 @@ export class MailService {
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1 class="logo">ApnaTrip • TravelOS</h1>
+        ${getEmailLogoHtml(true)}
       </div>
       <div class="content">
         <h2 class="greeting">Hello ${agencyName},</h2>
@@ -518,7 +637,7 @@ export class MailService {
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1 class="logo">ApnaTrip • TravelOS</h1>
+        ${getEmailLogoHtml(true)}
       </div>
       <div class="content">
         <h2 class="greeting">Hello ${agencyName},</h2>
@@ -556,7 +675,7 @@ export class MailService {
     applicationId: string,
     trackLink: string
   ): Promise<nodemailer.SentMessageInfo> {
-    const subject = `Application Received: ${agencyName} [${applicationId}] — ApnaTrip TravelOS`;
+    const subject = `Application Received: ${agencyName} [${applicationId}] — ApnaTrip`;
 
     const html = `
 <!DOCTYPE html>
@@ -585,7 +704,7 @@ export class MailService {
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1 class="logo">ApnaTrip • TravelOS</h1>
+        ${getEmailLogoHtml(true)}
       </div>
       <div class="content">
         <h2 class="greeting">Hello ${agencyName},</h2>
@@ -606,6 +725,129 @@ export class MailService {
       <div class="footer">
         &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.<br>
         Agency Partner Operations
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Registration Received Email (with Reference Number, Payment Success & Pending Approval status)
+   */
+  public async sendPartnerRegistrationReceivedEmail(params: {
+    to: string;
+    businessName: string;
+    serviceType: 'Travel Agency' | 'Car Rental';
+    referenceNumber: string;
+    paymentId: string;
+    amountPaid: number;
+    trackLink?: string;
+    supportContact?: string;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const {
+      to,
+      businessName,
+      serviceType,
+      referenceNumber,
+      paymentId,
+      amountPaid,
+      trackLink = `${envConfig.FRONTEND_URL || 'http://localhost:5173'}/agency/verification-pending`,
+      supportContact = 'support@apnatrip.com',
+    } = params;
+
+    const subject = `Registration Received: ${businessName} [${referenceNumber}] - ApnaTrip Partner Network`;
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Partner Registration Received</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #f8fafc; padding: 40px 0; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    .header { background: #583BE8; padding: 32px; text-align: center; color: #ffffff; }
+    .logo { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin: 0; }
+    .content { padding: 36px 32px; }
+    .greeting { font-size: 18px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 16px; }
+    .message { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 20px; }
+    .app-box { background-color: #f1f5f9; border-radius: 12px; border: 1px solid #cbd5e1; padding: 20px; margin-bottom: 24px; text-align: center; }
+    .app-label { font-size: 12px; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
+    .app-id { font-size: 22px; font-weight: 800; color: #583BE8; letter-spacing: 1px; }
+    .details-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; }
+    .details-table td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
+    .details-table .label { color: #64748b; font-weight: 600; width: 40%; }
+    .details-table .val { color: #0f172a; font-weight: 700; text-align: right; }
+    .badge-success { background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; }
+    .badge-pending { background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; }
+    .btn-container { text-align: center; margin-bottom: 28px; }
+    .btn { display: inline-block; background-color: #583BE8; color: #ffffff !important; font-size: 14px; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 12px; }
+    .footer { border-top: 1px solid #f1f5f9; padding: 24px 32px; font-size: 11px; color: #94a3b8; text-align: center; background-color: #ffffff; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="greeting">Hello ${businessName},</h2>
+        <p class="message">
+          Thank you! Your payment has been received and your <strong>${serviceType}</strong> registration has been submitted for review.
+        </p>
+        <div class="app-box">
+          <div class="app-label">Reference Number</div>
+          <div class="app-id">${referenceNumber}</div>
+        </div>
+
+        <table class="details-table">
+          <tr>
+            <td class="label">Business Name:</td>
+            <td class="val">${businessName}</td>
+          </tr>
+          <tr>
+            <td class="label">Service Category:</td>
+            <td class="val">${serviceType}</td>
+          </tr>
+          <tr>
+            <td class="label">Payment Status:</td>
+            <td class="val"><span class="badge-success">✓ Payment Success (₹${amountPaid})</span></td>
+          </tr>
+          <tr>
+            <td class="label">Payment ID:</td>
+            <td class="val"><code>${paymentId}</code></td>
+          </tr>
+          <tr>
+            <td class="label">Application Status:</td>
+            <td class="val"><span class="badge-pending">⏳ Pending Approval</span></td>
+          </tr>
+          <tr>
+            <td class="label">Estimated Review:</td>
+            <td class="val">24–48 Business Hours</td>
+          </tr>
+        </table>
+
+        <p class="message">
+          Our compliance and onboarding team is verifying your business details and submitted documentation. You will receive an official email confirmation with your credentials as soon as your account is approved.
+        </p>
+
+        <div class="btn-container">
+          <a href="${trackLink}" class="btn" target="_blank">View Application Status</a>
+        </div>
+
+        <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
+          Have questions or need assistance? Contact our Partner Support Team anytime at <a href="mailto:${supportContact}" style="color: #583BE8; text-decoration: none; font-weight: 700;">${supportContact}</a>.
+        </p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.<br>
+        Partner Onboarding & Verification Department
       </div>
     </div>
   </div>
@@ -649,7 +891,8 @@ export class MailService {
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1 class="logo">Super Admin Security Alert</h1>
+        ${getEmailLogoHtml(true)}
+        <div style="font-size: 14px; font-weight: 800; color: #cbd5e1; margin-top: 8px;">Super Admin Security Alert</div>
       </div>
       <div class="content">
         <h2 style="font-size:16px; color:#0f172a; margin-top:0;">New Agency Registration Submitted</h2>
@@ -731,7 +974,8 @@ export class MailService {
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1 class="logo">Document Re-upload Required</h1>
+        ${getEmailLogoHtml(true)}
+        <div style="font-size: 15px; font-weight: 800; color: #fef3c7; margin-top: 8px;">Document Re-upload Required</div>
       </div>
       <div class="content">
         <h2 class="greeting">Hello ${agencyName},</h2>
@@ -818,7 +1062,8 @@ export class MailService {
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1 class="logo">Agency Update Alert</h1>
+        ${getEmailLogoHtml(true)}
+        <div style="font-size: 14px; font-weight: 800; color: #e0f2fe; margin-top: 8px;">Agency Update Alert</div>
       </div>
       <div class="content">
         <h2 style="font-size:16px; color:#0f172a; margin-top:0;">Documents Re-uploaded by Agency</h2>
@@ -999,7 +1244,7 @@ export class MailService {
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1 class="logo">ApnaTrip</h1>
+        ${getEmailLogoHtml(true)}
         <div class="sub-badge">Agency Partner Portal</div>
       </div>
       <div class="content">
@@ -1042,9 +1287,1004 @@ export class MailService {
 
     return this.sendMail({ to, subject, html });
   }
+
+  /**
+   * Send Professional Customer / Traveler Password Reset Email (15-Minute Expiry)
+   */
+  public async sendUserPasswordResetEmail(
+    to: string,
+    recipientName: string,
+    resetLink: string
+  ): Promise<nodemailer.SentMessageInfo> {
+    const subject = `[ApnaTrip] Reset Your Password`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your ApnaTrip Password</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    .header { background: linear-gradient(135deg, #FF4D6D 0%, #E11D48 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 28px; font-weight: 900; letter-spacing: -0.5px; margin: 0; color: #ffffff; }
+    .tagline { font-size: 13px; font-weight: 600; opacity: 0.9; margin-top: 6px; letter-spacing: 0.5px; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 22px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .greeting { font-size: 15px; font-weight: 600; color: #334155; margin-bottom: 16px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .btn-container { text-align: center; margin: 32px 0; }
+    .btn { display: inline-block; background-color: #FF4D6D; color: #ffffff !important; font-size: 15px; font-weight: 800; text-decoration: none; padding: 14px 40px; border-radius: 14px; box-shadow: 0 4px 14px rgba(255, 77, 109, 0.35); }
+    .warning-box { background-color: #FFFBEB; border-radius: 12px; border: 1px solid #FDE68A; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; color: #92400E; line-height: 1.5; }
+    .link-fallback { font-size: 11px; color: #94A3B8; word-break: break-all; line-height: 1.5; margin-bottom: 24px; background-color: #F8FAFC; padding: 12px 16px; border-radius: 8px; border: 1px solid #E2E8F0; }
+    .link-fallback a { color: #FF4D6D; text-decoration: none; font-weight: 600; }
+    .signature { font-size: 13px; color: #334155; line-height: 1.6; border-top: 1px solid #F1F5F9; padding-top: 20px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+        <div class="tagline">Explore The World With Confidence</div>
+      </div>
+      <div class="content">
+        <h2 class="title">Password Reset Request</h2>
+        <div class="greeting">Hello ${recipientName || 'Traveler'},</div>
+        <p class="message">
+          We received a request to reset your ApnaTrip account password. If you initiated this request, please click the button below to choose your new password.
+        </p>
+        <div class="btn-container">
+          <a href="${resetLink}" class="btn" target="_blank">Reset My Password</a>
+        </div>
+        <div class="warning-box">
+          ⏱️ <strong>Strict Security Notice:</strong> This link will expire in exactly <strong>15 minutes</strong>.<br>
+          If you did not request a password reset, you can safely ignore this email. Your account remains completely secure.
+        </div>
+        <div class="link-fallback">
+          Button not working? Copy and paste this secure link into your browser:<br>
+          <a href="${resetLink}">${resetLink}</a>
+        </div>
+        <div class="signature">
+          Warm regards,<br>
+          <strong>The ApnaTrip Security Team</strong>
+        </div>
+      </div>
+      <div class="footer">
+        This is an automated security communication. Please do not reply.<br>
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Password Reset Confirmation Email (Password Changed Successfully)
+   */
+  public async sendPasswordResetSuccessEmail(
+    to: string,
+    recipientName: string,
+    portalType: string = 'traveler'
+  ): Promise<nodemailer.SentMessageInfo> {
+    const subject = `[ApnaTrip] Security Alert: Your Password Was Successfully Updated`;
+    const brandColor = portalType === 'agency' ? '#583BE8' : '#FF4D6D';
+    const portalName = portalType === 'agency' ? 'Agency Portal' : 'Traveler Account';
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Password Changed Successfully</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: ${brandColor}; padding: 32px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .success-badge { display: inline-block; background-color: #ECFDF5; color: #059669; font-weight: 700; font-size: 13px; padding: 6px 14px; border-radius: 20px; border: 1px solid #A7F3D0; margin-bottom: 20px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .security-alert { background-color: #FEF2F2; border-radius: 12px; border: 1px solid #FECACA; padding: 16px 20px; font-size: 13px; color: #991B1B; line-height: 1.5; margin-bottom: 24px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <div class="success-badge">✓ Security Update Confirmed</div>
+        <h2 class="title">Password Reset Complete</h2>
+        <p class="message">
+          Hello ${recipientName || 'Valued User'},<br><br>
+          This is an automated confirmation that the password for your ${portalName} (${to}) was changed on <strong>${new Date().toUTCString()}</strong>.
+        </p>
+        <div class="security-alert">
+          🚨 <strong>Did not make this change?</strong><br>
+          If you did not authorize this password reset, please contact our 24/7 Security Operations team immediately at <a href="mailto:security@apnatrip.com" style="color: #991B1B; font-weight: 700;">security@apnatrip.com</a> to secure your account.
+        </div>
+        <p class="message" style="margin-bottom: 0;">
+          All previous active login sessions have been terminated for your protection. You can now log in securely with your new password.
+        </p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Customer Welcome Email
+   */
+  public async sendWelcomeEmail(to: string, userName: string): Promise<nodemailer.SentMessageInfo> {
+    const subject = `Welcome to ApnaTrip, ${userName}! 🌍 Let Your Journey Begin`;
+    const exploreUrl = `${envConfig.FRONTEND_URL || 'http://localhost:5173'}/explore`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to ApnaTrip</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #FF4D6D 0%, #E11D48 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 28px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 22px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .feature-list { background-color: #F8FAFC; border-radius: 14px; padding: 20px; margin-bottom: 28px; border: 1px solid #E2E8F0; }
+    .feature-item { font-size: 13px; color: #334155; margin-bottom: 10px; line-height: 1.5; }
+    .btn-container { text-align: center; margin: 28px 0; }
+    .btn { display: inline-block; background-color: #FF4D6D; color: #ffffff !important; font-size: 15px; font-weight: 800; text-decoration: none; padding: 14px 36px; border-radius: 14px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">Welcome Aboard, ${userName}! 🎒</h2>
+        <p class="message">
+          We are thrilled to welcome you to ApnaTrip — your all-in-one travel ecosystem for curated tour departures, self-drive car rentals, and authentic local experiences.
+        </p>
+        <div class="feature-list">
+          <div class="feature-item">✈️ <strong>Curated Tour Packages:</strong> Handcrafted itineraries by verified local destination operators.</div>
+          <div class="feature-item">🚗 <strong>Self-Drive Car Rentals:</strong> Instant vehicle booking with token advance split-payments.</div>
+          <div class="feature-item">🛡️ <strong>One-Time Identity Verification:</strong> Complete your KYC once and unlock Silver Tier membership privileges automatically!</div>
+        </div>
+        <div class="btn-container">
+          <a href="${exploreUrl}" class="btn" target="_blank">Start Exploring Now</a>
+        </div>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Customer Email Verification Email
+   */
+  public async sendEmailVerificationEmail(
+    to: string,
+    recipientName: string,
+    verificationLink: string
+  ): Promise<nodemailer.SentMessageInfo> {
+    const subject = `[ApnaTrip] Please Verify Your Email Address`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verify Email Address</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #FF4D6D 0%, #E11D48 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 28px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 22px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .btn-container { text-align: center; margin: 32px 0; }
+    .btn { display: inline-block; background-color: #FF4D6D; color: #ffffff !important; font-size: 15px; font-weight: 800; text-decoration: none; padding: 14px 40px; border-radius: 14px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">Verify Your Email Address</h2>
+        <p class="message">
+          Hello ${recipientName || 'Traveler'},<br><br>
+          Thank you for signing up with ApnaTrip! Please verify your email address to activate your account and unlock booking capabilities.
+        </p>
+        <div class="btn-container">
+          <a href="${verificationLink}" class="btn" target="_blank">Verify Email Address</a>
+        </div>
+        <p class="message" style="font-size: 12px; color: #64748B;">
+          This verification link will remain valid for 24 hours. If you did not create an account with ApnaTrip, no further action is required.
+        </p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Car Rental Provider Approval Email
+   */
+  public async sendCarRentalApprovedEmail(params: {
+    to: string;
+    ownerName: string;
+    businessName: string;
+    applicationId: string;
+    loginLink: string;
+    loginEmail: string;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, ownerName, businessName, applicationId, loginLink, loginEmail } = params;
+    const subject = `🎉 Approved: Your Car Rental Fleet Provider Application (${applicationId})`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Car Rental Application Approved</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 22px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .credential-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 20px; margin-bottom: 24px; font-size: 13px; color: #334155; }
+    .btn-container { text-align: center; margin: 28px 0; }
+    .btn { display: inline-block; background-color: #10B981; color: #ffffff !important; font-size: 15px; font-weight: 800; text-decoration: none; padding: 14px 36px; border-radius: 14px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">Commercial Fleet Approved! 🚗</h2>
+        <p class="message">
+          Dear ${ownerName || 'Partner'},<br><br>
+          We are pleased to inform you that your Car Rental commercial provider registration for <strong>${businessName}</strong> (Tracking ID: <strong>${applicationId}</strong>) has been officially approved by the ApnaTrip Compliance Board.
+        </p>
+        <div class="credential-box">
+          <strong>Portal Credentials:</strong><br>
+          • <strong>Account Email:</strong> ${loginEmail}<br>
+          • <strong>Status:</strong> ACTIVE (Commercial Fleet Ready)<br>
+          • <strong>Workspace Route:</strong> /agency/car-rental/dashboard
+        </div>
+        <div class="btn-container">
+          <a href="${loginLink}" class="btn" target="_blank">Access Fleet Dashboard</a>
+        </div>
+        <p class="message" style="font-size: 13px; color: #64748B;">
+          You can now add vehicles to your fleet inventory, manage chauffeur rosters, review reservation requests, and manage financial payouts.
+        </p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Car Rental Provider Rejection Email
+   */
+  public async sendCarRentalRejectedEmail(params: {
+    to: string;
+    ownerName: string;
+    businessName: string;
+    reason: string;
+    appealLink?: string;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, ownerName, businessName, reason, appealLink } = params;
+    const subject = `Update Regarding Your Car Rental Provider Application - ApnaTrip`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Application Status Update</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .reason-box { background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 14px; padding: 20px; margin-bottom: 24px; font-size: 13px; color: #991B1B; line-height: 1.5; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">Car Rental Application Status Update</h2>
+        <p class="message">
+          Dear ${ownerName || 'Partner'},<br><br>
+          Thank you for your interest in joining the ApnaTrip Car Rental Partner Network with <strong>${businessName}</strong>. Following a comprehensive review by our compliance team, we are unable to approve your application at this time.
+        </p>
+        <div class="reason-box">
+          <strong>Review Decision Reason:</strong><br>
+          ${reason}
+        </div>
+        <p class="message">
+          If you believe this decision was made in error or if you have rectified the compliance documentation mentioned above, you may reapply or reach out to partner support.
+        </p>
+        ${appealLink ? `<div style="text-align: center; margin: 24px 0;"><a href="${appealLink}" style="display: inline-block; background-color: #DC2626; color: #ffffff; padding: 12px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px;">Review Application</a></div>` : ''}
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Booking Confirmation Email
+   */
+  public async sendBookingConfirmationEmail(params: {
+    to: string;
+    customerName: string;
+    bookingId: string;
+    title: string;
+    travelDates: string;
+    travelersCount: number;
+    totalAmount: number;
+    bookingDetailsUrl: string;
+    thumbnail?: string;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, customerName, bookingId, title, travelDates, travelersCount, totalAmount, bookingDetailsUrl } = params;
+    const subject = `🎉 Booking Confirmed: ${title} (ID: ${bookingId})`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Booking Confirmation</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 22px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .booking-card { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px; margin-bottom: 28px; }
+    .booking-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 13px; color: #334155; }
+    .total-row { border-top: 1px solid #E2E8F0; padding-top: 12px; font-weight: 800; font-size: 16px; color: #0F172A; }
+    .btn-container { text-align: center; margin: 28px 0; }
+    .btn { display: inline-block; background-color: #10B981; color: #ffffff !important; font-size: 15px; font-weight: 800; text-decoration: none; padding: 14px 36px; border-radius: 14px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">You're Going On An Adventure! 🎒</h2>
+        <p class="message">
+          Hello ${customerName || 'Traveler'},<br><br>
+          Your reservation is confirmed! We have received your payment and notified the operations dispatch team.
+        </p>
+        <div class="booking-card">
+          <div style="font-weight: 800; font-size: 16px; color: #0F172A; margin-bottom: 14px;">${title}</div>
+          <div style="font-size: 13px; color: #64748B; margin-bottom: 8px;"><strong>Booking Reference:</strong> ${bookingId}</div>
+          <div style="font-size: 13px; color: #64748B; margin-bottom: 8px;"><strong>Dates:</strong> ${travelDates}</div>
+          <div style="font-size: 13px; color: #64748B; margin-bottom: 14px;"><strong>Travelers:</strong> ${travelersCount} Person(s)</div>
+          <div style="border-top: 1px solid #E2E8F0; padding-top: 12px; font-size: 16px; font-weight: 800; color: #0F172A;">
+            Total Paid: ₹${totalAmount.toLocaleString('en-IN')}
+          </div>
+        </div>
+        <div class="btn-container">
+          <a href="${bookingDetailsUrl}" class="btn" target="_blank">View Booking Voucher</a>
+        </div>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Booking Cancellation Email
+   */
+  public async sendBookingCancelledEmail(params: {
+    to: string;
+    customerName: string;
+    bookingId: string;
+    title: string;
+    refundAmount?: number;
+    reason?: string;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, customerName, bookingId, title, refundAmount, reason } = params;
+    const subject = `Booking Cancellation Notice: ${title} (${bookingId})`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Booking Cancelled</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .box { background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 14px; padding: 20px; margin-bottom: 24px; font-size: 13px; color: #991B1B; line-height: 1.5; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">Booking Cancellation Confirmed</h2>
+        <p class="message">
+          Hello ${customerName || 'Traveler'},<br><br>
+          This email confirms that booking <strong>${bookingId}</strong> for <strong>${title}</strong> has been cancelled.
+        </p>
+        <div class="box">
+          ${reason ? `<strong>Cancellation Reason:</strong> ${reason}<br>` : ''}
+          ${refundAmount !== undefined ? `<strong>Refund Amount:</strong> ₹${refundAmount.toLocaleString('en-IN')}<br><small>Refunds typically reflect in your original payment account within 5–7 business days.</small>` : 'No refund applicable according to departure cancellation policies.'}
+        </div>
+        <p class="message">
+          If you have any questions or require assistance, our customer support concierge is ready to assist you.
+        </p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Payment Confirmation Receipt Email
+   */
+  public async sendPaymentConfirmationEmail(params: {
+    to: string;
+    customerName: string;
+    paymentId: string;
+    bookingId: string;
+    amount: number;
+    paymentMethod: string;
+    receiptUrl?: string;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, customerName, paymentId, bookingId, amount, paymentMethod, receiptUrl } = params;
+    const subject = `Payment Receipt: ₹${amount.toLocaleString('en-IN')} Received (ID: ${paymentId})`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Receipt</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 32px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .receipt-box { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 20px; margin-bottom: 24px; font-size: 13px; color: #334155; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">Payment Confirmed</h2>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 20px;">
+          Hello ${customerName || 'Traveler'},<br>
+          Thank you for your payment. Here is your official receipt:
+        </p>
+        <div class="receipt-box">
+          • <strong>Transaction ID:</strong> ${paymentId}<br>
+          • <strong>Booking ID:</strong> ${bookingId}<br>
+          • <strong>Amount Paid:</strong> ₹${amount.toLocaleString('en-IN')}<br>
+          • <strong>Payment Method:</strong> ${paymentMethod}<br>
+          • <strong>Date:</strong> ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </div>
+        ${receiptUrl ? `<div style="text-align: center; margin: 24px 0;"><a href="${receiptUrl}" style="background-color: #10B981; color: #ffffff; padding: 12px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px;">Download Official Invoice</a></div>` : ''}
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Payment Failure Notification Email
+   */
+  public async sendPaymentFailedEmail(params: {
+    to: string;
+    customerName: string;
+    bookingId: string;
+    amount: number;
+    reason?: string;
+    retryUrl?: string;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, customerName, bookingId, amount, reason, retryUrl } = params;
+    const subject = `⚠️ Payment Incomplete for Booking ${bookingId}`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Failed</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); padding: 32px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .fail-box { background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 14px; padding: 20px; margin-bottom: 24px; font-size: 13px; color: #991B1B; }
+    .btn-container { text-align: center; margin: 28px 0; }
+    .btn { display: inline-block; background-color: #EF4444; color: #ffffff !important; font-size: 15px; font-weight: 800; text-decoration: none; padding: 14px 36px; border-radius: 14px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">Payment Unsuccessful</h2>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 20px;">
+          Hello ${customerName || 'Traveler'},<br>
+          We were unable to process your payment for booking <strong>${bookingId}</strong>.
+        </p>
+        <div class="fail-box">
+          • <strong>Booking ID:</strong> ${bookingId}<br>
+          • <strong>Attempted Amount:</strong> ₹${amount.toLocaleString('en-IN')}<br>
+          • <strong>Status:</strong> Payment Failed / Cancelled<br>
+          ${reason ? `• <strong>Details:</strong> ${reason}<br>` : ''}
+        </div>
+        <p style="font-size: 13px; color: #64748B;">
+          Don't worry! Your seats are reserved temporarily. You can retry the payment right away to complete your reservation.
+        </p>
+        ${retryUrl ? `
+        <div class="btn-container">
+          <a href="${retryUrl}" class="btn" target="_blank">Retry Payment</a>
+        </div>` : ''}
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send KYC Approved & Membership Unlocked Notification Email
+   */
+  public async sendKycApprovedEmail(params: {
+    to: string;
+    travelerName: string;
+    membershipTier: string;
+    benefits?: string[];
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, travelerName, membershipTier, benefits } = params;
+    const subject = `🎉 Identity Verified! Your ${membershipTier} Membership is Now Active`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KYC Approved</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 22px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .benefit-box { background-color: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 14px; padding: 20px; margin-bottom: 24px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">Verification Complete! 🛡️</h2>
+        <p class="message">
+          Hello ${travelerName || 'Traveler'},<br><br>
+          Great news! Your identity documents have been successfully reviewed and approved by the ApnaTrip Compliance Board. Your travel profile is now 100% verified.
+        </p>
+        <div class="benefit-box">
+          <div style="font-weight: 800; font-size: 15px; color: #065F46; margin-bottom: 10px;">
+            Unlocked: ${membershipTier} Membership Tier
+          </div>
+          <div style="font-size: 13px; color: #047857; line-height: 1.6;">
+            • <strong>5% Flat Discount</strong> on all curated package bookings<br>
+            • <strong>1-Click Instant Checkout</strong> with pre-verified traveler profile<br>
+            • <strong>Priority Concierge Support</strong> & trip dispatch assistance<br>
+            • <strong>365 Days</strong> Tier Validity
+          </div>
+        </div>
+        <p class="message" style="margin-bottom: 0;">
+          The identity prompt on your home dashboard has been automatically dismissed. You're ready to explore without limitations!
+        </p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send KYC Rejected Notification Email
+   */
+  public async sendKycRejectedEmail(params: {
+    to: string;
+    travelerName: string;
+    reason: string;
+    reuploadUrl: string;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, travelerName, reason, reuploadUrl } = params;
+    const subject = `Action Required: Travel Document Verification Update - ApnaTrip`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verification Update</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .reason-box { background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 14px; padding: 20px; margin-bottom: 24px; font-size: 13px; color: #991B1B; line-height: 1.5; }
+    .btn-container { text-align: center; margin: 28px 0; }
+    .btn { display: inline-block; background-color: #DC2626; color: #ffffff !important; font-size: 15px; font-weight: 800; text-decoration: none; padding: 14px 36px; border-radius: 14px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">Verification Needs Attention</h2>
+        <p class="message">
+          Hello ${travelerName || 'Traveler'},<br><br>
+          During the review of your uploaded identity documents, our compliance team identified an issue that requires your attention:
+        </p>
+        <div class="reason-box">
+          <strong>Reviewer Feedback:</strong><br>
+          ${reason}
+        </div>
+        <p class="message">
+          Please upload a clear, legible photograph or scan of your document (Aadhaar Front+Back or Voter ID) so we can activate your travel profile.
+        </p>
+        <div class="btn-container">
+          <a href="${reuploadUrl}" class="btn" target="_blank">Re-upload Documents</a>
+        </div>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Membership Tier Activation Email
+   */
+  public async sendMembershipActivatedEmail(params: {
+    to: string;
+    travelerName: string;
+    tier: string;
+    validityDays: number;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, travelerName, tier, validityDays } = params;
+    const subject = `Welcome to ApnaTrip ${tier} Membership! ⭐`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Membership Activated</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; }
+    .title { font-size: 22px; font-weight: 800; color: #0F172A; margin-top: 0; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 class="title">${tier} Status Active ⭐</h2>
+        <p class="message">
+          Hello ${travelerName || 'Traveler'},<br><br>
+          Your account has been upgraded to <strong>${tier} Tier</strong>! Your membership is active for the next <strong>${validityDays} days</strong>.
+        </p>
+        <p class="message">
+          Enjoy member-exclusive rates, priority seating, accelerated reward points, and VIP concierge assistance across all your future adventures.
+        </p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send Promotional Coupon Notification Email
+   */
+  public async sendCouponNotificationEmail(params: {
+    to: string;
+    travelerName: string;
+    couponCode: string;
+    discountDesc: string;
+    expiresAt: string;
+    exploreUrl?: string;
+  }): Promise<nodemailer.SentMessageInfo> {
+    const { to, travelerName, couponCode, discountDesc, expiresAt, exploreUrl } = params;
+    const subject = `🎁 Special Gift: ${discountDesc} with code ${couponCode}`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Special Travel Discount</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; text-align: center; }
+    .coupon-card { border: 2px dashed #8B5CF6; background-color: #F5F3FF; border-radius: 16px; padding: 24px; margin: 24px 0; }
+    .code { font-size: 26px; font-weight: 900; letter-spacing: 2px; color: #6D28D9; }
+    .btn { display: inline-block; background-color: #8B5CF6; color: #ffffff !important; font-size: 15px; font-weight: 800; text-decoration: none; padding: 14px 36px; border-radius: 14px; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 0 0 12px;">A Special Travel Reward Just For You! 🎁</h2>
+        <p style="font-size: 14px; color: #475569; margin: 0 0 20px;">
+          Hello ${travelerName || 'Traveler'}, treat yourself to your next dream destination with this exclusive promotion.
+        </p>
+        <div class="coupon-card">
+          <div style="font-size: 14px; font-weight: 700; color: #6D28D9; margin-bottom: 8px;">${discountDesc}</div>
+          <div class="code">${couponCode}</div>
+          <div style="font-size: 12px; color: #64748B; margin-top: 8px;">Valid until: ${expiresAt}</div>
+        </div>
+        ${exploreUrl ? `<div style="margin: 28px 0;"><a href="${exploreUrl}" class="btn" target="_blank">Book With Discount</a></div>` : ''}
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
+
+  /**
+   * Send One-Time Password (OTP) Email
+   */
+  public async sendOtpEmail(
+    to: string,
+    userName: string,
+    otp: string,
+    purpose: string = 'Account Verification'
+  ): Promise<nodemailer.SentMessageInfo> {
+    const subject = `[ApnaTrip] Your Verification Code: ${otp}`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verification Code</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F8F9FC; color: #111827; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F8F9FC; padding: 40px 0; }
+    .container { max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #E5E7EB; }
+    .header { background: #FF4D6D; padding: 32px 30px; text-align: center; color: #ffffff; }
+    .logo { font-size: 26px; font-weight: 900; margin: 0; color: #ffffff; }
+    .content { padding: 36px 32px; text-align: center; }
+    .otp-box { background-color: #FFF1F2; border: 2px solid #FECDD3; border-radius: 14px; padding: 18px 24px; display: inline-block; margin: 20px 0; font-size: 32px; font-weight: 900; letter-spacing: 6px; color: #E11D48; }
+    .footer { border-top: 1px solid #F1F5F9; padding: 20px 32px; font-size: 11px; color: #94A3B8; text-align: center; background-color: #FAFBFC; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        ${getEmailLogoHtml(true)}
+      </div>
+      <div class="content">
+        <h2 style="font-size: 20px; font-weight: 800; color: #0F172A; margin: 0 0 10px;">Verification Code</h2>
+        <p style="font-size: 14px; color: #475569; margin: 0 0 16px;">
+          Hello ${userName || 'Traveler'}, use the verification code below for ${purpose}:
+        </p>
+        <div class="otp-box">${otp}</div>
+        <p style="font-size: 12px; color: #64748B; margin-top: 16px;">
+          ⏱️ This code will expire in <strong>10 minutes</strong>. For your security, never share this code with anyone.
+        </p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ApnaTrip Platform Inc. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendMail({ to, subject, html });
+  }
 }
 
 export const mailService = new MailService();
-
-
-

@@ -1,14 +1,17 @@
 import mongoose from 'mongoose';
 import { PackageModel, IPackage } from '../models/package.model.js';
+import { DepartureModel, computeDepartureStatus } from '../models/departure.model.js';
 import { AgencyModel } from '../models/agency.model.js';
 import { ReviewModel } from '../models/review.model.js';
 import { NotFoundError } from '../utils/errors.util.js';
 import { logger } from '../config/logger.config.js';
+import { packageReadinessService, isPackageVisibleToTraveler } from './packageReadiness.service.js';
 
 export interface CustomerPackageFilters {
   search?: string;
   q?: string;
   category?: string;
+  adventureType?: string;
   destination?: string;
   agencyId?: string;
   minPrice?: number;
@@ -25,7 +28,14 @@ export class PackageService {
   /**
    * Helper to format a Package document into frontend TourPackage schema
    */
-  public formatPackageResponse(pkg: any, agencyDoc?: any, reviewsDocs: any[] = []) {
+  public formatPackageResponse(
+    pkg: any,
+    agencyDoc?: any,
+    reviewsDocs: any[] = [],
+    activeDepartures: any[] = [],
+    isBookable?: boolean,
+    readinessInfo?: any
+  ) {
     const rawPrice = pkg.price || 0;
     const priceFormatted = `₹${rawPrice.toLocaleString('en-IN')}`;
     const originalPriceFormatted = pkg.originalPrice
@@ -40,135 +50,214 @@ export class PackageService {
     const destId = destName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
     const mappedItinerary = Array.isArray(pkg.itinerary) && pkg.itinerary.length > 0
-      ? pkg.itinerary.map((item: any) => ({
-          day: item.day,
-          title: item.title,
-          activities: Array.isArray(item.activities) ? item.activities : [item.description || 'Sightseeing and exploration'],
-          image: item.stay || pkg.coverImage || pkg.featuredImage,
-          overnightLocation: item.stay || destName,
-        }))
-      : [
-          {
-            day: 1,
-            title: `Arrival & Welcome to ${destName}`,
-            activities: ['Airport/Station Pickup', 'Hotel Check-in & Briefing', 'Local Market Walk & Dinner'],
-            overnightLocation: destName,
-          },
-          {
-            day: 2,
-            title: 'Scenic Sightseeing & Exploration',
-            activities: ['Guided Highlights Tour', 'Scenic Viewpoints & Nature Trail', 'Traditional Cultural Experience'],
-            overnightLocation: destName,
-          },
-          {
-            day: 3,
-            title: 'Adventure & Signature Activities',
-            activities: ['Outdoor Excursions', 'Photography Stops', 'Evening Leisure'],
-            overnightLocation: destName,
-          },
-          {
-            day: 4,
-            title: 'Souvenirs & Departure',
-            activities: ['Breakfast at Stay', 'Local Shopping', 'Transfer to Departure Point'],
-            overnightLocation: destName,
-          },
-        ];
+      ? pkg.itinerary.map((item: any) => {
+          let activities: string[] = [];
+          if (Array.isArray(item.plans) && item.plans.length > 0) {
+            activities = item.plans
+              .map((p: any) => {
+                const text = typeof p === 'string' ? p : p?.text || '';
+                return text.replace(/^\d{1,2}:\d{2}\s*[-–—]?\s*/, '').trim();
+              })
+              .filter(Boolean);
+          } else if (Array.isArray(item.activities) && item.activities.length > 0) {
+            activities = item.activities
+              .map((act: any) => {
+                const text = typeof act === 'string' ? act : act?.title || act?.text || '';
+                return text.replace(/^\d{1,2}:\d{2}\s*[-–—]?\s*/, '').trim();
+              })
+              .filter(Boolean);
+          } else if (item.description) {
+            activities = [item.description];
+          }
+
+          return {
+            day: item.day,
+            title: item.title,
+            description: item.description || '',
+            activities,
+            image: item.stay || pkg.coverImage || pkg.featuredImage,
+            overnightLocation: item.stay || destName,
+          };
+        })
+      : [];
 
     const mappedReviews = reviewsDocs.map((r: any) => ({
       id: r.reviewId || String(r._id),
-      travelerId: r.userId ? String(r.userId) : 'traveler-01',
-      travelerName: r.userName || 'Traveler',
+      travelerId: r.userId ? String(r.userId) : '',
+      travelerName: r.userName || 'Verified Traveler',
       travelerAvatar: r.userAvatar || '',
-      date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recent',
-      rating: r.rating || 5,
+      date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+      rating: Number(r.rating) || 5,
       comment: r.reviewText || '',
-      photos: r.images || [],
+      photos: Array.isArray(r.images) ? r.images : [],
+      verifiedPurchase: Boolean(r.verifiedPurchase),
     }));
+
+    const reviewCount = reviewsDocs.length > 0 ? reviewsDocs.length : (pkg.reviewCount || 0);
+    let calculatedRating = 0;
+    if (reviewsDocs.length > 0) {
+      const sum = reviewsDocs.reduce((acc: number, r: any) => acc + (Number(r.rating) || 0), 0);
+      calculatedRating = Math.round((sum / reviewsDocs.length) * 10) / 10;
+    } else if (pkg.rating && reviewCount > 0) {
+      calculatedRating = pkg.rating;
+    }
+
+    const accommodationConfirmed = Boolean(pkg.accommodationConfirmed);
+    const hotels = accommodationConfirmed && Array.isArray(pkg.accommodations) && pkg.accommodations.length > 0
+      ? pkg.accommodations.map((acc: any, idx: number) => ({
+          id: acc._id ? String(acc._id) : `hotel-${idx + 1}`,
+          name: acc.hotelName || '',
+          badge: acc.category || 'Hotel',
+          rating: acc.rating || 0,
+          reviewsCount: acc.reviewsCount || 0,
+          amenities: Array.isArray(acc.amenities) ? acc.amenities : [],
+          location: acc.city || acc.address || destName,
+          imageUrl: (Array.isArray(acc.hotelImages) && acc.hotelImages[0]) || acc.imageUrl || '',
+          roomType: acc.roomType || '',
+          checkIn: acc.checkIn || '',
+          checkOut: acc.checkOut || '',
+          shortDescription: acc.shortDescription || '',
+          dayRange: acc.dayRange || '',
+        }))
+      : [];
+
+    const activities = Array.isArray(pkg.activities) && pkg.activities.length > 0
+      ? pkg.activities
+          .filter((act: any) => act && (act.title || act.name))
+          .map((act: any, idx: number) => ({
+            id: act.id || `act-${idx + 1}`,
+            title: act.title || act.name || '',
+            iconName: act.iconName || 'Camera',
+            imageUrl: act.imageUrl || '',
+          }))
+      : [];
+
+    const faq = Array.isArray(pkg.faq) && pkg.faq.length > 0
+      ? pkg.faq
+          .filter((item: any) => item && item.question)
+          .map((item: any) => ({
+            question: item.question,
+            answer: item.answer || '',
+          }))
+      : [];
+
+    const primaryDep = activeDepartures.find((d: any) => {
+      const st = computeDepartureStatus(d);
+      const cap = Number(d.capacity) || pkg.totalSeats || 20;
+      const bkd = Number(d.bookedSeats) || 0;
+      return st === 'OPEN' && (cap - bkd) > 0;
+    }) || activeDepartures[0];
+    const hasOpenDeparture = Boolean(primaryDep && computeDepartureStatus(primaryDep) === 'OPEN' && ((Number(primaryDep.capacity) || pkg.totalSeats || 20) - (Number(primaryDep.bookedSeats) || 0)) > 0);
+    const computedBookable = typeof isBookable === 'boolean' ? isBookable : (hasOpenDeparture && Boolean(pkg.isActive) && !pkg.isDeleted);
+
+    const departureInfo = primaryDep
+      ? {
+          departureId: primaryDep.departureId || String(primaryDep._id),
+          departureDate: primaryDep.departureDate ? new Date(primaryDep.departureDate).toISOString() : new Date().toISOString(),
+          endDate: primaryDep.endDate ? new Date(primaryDep.endDate).toISOString() : (primaryDep.departureDate ? new Date(primaryDep.departureDate).toISOString() : new Date().toISOString()),
+          capacity: Number(primaryDep.capacity) || pkg.totalSeats || 20,
+          bookedSeats: Number(primaryDep.bookedSeats) || 0,
+          availableSeats: Math.max(0, (Number(primaryDep.capacity) || pkg.totalSeats || 20) - (Number(primaryDep.bookedSeats) || 0)),
+          status: computeDepartureStatus({
+            status: primaryDep.status,
+            isManualClosed: primaryDep.isManualClosed,
+            departureDate: primaryDep.departureDate,
+            endDate: primaryDep.endDate,
+            bookingCloses: primaryDep.bookingCloses,
+            capacity: primaryDep.capacity,
+            bookedSeats: primaryDep.bookedSeats,
+          }),
+        }
+      : null;
 
     return {
       id: pkg.packageId || String(pkg._id),
       _id: String(pkg._id),
       packageId: pkg.packageId || String(pkg._id),
-      agencyId: pkg.agencyId ? String(pkg.agencyId) : (agencyDoc?.agencyId || 'agency-001'),
-      agencyName: pkg.agencyName || agencyDoc?.agencyName || agencyDoc?.name || 'ApnaTrip Partner Agency',
-      agencyVerified: agencyDoc?.isVerified ?? true,
-      agencyLocation: agencyDoc?.location || `${pkg.destinationCountry || 'India'}`,
+      isBookable: computedBookable,
+      readiness: readinessInfo || null,
+      agencyId: pkg.agencyId ? (typeof pkg.agencyId === 'object' && pkg.agencyId._id ? String(pkg.agencyId._id) : String(pkg.agencyId)) : (agencyDoc?.agencyId || 'agency-001'),
+      agencyName: pkg.agencyName || (typeof pkg.agencyId === 'object' ? (pkg.agencyId.companyName || pkg.agencyId.name) : undefined) || agencyDoc?.companyName || agencyDoc?.agencyName || agencyDoc?.name || 'ApnaTrip Partner Agency',
+      agencyVerified: agencyDoc?.isVerified ?? (typeof pkg.agencyId === 'object' ? (Boolean(pkg.agencyId.isVerified) || pkg.agencyId.verificationStatus === 'APPROVED') : true),
+      agencyLocation: agencyDoc?.location || (typeof pkg.agencyId === 'object' ? pkg.agencyId.location : undefined) || `${pkg.destinationCountry || 'India'}`,
       destinationId: destId,
       destinationName: destName,
       title: pkg.title,
+      category: pkg.category || 'Adventure',
+      adventureType: pkg.adventureType || 'General Adventure',
       duration: durationFormatted,
       durationDays: days,
       durationNights: nights,
       price: priceFormatted,
       numericPrice: rawPrice,
+      startingPrice: priceFormatted,
       discountPrice: originalPriceFormatted,
-      rating: pkg.rating || 4.8,
-      reviewCount: pkg.reviewCount || reviewsDocs.length || 120,
-      badge: pkg.discountPercent ? `${pkg.discountPercent}% Off` : (pkg.isFeatured ? 'Featured' : 'Best Seller'),
+      rating: calculatedRating,
+      reviewCount: reviewCount,
+      reviewsCount: reviewCount,
+      badge: pkg.discountPercent ? `${pkg.discountPercent}% Off` : (pkg.isFeatured ? 'Featured' : ''),
       badgeType: (pkg.isFeatured ? 'bestseller' : 'popular') as 'bestseller' | 'popular' | 'new' | 'luxury',
-      overview: pkg.description || pkg.subtitle || `Experience the best of ${destName} with handpicked accommodations, expert local guides, and seamless transfers.`,
-      coverImage: pkg.coverImage || pkg.featuredImage || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop',
+      overview: pkg.description || pkg.subtitle || '',
+      coverImage: pkg.coverImage || pkg.featuredImage || (Array.isArray(pkg.images) && pkg.images[0]) || '',
+      primaryImage: pkg.coverImage || pkg.featuredImage || (Array.isArray(pkg.images) && pkg.images[0]) || '',
+      imageUrl: pkg.coverImage || pkg.featuredImage || (Array.isArray(pkg.images) && pkg.images[0]) || '',
       gallery: Array.isArray(pkg.galleryImages) && pkg.galleryImages.length > 0
         ? pkg.galleryImages
-        : [
-            pkg.coverImage || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800',
-            'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?q=80&w=800',
-            'https://images.unsplash.com/photo-1568849676085-51415703900f?q=80&w=800',
-          ],
-      groupSize: `${pkg.totalSeats || 15} Max Group`,
+        : (Array.isArray(pkg.images) && pkg.images.length > 0 ? pkg.images : (pkg.coverImage ? [pkg.coverImage] : [])),
+      nextDeparture: departureInfo,
+      availableSeats: departureInfo?.availableSeats ?? (pkg.totalSeats || 20),
+      departureSummary: departureInfo ? `Next: ${new Date(departureInfo.departureDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })} • ${departureInfo.availableSeats} seats left` : 'Departures available',
+      packageStatus: pkg.status || 'APPROVED',
+      status: pkg.status || 'APPROVED',
+      groupSize: pkg.totalSeats ? `${pkg.totalSeats} Max Group` : 'Flexible Group',
       difficulty: 'Moderate' as const,
-      bestTime: 'Oct – May',
-      vehicle: 'AC SUV / Tempo Traveler',
+      bestTime: '',
+      vehicle: '',
       startLocation: `${destName} Arrival Hub`,
       endLocation: `${destName} Departure Hub`,
       routeDetails: {
-        distance: `${days * 120} km`,
-        travelTime: `${days * 3}h total drive`,
-        highway: 'Scenic Highway & Mountain Corridors',
-        stops: [destName, 'Sightseeing Route', 'Cultural Stops'],
+        distance: '',
+        travelTime: '',
+        highway: '',
+        stops: [destName],
       },
-      includes: Array.isArray(pkg.inclusions) && pkg.inclusions.length > 0
-        ? pkg.inclusions
-        : ['All hotel & resort stays', 'Daily breakfast & dinner', 'AC vehicle for all transfers', 'Experienced local tour guide', 'All toll taxes and permits'],
-      excludes: Array.isArray(pkg.exclusions) && pkg.exclusions.length > 0
-        ? pkg.exclusions
-        : ['Airfare / Train tickets', 'Personal expenses & tips', 'Lunch and snacks unless specified', 'Travel insurance (optional add-on)'],
+      includes: Array.isArray(pkg.inclusions) ? pkg.inclusions : [],
+      excludes: Array.isArray(pkg.exclusions) ? pkg.exclusions : [],
       itinerary: mappedItinerary,
-      hotels: [
-        {
-          id: 'hotel-1',
-          name: `Premium ${destName} Heritage Resort`,
-          badge: '4-Star Luxury',
-          rating: 4.8,
-          reviewsCount: 310,
-          amenities: ['Free WiFi', 'Breakfast Included', 'Mountain / Nature View', '24/7 Room Service'],
-          location: destName,
-          imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800',
-        },
-      ],
-      activities: [
-        {
-          id: 'act-1',
-          title: 'Guided Nature Hike & Photography',
-          iconName: 'Camera',
-          imageUrl: pkg.coverImage || 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800',
-        },
-      ],
+      accommodationConfirmed,
+      accommodations: pkg.accommodations || [],
+      hotels,
+      activities,
       reviews: mappedReviews,
-      faq: [
-        {
-          question: 'What is the cancellation policy for this package?',
-          answer: 'Free cancellation up to 7 days before departure. 50% refund between 3 to 7 days. Non-refundable within 72 hours of departure.',
-        },
-        {
-          question: 'Is this tour suitable for families and senior citizens?',
-          answer: 'Yes! The pace is comfortable with easy walking trails, sanitized vehicles, and premium stays suitable for all age groups.',
-        },
-        {
-          question: 'Are meals included?',
-          answer: 'Daily breakfast and dinner are included as specified in the itinerary.',
-        },
-      ],
+      faq,
+      departure: departureInfo,
+      departures: activeDepartures.map((d: any) => {
+        const capacity = Number(d.capacity) || pkg.totalSeats || 20;
+        const bookedSeats = Number(d.bookedSeats) || 0;
+        const availableSeats = Math.max(0, capacity - bookedSeats);
+        const depStatus = computeDepartureStatus({
+          status: d.status,
+          isManualClosed: d.isManualClosed,
+          departureDate: new Date(d.departureDate),
+          endDate: new Date(d.endDate || d.departureDate),
+          bookingCloses: d.bookingCloses ? new Date(d.bookingCloses) : new Date(d.departureDate),
+          capacity,
+          bookedSeats,
+        });
+
+        return {
+          id: d.departureId || String(d._id),
+          departureId: d.departureId || String(d._id),
+          departureDate: new Date(d.departureDate).toISOString(),
+          endDate: new Date(d.endDate || d.departureDate).toISOString(),
+          capacity,
+          bookedSeats,
+          availableSeats,
+          price: d.priceOverride || pkg.price,
+          status: depStatus,
+          isSelectable: depStatus === 'OPEN' && availableSeats > 0,
+        };
+      }),
     };
   }
 
@@ -190,9 +279,26 @@ export class PackageService {
       limit = 20,
     } = filters;
 
+    // Fetch only bookable packages according to strict readiness criteria
+    const bookableIds = await packageReadinessService.getBookablePackageIds();
+    if (bookableIds.length === 0) {
+      return {
+        packages: [],
+        pagination: {
+          total: 0,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: 1,
+          hasMore: false,
+        },
+      };
+    }
+
     const query: any = {
+      _id: { $in: bookableIds },
       isDeleted: false,
-      status: { $in: ['APPROVED', 'DRAFT', 'PENDING'] }, // Show active marketplace inventory
+      isActive: true,
+      status: { $in: ['APPROVED', 'ACTIVE', 'PUBLISHED'] },
     };
 
     const searchText = search || q;
@@ -202,6 +308,7 @@ export class PackageService {
         { title: regex },
         { destination: regex },
         { category: regex },
+        { adventureType: regex },
         { agencyName: regex },
         { description: regex },
       ];
@@ -209,6 +316,10 @@ export class PackageService {
 
     if (category && category !== 'all' && category !== 'All') {
       query.category = new RegExp(category.trim(), 'i');
+    }
+
+    if (filters.adventureType && filters.adventureType !== 'all' && filters.adventureType !== 'All') {
+      query.adventureType = new RegExp(`^${filters.adventureType.trim()}$`, 'i');
     }
 
     if (destination && destination !== 'all' && destination !== 'All') {
@@ -249,7 +360,7 @@ export class PackageService {
       PackageModel.find(query).sort(sortOption).skip(skip).limit(take).lean(),
     ]);
 
-    const formattedList = packages.map((pkg) => this.formatPackageResponse(pkg));
+    const formattedList = await this.enrichAndFormatPackages(packages);
 
     return {
       packages: formattedList,
@@ -264,9 +375,59 @@ export class PackageService {
   }
 
   /**
-   * Get single package by ID (packageId or MongoDB _id or slug)
+   * Helper: Batch enrich package documents with live agency details and upcoming departures (zero N+1 queries)
    */
-  public async getPackageById(packageIdentifier: string) {
+  public async enrichAndFormatPackages(packages: any[]): Promise<any[]> {
+    if (!packages || packages.length === 0) return [];
+
+    const agencyIds = packages.map((p) => p.agencyId).filter(Boolean);
+    const agencies = agencyIds.length > 0
+      ? await AgencyModel.find({ _id: { $in: agencyIds } }).lean()
+      : [];
+    const agencyMap = new Map<string, any>(agencies.map((a: any) => [String(a._id), a]));
+
+    const pkgIds: any[] = [];
+    for (const p of packages) {
+      if (p._id) {
+        pkgIds.push(p._id);
+        pkgIds.push(String(p._id));
+      }
+      if (p.packageId) {
+        pkgIds.push(p.packageId);
+      }
+    }
+
+    const departures = pkgIds.length > 0
+      ? await DepartureModel.find({
+          packageId: { $in: pkgIds },
+          departureDate: { $gt: new Date() },
+          status: { $nin: ['SOLDOUT', 'BOOKING_CLOSED'] as any },
+        })
+          .sort({ departureDate: 1 })
+          .lean()
+      : [];
+
+    const departureMap = new Map<string, any[]>();
+    for (const dep of departures) {
+      const pKey = String(dep.packageId);
+      if (!departureMap.has(pKey)) {
+        departureMap.set(pKey, []);
+      }
+      departureMap.get(pKey)!.push(dep);
+    }
+
+    return packages.map((pkg) => {
+      const agencyDoc = agencyMap.get(String(pkg.agencyId));
+      const activeDepartures = departureMap.get(String(pkg._id)) || (pkg.packageId ? departureMap.get(pkg.packageId) : []) || [];
+      return this.formatPackageResponse(pkg, agencyDoc, [], activeDepartures, true);
+    });
+  }
+
+  /**
+   * Get single package by ID (packageId or MongoDB _id or slug)
+   * Enforces single source of truth validator: isPackageVisibleToTraveler
+   */
+  public async getPackageById(packageIdentifier: string, allowUnavailable: boolean = false) {
     if (!packageIdentifier || !packageIdentifier.trim()) {
       throw new NotFoundError('Package ID must be provided');
     }
@@ -297,6 +458,12 @@ export class PackageService {
       throw new NotFoundError(`Tour package "${packageIdentifier}" not found`);
     }
 
+    // Single source of truth visibility check
+    const isVisible = await isPackageVisibleToTraveler(pkg);
+    if (!isVisible && !allowUnavailable) {
+      throw new NotFoundError('This package is currently unavailable.');
+    }
+
     // Fetch associated agency and reviews
     let agencyDoc: any = null;
     if (pkg.agencyId) {
@@ -306,36 +473,84 @@ export class PackageService {
     const reviews = await ReviewModel.find({
       packageId: pkg._id,
       isDeleted: false,
+      status: 'Approved',
+      isHidden: false,
     })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(50)
       .lean();
 
-    return this.formatPackageResponse(pkg, agencyDoc, reviews);
+    const packageQueryIds: any[] = [pkg._id];
+    if (mongoose.Types.ObjectId.isValid(pkg._id)) {
+      packageQueryIds.push(new mongoose.Types.ObjectId(pkg._id.toString()));
+      packageQueryIds.push(pkg._id.toString());
+    }
+    if (pkg.packageId) {
+      packageQueryIds.push(pkg.packageId);
+    }
+
+    const activeDepartures = await DepartureModel.find({
+      packageId: { $in: packageQueryIds },
+      $and: [
+        {
+          $or: [
+            { endDate: { $gte: new Date() } },
+            { departureDate: { $gte: new Date() } },
+          ],
+        },
+      ],
+    })
+      .sort({ departureDate: 1 })
+      .lean();
+
+    const readiness = await packageReadinessService.getPackageReadiness(pkg);
+
+    return this.formatPackageResponse(
+      pkg,
+      agencyDoc,
+      reviews,
+      activeDepartures,
+      readiness.isBookable,
+      readiness
+    );
   }
 
   /**
    * Featured Packages (for Home & Landing)
    */
   public async getFeaturedPackages(limit = 6) {
-    const packages = await PackageModel.find({ isDeleted: false })
+    const bookableIds = await packageReadinessService.getBookablePackageIds();
+    if (bookableIds.length === 0) return [];
+
+    const packages = await PackageModel.find({
+      _id: { $in: bookableIds },
+      isDeleted: false,
+      isActive: true,
+    })
       .sort({ isFeatured: -1, rating: -1, bookingsCount: -1 })
       .limit(limit)
       .lean();
 
-    return packages.map((p) => this.formatPackageResponse(p));
+    return this.enrichAndFormatPackages(packages);
   }
 
   /**
    * Trending Packages
    */
   public async getTrendingPackages(limit = 8) {
-    const packages = await PackageModel.find({ isDeleted: false })
+    const bookableIds = await packageReadinessService.getBookablePackageIds();
+    if (bookableIds.length === 0) return [];
+
+    const packages = await PackageModel.find({
+      _id: { $in: bookableIds },
+      isDeleted: false,
+      isActive: true,
+    })
       .sort({ bookingsCount: -1, rating: -1 })
       .limit(limit)
       .lean();
 
-    return packages.map((p) => this.formatPackageResponse(p));
+    return this.enrichAndFormatPackages(packages);
   }
 
   /**
@@ -343,14 +558,24 @@ export class PackageService {
    */
   public async getSimilarPackages(packageId: string, limit = 4) {
     const base = await this.getPackageById(packageId).catch(() => null);
-    if (!base) return this.getFeaturedPackages(limit);
+    const bookableIds = await packageReadinessService.getBookablePackageIds();
+    if (bookableIds.length === 0) return [];
+
+    if (!base) {
+      return this.getFeaturedPackages(limit);
+    }
+
+    const basePkgId = base._id ? new mongoose.Types.ObjectId(base._id) : null;
+    const filterIds = basePkgId ? bookableIds.filter((id) => String(id) !== String(basePkgId)) : bookableIds;
 
     const similar = await PackageModel.find({
-      packageId: { $ne: base.id },
+      _id: { $in: filterIds },
       isDeleted: false,
+      isActive: true,
       $or: [
         { destination: new RegExp(base.destinationName, 'i') },
-        { category: base.badge },
+        { adventureType: base.adventureType || 'General Adventure' },
+        { category: base.category || base.badge },
       ],
     })
       .limit(limit)
@@ -360,7 +585,7 @@ export class PackageService {
       return this.getFeaturedPackages(limit);
     }
 
-    return similar.map((p) => this.formatPackageResponse(p));
+    return this.enrichAndFormatPackages(similar);
   }
 }
 

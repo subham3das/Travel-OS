@@ -54,12 +54,30 @@ export class AuthController {
   });
 
   public forgotPassword = asyncHandler(async (req: Request, res: Response) => {
-    const result = await authService.forgotPassword(req.body.email);
+    const meta = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+    const result = await authService.forgotPassword(req.body.email, meta);
     return ResponseUtil.success(res, result, result.message);
   });
 
+  public verifyResetToken = asyncHandler(async (req: Request, res: Response) => {
+    const token = (req.query.token as string) || req.body?.token;
+    const meta = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+    const result = await authService.verifyResetToken(token, meta);
+    return ResponseUtil.success(res, result, 'Reset token is valid');
+  });
+
   public resetPassword = asyncHandler(async (req: Request, res: Response) => {
-    const result = await authService.resetPassword(req.body.token, req.body.password);
+    const meta = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+    const result = await authService.resetPassword(req.body.token, req.body.password, meta);
     return ResponseUtil.success(res, result, result.message);
   });
 

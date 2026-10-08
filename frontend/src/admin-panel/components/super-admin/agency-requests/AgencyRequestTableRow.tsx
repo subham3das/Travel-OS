@@ -172,7 +172,19 @@ export const AgencyRequestTableRow: React.FC<AgencyRequestTableRowProps> = ({
 
       {/* Business Type */}
       <td className="py-3 px-3 text-slate-600 font-bold whitespace-nowrap">
-        {request.businessType}
+        {request.businessTypes?.includes('car_rental') && request.businessTypes?.includes('agency') ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-extrabold border border-purple-200">
+            Agency + Car
+          </span>
+        ) : request.businessTypes?.includes('car_rental') ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-extrabold border border-indigo-200">
+            🚗 Car Rental
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 text-slate-700 text-[10px] font-bold border border-slate-200">
+            {request.businessType || 'Tour Operator'}
+          </span>
+        )}
       </td>
 
       {/* Submitted Date */}

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { AgencyModel, IAgency } from '../models/agency.model.js';
 import { BookingModel, IBooking } from '../models/booking.model.js';
 import { PackageModel, IPackage } from '../models/package.model.js';
+import { packageReadinessService } from './packageReadiness.service.js';
 
 export interface AgencyDashboardStatsResponse {
   agency: {
@@ -85,6 +86,19 @@ export interface AgencyDashboardStatsResponse {
     occupancyPct: number;
     occupancyColor: 'green' | 'orange' | 'red';
   }>;
+  packagesRequiringAttention: {
+    totalActive: number;
+    totalIncomplete: number;
+    totalSoldOut: number;
+    totalBookingClosed: number;
+    attentionPackages: Array<{
+      id: string;
+      packageId: string;
+      packageName: string;
+      reason: string;
+      status: 'Incomplete Setup' | 'Sold Out' | 'Booking Closed' | 'Hidden';
+    }>;
+  };
 }
 
 export class AgencyDashboardService {
@@ -300,8 +314,83 @@ export class AgencyDashboardService {
       { label: 'This Week', tripText: `${tripsThisWeekCount} Trip${tripsThisWeekCount === 1 ? '' : 's'}`, count: tripsThisWeekCount },
     ];
 
+    // Evaluate packages requiring attention (Phase 7)
+    let totalActiveBookable = 0;
+    let totalIncomplete = 0;
+    let totalSoldOut = 0;
+    let totalBookingClosed = 0;
+    const attentionPackages: Array<{
+      id: string;
+      packageId: string;
+      packageName: string;
+      reason: string;
+      status: 'Incomplete Setup' | 'Sold Out' | 'Booking Closed' | 'Hidden';
+    }> = [];
+
+    const packageReadinessResults = await Promise.all(
+      packagesList.map(async (pkg) => ({
+        pkg,
+        readiness: await packageReadinessService.getPackageReadiness(pkg),
+      }))
+    );
+
+    for (const { pkg, readiness } of packageReadinessResults) {
+      if (readiness.isBookable) {
+        totalActiveBookable++;
+      } else {
+        let statusTag: 'Incomplete Setup' | 'Sold Out' | 'Booking Closed' | 'Hidden' = 'Incomplete Setup';
+        const topReason = readiness.missingRequirements[0] || 'Requires setup';
+
+        if (readiness.missingRequirements.some((r) => r.toLowerCase().includes('sold out'))) {
+          statusTag = 'Sold Out';
+          totalSoldOut++;
+        } else if (
+          readiness.missingRequirements.some(
+            (r) => r.toLowerCase().includes('booking window') || r.toLowerCase().includes('past')
+          )
+        ) {
+          statusTag = 'Booking Closed';
+          totalBookingClosed++;
+        } else if (
+          readiness.missingRequirements.some(
+            (r) => r.toLowerCase().includes('hidden') || r.toLowerCase().includes('inactive')
+          )
+        ) {
+          statusTag = 'Hidden';
+          totalIncomplete++;
+        } else {
+          totalIncomplete++;
+        }
+
+        attentionPackages.push({
+          id: pkg._id.toString(),
+          packageId: pkg.packageId || pkg._id.toString(),
+          packageName: pkg.title,
+          reason: topReason,
+          status: statusTag,
+        });
+
+        // Phase 6: ensure notification is triggered if needed
+        packageReadinessService.notifyAgencyIfNeeded(pkg, readiness);
+      }
+    }
+
     // 9. Quick Insights (Rule Engine based on real MongoDB values)
-    const quickInsights = [];
+    const quickInsights: Array<{
+      id: string;
+      title: string;
+      subtitle: string;
+      type: 'growth' | 'fire' | 'warning' | 'wallet';
+    }> = [];
+
+    if (attentionPackages.length > 0) {
+      quickInsights.push({
+        id: 'qi-attention',
+        title: `⚠ ${attentionPackages.length} package${attentionPackages.length > 1 ? 's' : ''} require setup`,
+        subtitle: `${attentionPackages[0].packageName}: ${attentionPackages[0].reason}`,
+        type: 'warning' as const,
+      });
+    }
 
     if (revenueGrowthPct !== 0) {
       quickInsights.push({
@@ -493,6 +582,13 @@ export class AgencyDashboardService {
       quickInsights: quickInsights.slice(0, 4),
       recentBookings: recentBookingsDTO,
       departures: departuresDTO,
+      packagesRequiringAttention: {
+        totalActive: totalActiveBookable,
+        totalIncomplete,
+        totalSoldOut,
+        totalBookingClosed,
+        attentionPackages,
+      },
     };
   }
 

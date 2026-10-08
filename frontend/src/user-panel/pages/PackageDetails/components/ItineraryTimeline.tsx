@@ -76,12 +76,15 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ itinerary 
             </div>
 
             <div className="space-y-3">
-              {activeDay.activities.map((act, idx) => (
-                <div key={idx} className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-slate-700">
-                  {getIconForActivity(act)}
-                  <span>{act}</span>
-                </div>
-              ))}
+              {activeDay.activities.map((act, idx) => {
+                const cleanAct = act.replace(/^\d{1,2}:\d{2}\s*[-–—]?\s*/, '');
+                return (
+                  <div key={idx} className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-slate-700">
+                    {getIconForActivity(cleanAct)}
+                    <span>{cleanAct}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

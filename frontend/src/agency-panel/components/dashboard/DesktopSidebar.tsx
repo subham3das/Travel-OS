@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { BrandLogo } from '../../../common/brand';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   Calendar,
@@ -11,31 +13,53 @@ import {
   BarChart2,
   LogOut,
   User,
+  Car,
+  Settings,
+  CalendarDays,
+  Star,
+  Layers,
+  Lock,
 } from 'lucide-react';
 import { useAgencyAuth } from '../../hooks/useAgencyAuth';
+import { useActiveBusiness } from '../../context/ActiveBusinessContext';
 import { AgencyVerificationStatus } from '../../types/agency';
+import { ApprovalRequiredModal } from './ApprovalRequiredModal';
 
 export const DesktopSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { agency, logoutAgency } = useAgencyAuth();
+  const { activeBusiness } = useActiveBusiness();
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   const handleLogout = () => {
     logoutAgency();
     navigate('/agency/login');
   };
 
-  const navItems = [
+  const agencyNavItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/agency/dashboard', icon: <LayoutDashboard className="w-4.5 h-4.5" /> },
-    { id: 'messages', label: 'Messages', path: '/agency/messages', icon: <MessageSquare className="w-4.5 h-4.5" /> },
-    { id: 'customers', label: 'Customers', path: '/agency/customers', icon: <Users className="w-4.5 h-4.5" /> },
-    { id: 'bookings', label: 'Bookings', path: '/agency/bookings', icon: <Calendar className="w-4.5 h-4.5" /> },
     { id: 'packages', label: 'Packages', path: '/agency/packages', icon: <Package className="w-4.5 h-4.5" /> },
-    { id: 'trips', label: 'Trips', path: '/agency/trips', icon: <MapPin className="w-4.5 h-4.5" /> },
-    { id: 'profile', label: 'Agency Profile', path: '/agency/profile', icon: <User className="w-4.5 h-4.5" /> },
-    { id: 'notifications', label: 'Notifications', path: '/agency/notifications', icon: <Bell className="w-4.5 h-4.5" /> },
+    { id: 'bookings', label: 'Bookings', path: '/agency/bookings', icon: <Calendar className="w-4.5 h-4.5" /> },
+    { id: 'customers', label: 'Customers', path: '/agency/customers', icon: <Users className="w-4.5 h-4.5" /> },
+    { id: 'messages', label: 'Messages', path: '/agency/messages', icon: <MessageSquare className="w-4.5 h-4.5" /> },
     { id: 'analytics', label: 'Analytics', path: '/agency/analytics', icon: <BarChart2 className="w-4.5 h-4.5" /> },
+    { id: 'settings', label: 'Settings', path: '/agency/profile/settings', icon: <Settings className="w-4.5 h-4.5" /> },
   ];
+
+  const carRentalNavItems = [
+    { id: 'cr-dashboard', label: 'Dashboard', path: '/agency/car-rental/dashboard', icon: <LayoutDashboard className="w-4.5 h-4.5" /> },
+    { id: 'cr-cars', label: 'Vehicles', path: '/agency/car-rental/cars', icon: <Car className="w-4.5 h-4.5" /> },
+    { id: 'cr-fleet-overview', label: 'Fleet Overview', path: '/agency/car-rental/fleet-overview', icon: <Layers className="w-4.5 h-4.5" /> },
+    { id: 'cr-bookings', label: 'Bookings', path: '/agency/car-rental/bookings', icon: <Calendar className="w-4.5 h-4.5" /> },
+    { id: 'cr-drivers', label: 'Drivers', path: '/agency/car-rental/drivers', icon: <Users className="w-4.5 h-4.5" /> },
+    { id: 'cr-customers', label: 'Customers', path: '/agency/car-rental/customers', icon: <Users className="w-4.5 h-4.5" /> },
+    { id: 'cr-reviews', label: 'Reviews', path: '/agency/car-rental/reviews', icon: <Star className="w-4.5 h-4.5" /> },
+    { id: 'cr-analytics', label: 'Analytics', path: '/agency/car-rental/analytics', icon: <BarChart2 className="w-4.5 h-4.5" /> },
+    { id: 'cr-settings', label: 'Settings', path: '/agency/car-rental/settings', icon: <Settings className="w-4.5 h-4.5" /> },
+  ];
+
+  const navItems = activeBusiness === 'car_rental' ? carRentalNavItems : agencyNavItems;
 
   const rawName = agency?.agencyDisplayName || agency?.name || 'Agency Partner';
   const nameWords = rawName.trim().split(/\s+/);
@@ -44,57 +68,81 @@ export const DesktopSidebar: React.FC = () => {
       ? `${nameWords[0][0]}${nameWords[1][0]}`.toUpperCase()
       : rawName.slice(0, 2).toUpperCase();
 
-  const isVerified =
-    agency?.verificationStatus === AgencyVerificationStatus.APPROVED ||
-    (agency?.verificationStatus as any) === 'VERIFIED';
+  const onboardingStatus =
+    agency?.onboardingStatus ||
+    (agency?.verificationStatus === 'APPROVED' ? 'APPROVED' : 'PAYMENT_PENDING');
+  const isApproved = onboardingStatus === 'APPROVED';
 
   return (
     <aside className="hidden md:flex sticky top-0 h-screen w-64 bg-white border-r border-slate-100 flex-col justify-between p-5 shrink-0 shadow-xs select-none z-30 overflow-y-auto scrollbar-none">
       <div className="space-y-6">
         {/* Brand Logo Header */}
-        <div className="flex items-center gap-2.5 px-2 cursor-pointer" onClick={() => navigate('/agency/dashboard')}>
-          <div className="w-9 h-9 rounded-2xl bg-[#583BE8] text-white flex items-center justify-center shadow-md shadow-[#583BE8]/25 shrink-0">
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 21.5C12 21.5 19 15.5 19 10C19 6.13401 15.866 3 12 3C8.13401 3 5 6.13401 5 10C5 15.5 12 21.5 12 21.5Z"
-                fill="white"
-                fillOpacity="0.25"
-              />
-              <circle cx="12" cy="9.5" r="3.5" stroke="white" strokeWidth="1.8" />
-              <path d="M12 7.5L13.5 11L12 10L10.5 11L12 7.5Z" fill="white" />
-            </svg>
-          </div>
-          <div>
-            <span className="text-lg font-black tracking-tight text-[#0F172A] block leading-none">
-              Apna<span className="text-[#583BE8]">Trip</span>
-            </span>
-            <span className="text-[9px] font-black tracking-widest uppercase text-slate-400 block mt-0.5">
-              PARTNER PORTAL
-            </span>
-          </div>
+        <div
+          className="flex flex-col gap-1.5 px-2 cursor-pointer"
+          onClick={() => navigate(activeBusiness === 'car_rental' ? '/agency/car-rental/dashboard' : '/agency/dashboard')}
+        >
+          <BrandLogo theme="light" className="h-8 w-auto max-w-[170px]" alt="ApnaTrip" />
+          <span className="text-[9px] font-black tracking-widest uppercase text-slate-400 block pl-0.5">
+            {activeBusiness === 'car_rental' ? 'CAR RENTAL PORTAL' : 'TRAVEL AGENCY PORTAL'}
+          </span>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="space-y-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path || (item.path !== '/agency/dashboard' && location.pathname.startsWith(item.path));
+        {/* Animated Navigation Items */}
+        <AnimatePresence mode="wait">
+          <motion.nav
+            key={activeBusiness}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-1"
+          >
+            {navItems.map((item) => {
+              const isActive =
+                location.pathname === item.path ||
+                (item.path !== '/agency/dashboard' &&
+                  item.path !== '/agency/car-rental/dashboard' &&
+                  location.pathname.startsWith(item.path));
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-[#583BE8] text-white shadow-md shadow-[#583BE8]/25'
-                    : 'text-slate-600 hover:bg-purple-50/70 hover:text-[#583BE8]'
-                }`}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+              const isOperational =
+                item.id !== 'dashboard' &&
+                item.id !== 'cr-dashboard' &&
+                item.id !== 'settings' &&
+                item.id !== 'cr-settings';
+
+              const isItemLocked = !isApproved && isOperational;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (isItemLocked) {
+                      setShowApprovalModal(true);
+                    } else {
+                      navigate(item.path);
+                    }
+                  }}
+                  title={isItemLocked ? 'Locked until registration fee is paid and application is verified.' : undefined}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#583BE8] text-white shadow-md shadow-[#583BE8]/25'
+                      : isItemLocked
+                      ? 'text-slate-400 hover:bg-slate-50'
+                      : 'text-slate-600 hover:bg-purple-50/70 hover:text-[#583BE8]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {item.icon}
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  {isItemLocked && (
+                    <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </motion.nav>
+        </AnimatePresence>
       </div>
 
       {/* Bottom Profile Summary & Logout */}
@@ -112,8 +160,20 @@ export const DesktopSidebar: React.FC = () => {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-xs font-black text-[#0F172A] truncate">{rawName}</p>
-            <p className={`text-[10px] font-semibold ${isVerified ? 'text-emerald-600' : 'text-amber-600'}`}>
-              {isVerified ? '✓ Verified Partner' : 'Verification Under Review'}
+            <p
+              className={`text-[10px] font-semibold ${
+                onboardingStatus === 'APPROVED'
+                  ? 'text-emerald-600'
+                  : onboardingStatus === 'UNDER_REVIEW'
+                  ? 'text-indigo-600'
+                  : 'text-amber-600'
+              }`}
+            >
+              {onboardingStatus === 'APPROVED'
+                ? '✓ Verified Partner'
+                : onboardingStatus === 'UNDER_REVIEW'
+                ? '• Under Review'
+                : '• Registration Fee Pending'}
             </p>
           </div>
         </div>
@@ -126,6 +186,14 @@ export const DesktopSidebar: React.FC = () => {
           <span>Logout</span>
         </button>
       </div>
+
+      {/* Approval Required Modal */}
+      <ApprovalRequiredModal
+        isOpen={showApprovalModal}
+        onClose={() => setShowApprovalModal(false)}
+        applicationId={agency?.applicationId || (agency as any)?._id}
+        businessName={rawName}
+      />
     </aside>
   );
 };

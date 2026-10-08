@@ -1,29 +1,23 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, ShieldCheck, CreditCard, AlertCircle } from 'lucide-react';
 
-export const PolicySection: React.FC = () => {
+export interface AgencyPolicyItem {
+  title: string;
+  subtitle?: string;
+  content: string;
+  icon?: React.ReactNode;
+}
+
+interface PolicySectionProps {
+  policies?: AgencyPolicyItem[];
+}
+
+export const PolicySection: React.FC<PolicySectionProps> = ({ policies = [] }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const policies = [
-    {
-      title: 'Cancellation Policy',
-      subtitle: 'Get full details about our cancellation & refund policy.',
-      content: '100% refund for cancellations made 15+ days prior to departure. 50% refund for cancellations 7-14 days prior. Non-refundable within 7 days of departure.',
-      icon: <AlertCircle className="w-4 h-4 text-purple-600" />,
-    },
-    {
-      title: 'Payment Policy',
-      subtitle: 'Secure payments. Easy EMIs and multiple payment options.',
-      content: 'Pay 25% advance to lock your booking. Balance amount payable 7 days before departure via UPI, Credit Card, or Net Banking.',
-      icon: <CreditCard className="w-4 h-4 text-purple-600" />,
-    },
-    {
-      title: 'Travel Safety & Insurance',
-      subtitle: 'Your safety is our priority. Know about our safety measures.',
-      content: 'All tours include complimentary comprehensive accidental insurance cover up to ₹5,000,000. Certified first-aid trained guides accompany every trip.',
-      icon: <ShieldCheck className="w-4 h-4 text-purple-600" />,
-    },
-  ];
+  if (!policies || policies.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-3.5">

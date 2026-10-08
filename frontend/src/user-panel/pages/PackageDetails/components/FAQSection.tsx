@@ -3,22 +3,15 @@ import { ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
 import { PackageFAQ } from '../../../types/package';
 
 interface FAQSectionProps {
-  faq: PackageFAQ[];
+  faq?: PackageFAQ[];
 }
 
 export const FAQSection: React.FC<FAQSectionProps> = ({ faq }) => {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
-  const defaultFaq: PackageFAQ[] = faq && faq.length > 0 ? faq : [
-    {
-      question: 'What is the best time to visit Meghalaya?',
-      answer: 'September to May is the best time to visit Meghalaya with clear skies, comfortable temperatures and cascading waterfalls in Cherrapunji.',
-    },
-    {
-      question: 'What should I pack for this trip?',
-      answer: 'We recommend bringing comfortable trekking shoes, waterproof rain jackets/umbrellas, light woollens for Shillong evenings, power banks, and camera gear.',
-    },
-  ];
+  if (!faq || faq.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-3.5">
@@ -26,14 +19,16 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ faq }) => {
         <h2 className="text-lg sm:text-xl font-extrabold text-[#0F172A] tracking-tight">
           FAQ
         </h2>
-        <button className="text-xs font-bold text-[#6356E5] hover:underline flex items-center gap-0.5 cursor-pointer">
-          <span>View All FAQ</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
+        {faq.length > 3 && (
+          <button className="text-xs font-bold text-[#6356E5] hover:underline flex items-center gap-0.5 cursor-pointer">
+            <span>View All FAQ</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="space-y-2.5">
-        {defaultFaq.map((item, idx) => {
+        {faq.map((item, idx) => {
           const isOpen = openIdx === idx;
           return (
             <div

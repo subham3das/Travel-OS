@@ -4,10 +4,11 @@ import { ResponseUtil } from '../utils/response.util.js';
 import { HTTP_STATUS, ERROR_CODES } from '../constants/http.constant.js';
 
 export const globalRateLimiter = rateLimit({
-  windowMs: envConfig.RATE_LIMIT_WINDOW_MS,
-  max: envConfig.RATE_LIMIT_MAX_REQUESTS,
+  windowMs: envConfig.RATE_LIMIT_WINDOW_MS || 60000,
+  max: envConfig.NODE_ENV === 'development' ? 5000 : (envConfig.RATE_LIMIT_MAX_REQUESTS || 1000),
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => envConfig.NODE_ENV === 'development',
   handler: (_req, res) => {
     ResponseUtil.error(
       res,
@@ -20,9 +21,10 @@ export const globalRateLimiter = rateLimit({
 
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 requests per 15 minutes
+  max: envConfig.NODE_ENV === 'development' ? 1000 : 20,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => envConfig.NODE_ENV === 'development',
   handler: (_req, res) => {
     ResponseUtil.error(
       res,

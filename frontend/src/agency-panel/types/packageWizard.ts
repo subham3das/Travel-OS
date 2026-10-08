@@ -32,6 +32,26 @@ export type PackageType =
   | 'Luxury'
   | 'Weekend Getaway';
 
+export const ADVENTURE_TYPES = [
+  'Trekking',
+  'Camping',
+  'Backpacking',
+  'Expedition',
+  'Road Trip',
+  'Wildlife Safari',
+  'Desert Safari',
+  'Cycling',
+  'River Rafting',
+  'Skiing',
+  'Snow Adventure',
+  'Scuba Diving',
+  'Paragliding',
+  'General Adventure',
+] as const;
+
+export type AdventureType = (typeof ADVENTURE_TYPES)[number];
+export const DEFAULT_ADVENTURE_TYPE: AdventureType = 'General Adventure';
+
 export type TripDifficulty = 'Easy' | 'Moderate' | 'Difficult';
 
 export type PackageVisibility = 'Draft' | 'Publish Later';
@@ -40,6 +60,7 @@ export interface Step1BasicInfo {
   packageName: string;
   shortDescription: string;
   packageType: PackageType | null;
+  adventureType?: AdventureType | string;
   tripDifficulty: TripDifficulty | null;
   visibility: PackageVisibility;
 }
@@ -62,7 +83,6 @@ export interface Step3PricingInfo {
   pricingModel: PricingModel;
   originalPrice: number;
   discountedPrice: number;
-  minTravelers: number;
   maxTravelers: number;
   recommendedGroupSize: number;
   paymentType: PaymentType;
@@ -94,7 +114,6 @@ export interface DepartureScheduleItem {
   reportingTime: string;
   bookingClosingDate: string; // "2026-09-05"
   bookingClosingTime: string; // "23:59"
-  minimumTravelers: number;
   maximumTravelers: number;
   bookedTravelers: number;
   availableSeats: number;
@@ -160,6 +179,26 @@ export interface Step8PublishInfo {
   finalAgreement: boolean;
 }
 
+export interface PackageHotelEntry {
+  id: string;
+  hotelName: string;
+  hotelImages: string[];
+  category: string;
+  address: string;
+  city: string;
+  amenities: string[];
+  roomType: string;
+  checkIn: string;
+  checkOut: string;
+  shortDescription: string;
+  dayRange?: string;
+}
+
+export interface StepAccommodationInfo {
+  accommodationConfirmed: boolean;
+  hotels: PackageHotelEntry[];
+}
+
 export interface PackageWizardDraft {
   currentStep: number;
   isComplete: boolean;
@@ -168,6 +207,7 @@ export interface PackageWizardDraft {
   step3: Step3PricingInfo;
   stepDepartures: StepDeparturesInfo;
   step4: Step4ItineraryInfo;
+  stepAccommodation: StepAccommodationInfo;
   step5: Step5GalleryInfo;
   step6: Step6InclusionsInfo;
   step7: Step7PoliciesInfo;
@@ -183,7 +223,6 @@ export const INITIAL_DEPARTURE_ITEM: DepartureScheduleItem = {
   reportingTime: '07:30 AM',
   bookingClosingDate: '2026-09-05',
   bookingClosingTime: '23:59',
-  minimumTravelers: 8,
   maximumTravelers: 20,
   bookedTravelers: 0,
   availableSeats: 20,
@@ -199,6 +238,7 @@ export const INITIAL_WIZARD_DRAFT: PackageWizardDraft = {
     packageName: 'Ladakh Adventure Expedition',
     shortDescription: 'High-altitude motorable mountain pass trail & starlit lake camping.',
     packageType: 'Adventure',
+    adventureType: 'General Adventure',
     tripDifficulty: 'Difficult',
     visibility: 'Draft',
   },
@@ -219,7 +259,6 @@ export const INITIAL_WIZARD_DRAFT: PackageWizardDraft = {
     pricingModel: 'Price Per Person',
     originalPrice: 24999,
     discountedPrice: 18999,
-    minTravelers: 8,
     maxTravelers: 20,
     recommendedGroupSize: 12,
     paymentType: 'Full Payment',
@@ -240,6 +279,10 @@ export const INITIAL_WIZARD_DRAFT: PackageWizardDraft = {
   step4: {
     days: INITIAL_ITINERARY_DAYS,
     activeDayId: INITIAL_ITINERARY_DAYS[0]?.id || 'day-1',
+  },
+  stepAccommodation: {
+    accommodationConfirmed: false,
+    hotels: [],
   },
   step5: {
     coverImage: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
@@ -324,8 +367,9 @@ export const WIZARD_STEPS: WizardStepMeta[] = [
   { step: 3, title: 'Pricing & Capacity' },
   { step: 4, title: 'Departure Schedule' },
   { step: 5, title: 'Itinerary' },
-  { step: 6, title: 'Gallery & Media' },
-  { step: 7, title: 'Inclusions & Exclusions' },
-  { step: 8, title: 'Policies, FAQs & Rules' },
-  { step: 9, title: 'Preview & Publish' },
+  { step: 6, title: 'Accommodation (Optional)' },
+  { step: 7, title: 'Gallery & Media' },
+  { step: 8, title: 'Inclusions & Exclusions' },
+  { step: 9, title: 'Policies, FAQs & Rules' },
+  { step: 10, title: 'Preview & Publish' },
 ];

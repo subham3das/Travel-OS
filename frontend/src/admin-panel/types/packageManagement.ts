@@ -1,6 +1,6 @@
 // ─── Super Admin Package Management Interfaces ───────────────────────────────
 
-export type PackageStatus = 'Active' | 'Draft' | 'Sold Out' | 'Pending' | 'Hidden';
+export type PackageStatus = 'Active' | 'Draft' | 'Sold Out' | 'Pending' | 'Hidden' | 'Archived' | 'Inactive';
 export type PackageApprovalStatus = 'Approved' | 'Pending' | 'Rejected' | '—';
 
 export interface PackageItineraryDay {
@@ -58,8 +58,15 @@ export interface AdminPackageItem {
   reviewCount: number; // e.g. 128
   status: PackageStatus;
   approvalStatus: PackageApprovalStatus;
+  visibilityStatus?: 'Visible' | 'Hidden';
+  visibilityReason?: string;
   isFeatured: boolean;
+  isPopular?: boolean;
+  isTrending?: boolean;
+  isMostPopular?: boolean;
+  autoRankEnabled?: boolean;
   category: string; // e.g. Adventure, Honeymoon, Luxury, Beach, Cultural
+  adventureType?: string; // e.g. Trekking, Camping, Road Trip
   departureMonth: string; // e.g. May, June, July
   lastUpdated: string; // e.g. May 21, 2024
 
@@ -92,6 +99,7 @@ export interface PackageFilters {
   destination: string;
   agency: string;
   category: string;
+  adventureType?: string;
   duration: string;
   priceRange: string;
   departureMonth: string;

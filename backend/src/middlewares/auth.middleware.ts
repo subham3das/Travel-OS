@@ -30,3 +30,23 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
     next(error);
   }
 };
+
+/**
+ * Optional Authentication Middleware
+ * Decodes user token if provided, but does not block guests if omitted.
+ */
+export const optionalAuthenticate = (req: Request, _res: Response, next: NextFunction): void => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = TokenUtil.verifyAccessToken(token);
+    req.user = decoded;
+    next();
+  } catch {
+    next();
+  }
+};
+

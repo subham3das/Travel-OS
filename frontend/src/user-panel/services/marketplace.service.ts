@@ -112,6 +112,11 @@ class MarketplaceService {
       if (filters.selectedTravelTypes && filters.selectedTravelTypes.length > 0) {
         params.category = filters.selectedTravelTypes.join(',');
       }
+      if (filters.adventureType) {
+        params.adventureType = filters.adventureType;
+      } else if (filters.selectedAdventureTypes && filters.selectedAdventureTypes.length > 0) {
+        params.adventureType = filters.selectedAdventureTypes.join(',');
+      }
     }
 
     const res = await apiClient.get<GroupedSearchResults>('/search', {
@@ -122,6 +127,8 @@ class MarketplaceService {
       destinations: [],
       packages: [],
       agencies: [],
+      cars: [],
+      travelers: [],
       bookings: [],
       trips: [],
       messages: [],

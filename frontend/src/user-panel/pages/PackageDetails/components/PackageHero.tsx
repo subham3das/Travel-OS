@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TourPackage } from '../../../types/package';
 import { useToast } from '../../../context/ToastContext';
+import { wishlistService } from '../../../services/wishlist.service';
 
 interface PackageHeroProps {
   pkg: TourPackage;
@@ -12,8 +13,25 @@ interface PackageHeroProps {
 export const PackageHero: React.FC<PackageHeroProps> = ({ pkg, onOpenGallery }) => {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(() => wishlistService.isPackageSaved(pkg.id));
   const [currentIdx, setCurrentIdx] = useState(0);
+
+  useEffect(() => {
+    setIsWishlisted(wishlistService.isPackageSaved(pkg.id));
+  }, [pkg.id]);
+
+  const handleToggleWishlist = () => {
+    const nextState = wishlistService.toggleSavePackage({
+      id: pkg.id,
+      title: pkg.title,
+      price: pkg.price,
+      image: (pkg.gallery && pkg.gallery[0]) || pkg.coverImage,
+      agency: pkg.agencyName || 'Verified Partner',
+      duration: pkg.duration,
+    });
+    setIsWishlisted(nextState);
+    showToast(nextState ? 'Added to your Wishlist!' : 'Removed from Wishlist', 'info');
+  };
 
   const images = pkg.gallery && pkg.gallery.length > 0 ? pkg.gallery : [pkg.coverImage];
   const totalImages = images.length;
@@ -57,7 +75,7 @@ export const PackageHero: React.FC<PackageHeroProps> = ({ pkg, onOpenGallery }) 
 
         <div className="flex items-center gap-2.5">
           <button
-            onClick={() => setIsWishlisted(!isWishlisted)}
+            onClick={handleToggleWishlist}
             className="w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-lg hover:bg-slate-100 transition-all cursor-pointer focus:outline-none"
           >
             <Heart

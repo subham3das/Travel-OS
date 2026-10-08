@@ -15,19 +15,7 @@ export const POPULAR_DESTINATIONS: string[] = [
   'Jaipur, Rajasthan',
 ];
 
-export const MOCK_COVERED_DESTINATIONS_SUGGESTIONS: string[] = [
-  'Leh',
-  'Nubra Valley',
-  'Pangong Lake',
-  'Khardung La',
-  'Zanskar Valley',
-  'Tso Moriri',
-  'Diskit Monastery',
-  'Magnetic Hill',
-  'Sangam',
-];
-
-export const MOCK_CITIES: string[] = [
+export const MAJOR_CITIES: string[] = [
   'Leh',
   'Delhi',
   'Mumbai',
@@ -36,7 +24,11 @@ export const MOCK_CITIES: string[] = [
   'Kochi',
   'Bangalore',
   'Chandigarh',
+  'Kolkata',
+  'Jaipur',
+  'Guwahati',
 ];
+export const MOCK_CITIES = MAJOR_CITIES;
 
 export const TRAVEL_SEASONS_CONFIG: { season: TravelSeason; emoji: string }[] = [
   { season: 'Spring', emoji: '🌸' },

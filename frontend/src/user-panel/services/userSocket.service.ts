@@ -56,6 +56,22 @@ class UserSocketService {
       this.notifyListeners('chat:typing', data);
     });
 
+    this.socket.on('cms:content_updated', (data) => {
+      this.notifyListeners('cms:content_updated', data);
+    });
+
+    this.socket.on('current_trip_updated', (data) => {
+      this.notifyListeners('current_trip_updated', data);
+    });
+
+    this.socket.on('booking_updated', (data) => {
+      this.notifyListeners('booking_updated', data);
+    });
+
+    this.socket.on('trip_status_updated', (data) => {
+      this.notifyListeners('trip_status_updated', data);
+    });
+
     return this.socket;
   }
 

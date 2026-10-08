@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Share2, Star, CloudSun, MapPin } from 'lucide-react';
 import { Destination } from '../../../data/destinations';
+import { wishlistService } from '../../../services/wishlist.service';
+import { useToast } from '../../../context/ToastContext';
 
 interface DestinationHeroProps {
   destination: Destination;
@@ -9,7 +11,26 @@ interface DestinationHeroProps {
 
 export const DestinationHero: React.FC<DestinationHeroProps> = ({ destination }) => {
   const navigate = useNavigate();
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { showToast } = useToast();
+  const [isWishlisted, setIsWishlisted] = useState(() =>
+    wishlistService.isDestinationSaved(destination.id)
+  );
+
+  useEffect(() => {
+    setIsWishlisted(wishlistService.isDestinationSaved(destination.id));
+  }, [destination.id]);
+
+  const handleToggleWishlist = () => {
+    const nextState = wishlistService.toggleSaveDestination({
+      id: destination.id,
+      title: destination.name,
+      subtitle: destination.country || 'India',
+      image: destination.heroImage || (destination as any).thumbnail || '',
+      rating: destination.rating || 4.8,
+    });
+    setIsWishlisted(nextState);
+    showToast(nextState ? 'Destination added to Wishlist!' : 'Removed from Wishlist', 'info');
+  };
 
   const handleShare = () => {
     if (navigator.share) {
@@ -17,9 +38,10 @@ export const DestinationHero: React.FC<DestinationHeroProps> = ({ destination })
         title: destination.name,
         text: destination.description,
         url: window.location.href,
-      });
+      }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      if (navigator.clipboard) navigator.clipboard.writeText(window.location.href);
+      showToast('Link copied to clipboard!', 'success');
     }
   };
 
@@ -44,7 +66,7 @@ export const DestinationHero: React.FC<DestinationHeroProps> = ({ destination })
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsWishlisted(!isWishlisted)}
+            onClick={handleToggleWishlist}
             className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-black/50 transition-all cursor-pointer focus:outline-none"
           >
             <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-[#FF4D6D] text-[#FF4D6D]' : 'text-white'}`} />

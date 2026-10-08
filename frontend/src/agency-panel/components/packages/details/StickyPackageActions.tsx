@@ -3,14 +3,13 @@ import { Edit3, Copy, CalendarPlus, TrendingUp } from 'lucide-react';
 
 interface StickyPackageActionsProps {
   onEdit: () => void;
-  onDuplicate: () => void;
+  onDuplicate?: () => void;
   onCreateDeparture: () => void;
   onViewAnalytics: () => void;
 }
 
 export const StickyPackageActions: React.FC<StickyPackageActionsProps> = ({
   onEdit,
-  onDuplicate,
   onCreateDeparture,
   onViewAnalytics,
 }) => {
@@ -38,15 +37,6 @@ export const StickyPackageActions: React.FC<StickyPackageActionsProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={onDuplicate}
-            className="px-3 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold hidden sm:flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Copy className="w-4 h-4 text-slate-500 shrink-0" />
-            <span>Duplicate</span>
-          </button>
-
           <button
             type="button"
             onClick={onViewAnalytics}

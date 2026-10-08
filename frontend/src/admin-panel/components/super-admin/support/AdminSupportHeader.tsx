@@ -5,21 +5,18 @@ import {
   Calendar,
   Download,
   RefreshCw,
-  Plus,
   ChevronDown,
 } from 'lucide-react';
 
 interface AdminSupportHeaderProps {
   onExport: () => void;
   onRefresh: () => void;
-  onCreateAnnouncement: () => void;
   isRefreshing?: boolean;
 }
 
 export const AdminSupportHeader: React.FC<AdminSupportHeaderProps> = ({
   onExport,
   onRefresh,
-  onCreateAnnouncement,
   isRefreshing = false,
 }) => {
   const navigate = useNavigate();
@@ -46,7 +43,7 @@ export const AdminSupportHeader: React.FC<AdminSupportHeaderProps> = ({
         </div>
       </div>
 
-      {/* Right Controls: Date Range Picker, Export Report, Refresh, Create Announcement */}
+      {/* Right Controls: Date Range Picker, Export Report, Refresh */}
       <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
         {/* Date Range Picker */}
         <div className="relative">
@@ -74,15 +71,6 @@ export const AdminSupportHeader: React.FC<AdminSupportHeaderProps> = ({
         >
           <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${isRefreshing ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
-        </button>
-
-        {/* Create Announcement (Primary Purple CTA) */}
-        <button
-          onClick={onCreateAnnouncement}
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#6356E5] hover:bg-[#5244e0] text-white text-xs font-extrabold shadow-md shadow-[#6356E5]/25 transition-all cursor-pointer shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Announcement</span>
         </button>
       </div>
     </div>

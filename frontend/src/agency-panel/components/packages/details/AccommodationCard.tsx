@@ -7,6 +7,8 @@ interface AccommodationCardProps {
 }
 
 export const AccommodationCard: React.FC<AccommodationCardProps> = ({ accommodation }) => {
+  if (!accommodation) return null;
+
   return (
     <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-100/90 shadow-2xs space-y-4 select-none overflow-hidden">
       <h3 className="text-sm sm:text-lg font-black text-[#0F172A] flex items-center gap-2 truncate">

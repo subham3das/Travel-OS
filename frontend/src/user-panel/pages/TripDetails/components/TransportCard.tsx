@@ -7,7 +7,17 @@ interface TransportCardProps {
 }
 
 export const TransportCard: React.FC<TransportCardProps> = ({ trip }) => {
-  const { vehicle } = trip;
+  const vehicle = trip?.vehicle || (trip as any)?.leadVehicle || {};
+  const vehicleName = vehicle.name || 'Rental Vehicle';
+  const vehicleNumber = vehicle.number || (vehicle as any)?.registrationNumber || 'Commercial Plate';
+  const vehicleType = vehicle.type || 'Commercial Fleet';
+  const driverName = vehicle.driverName || (vehicle as any)?.assignedDriver || 'Assigned on Dispatch';
+  const driverPhone = vehicle.driverPhone || trip?.agency?.phone || '';
+  const pickupLocation = vehicle.pickupLocation || trip?.destination || 'Pickup Point';
+  const pickupTime =
+    vehicle.pickupTime ||
+    (trip as any)?.assignedHotel?.roomType?.replace('Scheduled Time: ', '') ||
+    'Scheduled Time';
 
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-2xs space-y-4 select-none">
@@ -20,7 +30,7 @@ export const TransportCard: React.FC<TransportCardProps> = ({ trip }) => {
           </div>
         </div>
         <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-200">
-          {vehicle.type}
+          {vehicleType}
         </span>
       </div>
 
@@ -28,19 +38,21 @@ export const TransportCard: React.FC<TransportCardProps> = ({ trip }) => {
         {/* Vehicle Name & Number */}
         <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-100 space-y-1">
           <span className="text-[10px] font-bold text-amber-800 uppercase block">Vehicle</span>
-          <p className="font-black text-[#0F172A]">{vehicle.name}</p>
-          <p className="text-[11px] font-bold text-slate-500">Plate Number: {vehicle.number}</p>
+          <p className="font-black text-[#0F172A]">{vehicleName}</p>
+          <p className="text-[11px] font-bold text-slate-500">Plate Number: {vehicleNumber}</p>
         </div>
 
         {/* Driver Info */}
         <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
           <span className="text-[10px] font-bold text-slate-400 uppercase block">Assigned Driver</span>
           <p className="font-extrabold text-[#0F172A] flex items-center gap-1">
-            <UserCheck className="w-3.5 h-3.5 text-emerald-600" /> {vehicle.driverName}
+            <UserCheck className="w-3.5 h-3.5 text-emerald-600" /> {driverName}
           </p>
-          <p className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
-            <Phone className="w-3 h-3 text-slate-400" /> {vehicle.driverPhone}
-          </p>
+          {driverPhone && (
+            <p className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+              <Phone className="w-3 h-3 text-slate-400" /> {driverPhone}
+            </p>
+          )}
         </div>
 
         {/* Pickup Location & Time */}
@@ -48,15 +60,13 @@ export const TransportCard: React.FC<TransportCardProps> = ({ trip }) => {
           <span className="text-[10px] font-black text-[#583BE8] uppercase block">Scheduled Pickup Point</span>
           <p className="font-black text-[#0F172A] flex items-center gap-1.5">
             <MapPin className="w-4 h-4 text-[#FF4D6D] shrink-0" />
-            {vehicle.pickupLocation}
+            {pickupLocation}
           </p>
           <p className="text-[11px] font-bold text-purple-700 flex items-center gap-1 pl-5">
-            <Clock className="w-3.5 h-3.5" /> Pickup Time: {vehicle.pickupTime}
+            <Clock className="w-3.5 h-3.5" /> Pickup Time: {pickupTime}
           </p>
         </div>
       </div>
     </div>
   );
 };
-
-export default TransportCard;

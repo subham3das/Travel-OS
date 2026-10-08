@@ -75,6 +75,27 @@ export class AdminPackageController {
     }
   }
 
+  async updateStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const { status } = req.body;
+      const pkg = await adminPackageService.updateStatus(id, status, (req as any).admin);
+      res.status(200).json({ success: true, data: pkg, message: `Package status updated to ${status}` });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to update package status' });
+    }
+  }
+
+  async updateFlags(req: Request, res: Response): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const pkg = await adminPackageService.updateFlags(id, req.body, (req as any).admin);
+      res.status(200).json({ success: true, data: pkg, message: 'Package discovery flags updated' });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to update discovery flags' });
+    }
+  }
+
   async deletePackage(req: Request, res: Response): Promise<void> {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

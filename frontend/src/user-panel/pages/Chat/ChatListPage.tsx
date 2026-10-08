@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,17 +9,20 @@ import {
   ShieldCheck,
   X,
   MessageSquareOff,
+  Car,
 } from 'lucide-react';
-import { getChats, ChatConversation } from '../../data/chats';
+import { ChatConversation } from '../../data/chats';
 import { customerChatService } from '../../services/customerChat.service';
 import { userSocketService } from '../../services/userSocket.service';
 import { ChatCard } from './components/ChatCard';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 
+type FilterType = 'all' | 'packages' | 'cars' | 'bookings' | 'support' | 'agencies';
+
 export const ChatListPage: React.FC = () => {
   const navigate = useNavigate();
-  const [chats, setChats] = useState<ChatConversation[]>(getChats());
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'agencies' | 'support' | 'bookings'>('all');
+  const [chats, setChats] = useState<ChatConversation[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSecurityBanner, setShowSecurityBanner] = useState(true);
@@ -27,15 +30,17 @@ export const ChatListPage: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     customerChatService.getConversations().then((liveList) => {
-      if (isMounted && liveList && liveList.length > 0) {
-        setChats(liveList);
+      if (isMounted) {
+        setChats(liveList || []);
       }
     });
 
-    const unsubscribe = userSocketService.subscribe('message:new', (data: any) => {
+    const unsubscribe = userSocketService.subscribe('message:new', () => {
       if (!isMounted) return;
       customerChatService.getConversations().then((updated) => {
-        if (isMounted && updated.length > 0) setChats(updated);
+        if (isMounted) {
+          setChats(updated || []);
+        }
       });
     });
 
@@ -45,34 +50,80 @@ export const ChatListPage: React.FC = () => {
     };
   }, []);
 
-  const filterChips: { id: 'all' | 'agencies' | 'support' | 'bookings'; label: string; icon: React.ReactNode }[] = [
-    { id: 'all', label: 'All', icon: null },
-    { id: 'agencies', label: 'Agencies', icon: <Briefcase className="w-3.5 h-3.5" /> },
-    { id: 'support', label: 'Support', icon: <Headphones className="w-3.5 h-3.5" /> },
-    { id: 'bookings', label: 'Bookings', icon: <Clock className="w-3.5 h-3.5" /> },
+  const isPackageChat = (c: ChatConversation) =>
+    (c.conversationType === 'PACKAGE' || c.category === 'agencies' || c.category === 'hosts' || Boolean(c.packageName)) &&
+    c.conversationType !== 'CAR_RENTAL' &&
+    c.category !== 'cars' &&
+    c.category !== 'support';
+
+  const isCarChat = (c: ChatConversation) =>
+    c.conversationType === 'CAR_RENTAL' || c.category === 'cars' || Boolean(c.vehicleBooking);
+
+  const isBookingChat = (c: ChatConversation) =>
+    Boolean(
+      (c.bookingId && c.bookingId.trim().length > 0) ||
+      (c.vehicleBooking?.bookingId && c.vehicleBooking.bookingId.trim().length > 0)
+    );
+
+  const isSupportChat = (c: ChatConversation) =>
+    c.category === 'support' ||
+    c.agencyId?.startsWith('support') ||
+    c.agencyName?.toLowerCase().includes('support') ||
+    c.agencyName?.toLowerCase().includes('concierge') ||
+    c.agencyName?.toLowerCase().includes('billing');
+
+  const counts = useMemo(() => {
+    return {
+      all: chats.length,
+      packages: chats.filter(isPackageChat).length,
+      cars: chats.filter(isCarChat).length,
+      bookings: chats.filter(isBookingChat).length,
+      support: chats.filter(isSupportChat).length,
+    };
+  }, [chats]);
+
+  const filterChips: { id: FilterType; label: string; icon: React.ReactNode; count: number }[] = [
+    { id: 'all', label: 'All', icon: null, count: counts.all },
+    { id: 'packages', label: 'Packages', icon: <Briefcase className="w-3.5 h-3.5" />, count: counts.packages },
+    { id: 'cars', label: 'Car Rentals', icon: <Car className="w-3.5 h-3.5" />, count: counts.cars },
+    { id: 'bookings', label: 'Bookings', icon: <Clock className="w-3.5 h-3.5" />, count: counts.bookings },
+    { id: 'support', label: 'Support', icon: <Headphones className="w-3.5 h-3.5" />, count: counts.support },
   ];
 
   const handleChatClick = (chat: ChatConversation) => {
     navigate(`/chat/${chat.id}`);
   };
 
-  const filteredChats = chats.filter((c) => {
-    if (selectedFilter === 'agencies' && c.category !== 'agencies') return false;
-    if (selectedFilter === 'support' && c.category !== 'support') return false;
-    if (selectedFilter === 'bookings' && !c.bookingId) return false;
+  const filteredChats = useMemo(() => {
+    return chats.filter((c) => {
+      if (selectedFilter === 'packages' || selectedFilter === 'agencies') {
+        if (!isPackageChat(c)) return false;
+      } else if (selectedFilter === 'cars') {
+        if (!isCarChat(c)) return false;
+      } else if (selectedFilter === 'bookings') {
+        if (!isBookingChat(c)) return false;
+      } else if (selectedFilter === 'support') {
+        if (!isSupportChat(c)) return false;
+      }
 
-    if (searchQuery.trim().length > 0) {
-      const q = searchQuery.toLowerCase();
-      return (
-        c.agencyName.toLowerCase().includes(q) ||
-        (c.bookingId && c.bookingId.toLowerCase().includes(q)) ||
-        (c.packageName && c.packageName.toLowerCase().includes(q)) ||
-        (c.destinationName && c.destinationName.toLowerCase().includes(q))
-      );
-    }
+      if (searchQuery.trim().length > 0) {
+        const q = searchQuery.toLowerCase();
+        return (
+          c.agencyName?.toLowerCase().includes(q) ||
+          (c.bookingId && c.bookingId.toLowerCase().includes(q)) ||
+          (c.packageName && c.packageName.toLowerCase().includes(q)) ||
+          (c.destinationName && c.destinationName.toLowerCase().includes(q)) ||
+          (c.vehicleBooking?.vehicleName && c.vehicleBooking.vehicleName.toLowerCase().includes(q)) ||
+          (c.vehicleBooking?.bookingId && c.vehicleBooking.bookingId.toLowerCase().includes(q)) ||
+          (c.vehicleBooking?.rentalProvider && c.vehicleBooking.rentalProvider.toLowerCase().includes(q)) ||
+          (c.vehicleBooking?.pickupLocation && c.vehicleBooking.pickupLocation.toLowerCase().includes(q)) ||
+          (c.vehicleBooking?.dropLocation && c.vehicleBooking.dropLocation.toLowerCase().includes(q))
+        );
+      }
 
-    return true;
-  });
+      return true;
+    });
+  }, [chats, selectedFilter, searchQuery]);
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#6356E5]/20 selection:text-[#6356E5]">
@@ -110,14 +161,14 @@ export const ChatListPage: React.FC = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by agency name, booking ID, or package..."
+                  placeholder="Search by agency, car, package, or booking ID..."
                   className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-[#0F172A] focus:outline-none focus:border-[#6356E5] focus:bg-white transition-all"
                   autoFocus
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -144,6 +195,15 @@ export const ChatListPage: React.FC = () => {
               >
                 {chip.icon}
                 <span>{chip.label}</span>
+                {chip.count > 0 && (
+                  <span
+                    className={`ml-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {chip.count}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -158,51 +218,58 @@ export const ChatListPage: React.FC = () => {
             <div className="w-16 h-16 rounded-full bg-purple-50 text-[#6356E5] flex items-center justify-center mx-auto">
               <MessageSquareOff className="w-8 h-8" />
             </div>
-            <h3 className="text-base font-black text-[#0F172A]">No Conversations Yet</h3>
+            <h3 className="text-base font-black text-[#0F172A]">No Conversations Found</h3>
             <p className="text-xs font-medium text-slate-500 max-w-xs mx-auto">
-              Start chatting with a verified travel agency directly from any package or booking page.
+              {searchQuery
+                ? `No conversation matches "${searchQuery}". Try a different keyword.`
+                : 'No conversations match the selected filter category.'}
             </p>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="mt-2 inline-flex items-center px-4 py-2 text-xs font-bold text-[#6356E5] bg-purple-50 hover:bg-purple-100 rounded-full transition-colors cursor-pointer"
+              >
+                Clear Search
+              </button>
+            )}
           </div>
         ) : (
-          <div className="bg-white rounded-3xl border border-slate-100/90 shadow-2xs divide-y divide-slate-100 overflow-hidden">
+          /* Chat List */
+          <div className="bg-white rounded-3xl border border-slate-100 divide-y divide-slate-100 shadow-2xs overflow-hidden">
             {filteredChats.map((chat) => (
               <ChatCard key={chat.id} chat={chat} onClick={handleChatClick} />
             ))}
           </div>
         )}
 
-        {/* Security Banner at Bottom */}
+        {/* Security & Verification Banner */}
         {showSecurityBanner && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs flex items-center justify-between gap-3"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#6356E5]/10 text-[#6356E5] flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-
-              <div>
-                <h4 className="text-xs font-black text-[#0F172A]">Chat with verified travel agencies</h4>
-                <p className="text-[11px] font-medium text-slate-500 leading-tight">
-                  All agencies are verified & your conversations are secured with end-to-end encryption.
-                </p>
-              </div>
+          <div className="p-4 rounded-3xl bg-indigo-50/60 border border-indigo-100/80 flex items-start gap-3 relative">
+            <div className="p-2 rounded-2xl bg-white shadow-2xs text-[#6356E5] shrink-0 mt-0.5">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-
+            <div className="flex-1 min-w-0 pr-6 space-y-0.5">
+              <h4 className="text-xs font-black text-[#0F172A]">
+                End-to-End Secure Booking Channels
+              </h4>
+              <p className="text-[11px] font-medium text-slate-600 leading-relaxed">
+                All communications and vehicle bookings are verified by ApnaTrip.
+                Never share UPI PINs or passwords in chat.
+              </p>
+            </div>
             <button
+              type="button"
               onClick={() => setShowSecurityBanner(false)}
-              className="text-slate-400 hover:text-slate-600 p-1 shrink-0 cursor-pointer"
+              className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+              title="Dismiss"
             >
               <X className="w-4 h-4" />
             </button>
-          </motion.div>
+          </div>
         )}
       </main>
 
-      {/* Shared Bottom Navigation */}
-      <BottomNavigation activeTab="chat" />
+      <BottomNavigation />
     </div>
   );
 };

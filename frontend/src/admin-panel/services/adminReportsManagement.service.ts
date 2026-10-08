@@ -3,7 +3,7 @@ import {
   ReportItem,
   ReportCategory,
   RevenueTrendDataPoint,
-  GeographicRegionData,
+  BookingFunnelItem,
   TopDestinationReportItem,
   AgencyMatrixBubble,
   CategoryPerformanceItem,
@@ -91,9 +91,9 @@ class AdminReportsManagementService {
     }
   }
 
-  public async getGeographicData(): Promise<GeographicRegionData[]> {
+  public async getBookingFunnel(): Promise<BookingFunnelItem[]> {
     try {
-      const response = await adminApiClient.get<GeographicRegionData[]>('/admin/reports/geographic');
+      const response = await adminApiClient.get<BookingFunnelItem[]>('/admin/reports/booking-funnel');
       if (response.success && response.data) return response.data;
       return [];
     } catch {
@@ -180,6 +180,26 @@ class AdminReportsManagementService {
       date: 'Just now',
       format,
     };
+  }
+
+  public async getPackageAnalytics(): Promise<any> {
+    const res = await adminApiClient.get('/admin/reports/package-analytics');
+    return res.data;
+  }
+
+  public async getDepartureAnalytics(): Promise<any> {
+    const res = await adminApiClient.get('/admin/reports/departure-analytics');
+    return res.data;
+  }
+
+  public async getBookingAnalytics(): Promise<any> {
+    const res = await adminApiClient.get('/admin/reports/booking-analytics');
+    return res.data;
+  }
+
+  public async getAgencyAnalytics(): Promise<any> {
+    const res = await adminApiClient.get('/admin/reports/agency-analytics');
+    return res.data;
   }
 }
 

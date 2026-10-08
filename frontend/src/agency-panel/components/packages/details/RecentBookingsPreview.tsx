@@ -51,11 +51,8 @@ export const RecentBookingsPreview: React.FC<RecentBookingsPreviewProps> = ({ re
             </div>
 
             <div className="text-right shrink-0">
-              <span className="text-xs sm:text-sm font-black text-[#0F172A] block">
-                ₹{b.amount.toLocaleString('en-IN')}
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
-                {b.paymentStatus}
+              <span className="text-[10px] sm:text-xs font-black text-[#583BE8] bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200 inline-block">
+                {b.travelersCount} {b.travelersCount === 1 ? 'Seat' : 'Seats'}
               </span>
             </div>
           </div>

@@ -48,14 +48,38 @@ export const ChatCard: React.FC<ChatCardProps> = ({ chat, onClick }) => {
           {chat.lastMessage}
         </p>
 
-        {/* Booking ID Tag Pill */}
-        {chat.bookingId && (
-          <div className="pt-0.5">
+        {/* Context Tag Pill */}
+        {chat.conversationType === 'CAR_RENTAL' || chat.vehicleBooking ? (
+          <div className="pt-0.5 flex items-center gap-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[11px] font-bold">
+              🚗 {chat.vehicleBooking?.vehicleName || 'Rental Vehicle'}
+              {chat.vehicleBooking?.bookingId ? `: ${chat.vehicleBooking.bookingId}` : ''}
+            </span>
+          </div>
+        ) : chat.bookingId ? (
+          <div className="pt-0.5 flex items-center gap-1.5 flex-wrap">
             <span className="inline-block px-2.5 py-0.5 rounded-full bg-purple-50 text-[#6356E5] text-[11px] font-bold">
               Booking ID: {chat.bookingId}
             </span>
+            {chat.packageName && (
+              <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold truncate max-w-[150px]">
+                {chat.packageName}
+              </span>
+            )}
           </div>
-        )}
+        ) : chat.packageName ? (
+          <div className="pt-0.5">
+            <span className="inline-block px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold">
+              🎒 {chat.packageName}
+            </span>
+          </div>
+        ) : chat.category === 'support' ? (
+          <div className="pt-0.5">
+            <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">
+              🛡️ Official Support
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {/* Unread Count Circle Badge */}

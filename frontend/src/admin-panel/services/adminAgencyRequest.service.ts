@@ -166,6 +166,56 @@ export const adminAgencyRequestService = {
   },
 
   /**
+   * Approve Car Rental Capability Independently
+   */
+  async approveCarRentalRequest(id: string, notes?: string) {
+    try {
+      const response = await adminApiClient.put<{
+        success: boolean;
+        message: string;
+        agency: AgencyRequestItem;
+      }>(`/admin/agency-requests/${id}/approve-car-rental`, { notes });
+
+      return {
+        success: response.success,
+        agency: response.data?.agency,
+        message: response.message || response.data?.message || 'Car Rental business approved successfully.',
+      };
+    } catch (err: any) {
+      console.error('approveCarRentalRequest error:', err);
+      return {
+        success: false,
+        message: err.message || 'Failed to approve car rental capability.',
+      };
+    }
+  },
+
+  /**
+   * Reject Car Rental Capability Independently
+   */
+  async rejectCarRentalRequest(id: string, reason: string, notes?: string) {
+    try {
+      const response = await adminApiClient.put<{
+        success: boolean;
+        message: string;
+        agency: AgencyRequestItem;
+      }>(`/admin/agency-requests/${id}/reject-car-rental`, { reason, notes });
+
+      return {
+        success: response.success,
+        agency: response.data?.agency,
+        message: response.message || response.data?.message || 'Car Rental capability rejected.',
+      };
+    } catch (err: any) {
+      console.error('rejectCarRentalRequest error:', err);
+      return {
+        success: false,
+        message: err.message || 'Failed to reject car rental capability.',
+      };
+    }
+  },
+
+  /**
    * Approve Submitted / Re-uploaded Documents for an Agency
    */
   async approveAgencyDocuments(id: string, documentIds?: string[], notes?: string) {

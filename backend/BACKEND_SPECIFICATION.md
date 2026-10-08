@@ -209,6 +209,112 @@ Manages traveler identity, profiles, contact details, traveler KYC/passports, lo
 
 ---
 
+### Module 2B: Traveler Identity & One-Time Travel Profile Verification (KYC Workspace)
+
+#### 1. Overview
+Governs the traveler's one-time personal profile and government-issued identity documents. Enforces a backend-driven state machine that derives parent KYC status directly from document statuses, auto-unlocks Silver Tier membership upon verification, and synchronizes real-time decisions with the Super Admin KYC workspace.
+
+#### 2. Database Collections
+* **Collection:** `travel_profiles` (`TravelProfileModel`)
+  * `_id`: ObjectId
+  * `userId`: ObjectId (Ref -> `users`, Unique, Index)
+  * `fullName`: String (Required)
+  * `dob`: Date
+  * `gender`: Enum (`male`, `female`, `other`, `prefer_not_to_say`)
+  * `nationality`: String (Default: 'Indian')
+  * `phone`: String, `email`: String
+  * `address`: String, `city`: String, `state`: String, `country`: String, `pin`: String
+  * `emergencyContact`: Object (`name`, `phone`, `relationship`)
+  * `bloodGroup`: String, `medicalConditions`: String, `allergies`: String
+  * `aadhaar`: Object (`number`, `frontUrl`, `backUrl`)
+  * `voterId`: Object (`number`, `frontUrl`)
+  * `drivingLicence`: Object (`number`, `frontUrl`, `backUrl`)
+  * `passport`: Object (`number`, `expiryDate`, `documentUrl`)
+  * `travelPreferences`: Object (`seatPreference`, `mealPreference`, `specialAssistance`)
+  * `verificationStatus`: Enum (`UNVERIFIED`, `PENDING`, `VERIFIED`, `REJECTED`)
+  * `rejectionReason`: String
+  * `completionPercentage`: Number
+  * `missingFields`: Array of Strings
+  * `createdAt`: Date, `updatedAt`: Date
+
+* **Collection:** `user_kycs` (`UserKycModel`)
+  * `_id`: ObjectId
+  * `userId`: ObjectId (Ref -> `users`, Unique, Index)
+  * `verificationId`: String (Unique, Index, e.g. `KYC-2026-USR-8912`)
+  * `status`: Enum (`Pending`, `Verified`, `Rejected`, `Expired`, `Suspended`, `None`)
+  * `submittedAt`: Date (Nullable)
+  * `verifiedAt`: Date (Nullable)
+  * `lastUpdated`: Date
+  * `reviewedBy`: Object (`id`, `name`, `email`, `role`)
+  * `rejectionReason`: String
+  * `internalNote`: String
+  * `riskScore`: Number (0-100)
+  * `riskLevel`: Enum (`Low`, `Medium`, `High`)
+  * `verificationSource`: String
+  * `fraudDetection`: String
+  * `faceMatchPercent`: Number
+  * `documentMatchPercent`: Number
+  * `governmentValidation`: String
+  * `documents`: Array of Objects:
+    * `id`: String (Unique within record)
+    * `type`: String (`Aadhaar Card (Front)`, `Voter ID`, etc.)
+    * `docCategory`: Enum (`aadhaar`, `voterId`, `drivingLicence`, `passport`)
+    * `status`: Enum (`Pending`, `Verified`, `Rejected`)
+    * `uploadedAt`: Date, `verifiedAt`: Date
+    * `mimeType`: String, `size`: String, `fileUrl`: String, `thumbnailUrl`: String
+    * `documentNumberMasked`: String (e.g. `•••• •••• 4289`)
+    * `country`: String, `expiryDate`: String, `ocrResult`: String, `forgeryCheck`: String, `faceMatchPercent`: Number
+    * `rejectionReason`: String
+  * `timeline`: Array of Objects (`id`, `action`, `timestamp`, `admin`, `notes`)
+
+#### 3. State Machine & Status Derivation Rules
+The parent status is dynamically derived using:
+$$\text{Status} = f(\text{Documents})$$
+* **No documents:** `None` (`NOT_SUBMITTED`).
+* **ANY document Rejected:** `Rejected`.
+* **ANY document Pending:** `Pending`.
+* **ALL documents Verified:** `Verified`.
+* **Expired document:** `Expired`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Traveler
+    participant API as TravelOS API Gateway
+    participant Cloud as Cloudinary Storage
+    participant DB as MongoDB Atlas
+    actor Admin as Compliance Admin
+
+    Traveler->>API: PUT /api/profile/travel-profile (Doc URLs)
+    API->>Cloud: Persist document assets in secure folder
+    API->>DB: Save TravelProfile (verificationStatus='PENDING')
+    API->>DB: Sync UserKyc (status='Pending', deriveParentStatus)
+    Admin->>API: GET /api/admin/users/:userId/kyc
+    API-->>Admin: Full KYC Workspace Payload (Telemetry, Summary, Docs, Timeline)
+    Admin->>API: POST /api/admin/users/:userId/kyc/documents/:docId/approve
+    API->>DB: Mark Doc as Verified, recalculate deriveParentStatus
+    Admin->>API: POST /api/admin/users/:userId/kyc/approve
+    API->>DB: Update User (isKycVerified=true, membership='Silver')
+    API->>DB: Dispatch High-Priority Approval Notification
+    API-->>Traveler: Unlocked Silver Privileges & Home Card Auto-Hidden
+```
+
+#### 4. API Endpoints
+* `GET /api/profile/travel-profile`: Get self profile and stats.
+* `PUT /api/profile/travel-profile`: Update profile; auto-reverts `REJECTED` to `PENDING` on document re-upload.
+* `GET /api/admin/users/:userId/kyc`: Fetch complete admin verification workspace payload.
+* `POST /api/admin/users/:userId/kyc/approve`: Approve overall KYC, upgrade user to Silver Tier, dispatch notification.
+* `POST /api/admin/users/:userId/kyc/reject`: Reject overall KYC with required reason.
+* `POST /api/admin/users/:userId/kyc/request-reupload`: Request document correction.
+* `POST /api/admin/users/:userId/kyc/revoke`: Revoke verified status.
+* `POST /api/admin/users/:userId/kyc/renew`: Extend valid KYC term.
+* `POST /api/admin/users/:userId/kyc/unsuspend`: Restore suspended account.
+* `POST /api/admin/users/:userId/kyc/documents/:docId/approve`: Approve specific document; auto-derives parent status.
+* `POST /api/admin/users/:userId/kyc/documents/:docId/reject`: Reject specific document; auto-derives parent status as Rejected.
+* `POST /api/admin/users/:userId/kyc/documents/:docId/request-reupload`: Request re-upload for single document.
+
+---
+
 ### Module 3: Agencies (Agency Partner Management)
 
 #### 1. Overview

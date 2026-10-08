@@ -7,7 +7,8 @@ import { asyncHandler } from '../utils/asyncHandler.util.js';
 export class TravelerController {
   public list = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
-    const travelers = await savedTravelerService.listTravelers(userId);
+    const includeArchived = req.query.includeArchived === 'true';
+    const travelers = await savedTravelerService.listTravelers(userId, includeArchived);
     return ResponseUtil.success(res, { travelers }, 'Saved travelers fetched successfully');
   });
 
@@ -27,6 +28,14 @@ export class TravelerController {
     const travelerId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const traveler = await savedTravelerService.updateTraveler(String(travelerId), userId, req.body);
     return ResponseUtil.success(res, { traveler }, 'Saved traveler updated successfully');
+  });
+
+  public archive = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const travelerId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const isArchived = req.body.isArchived !== false;
+    const result = await savedTravelerService.archiveTraveler(String(travelerId), userId, isArchived);
+    return ResponseUtil.success(res, result, result.message);
   });
 
   public delete = asyncHandler(async (req: Request, res: Response) => {

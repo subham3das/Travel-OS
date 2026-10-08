@@ -102,7 +102,7 @@ class AgencyApiClient {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       } else {
-        const authError: any = new Error('Agency authentication required. Please log in to your partner account.');
+        const authError: any = new Error('Please sign in to access this partner feature.');
         authError.status = 401;
         throw authError;
       }

@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { BookingModel, IBooking } from '../models/booking.model.js';
 import { AuditLoggerService } from './auditLogger.service.js';
+import { mailService } from './mail.service.js';
+import { logger } from '../config/logger.config.js';
 
 export interface BookingKPIStatsResult {
   totalBookings: { count: number; growth: string; isPositive: boolean };
@@ -254,6 +256,22 @@ export class AdminBookingService {
       description: `Cancelled booking "${booking.bookingId}" (Reason: ${reason || 'Admin Initiated'})`,
       severity: 'High',
     });
+
+    // Send Cancellation Email via Centralized MailService
+    if (booking.customerEmail) {
+      mailService
+        .sendBookingCancelledEmail({
+          to: booking.customerEmail,
+          customerName: booking.customerName,
+          bookingId: booking.bookingId,
+          title: booking.packageName,
+          refundAmount: booking.paidAmount || booking.totalAmount,
+          reason: reason || 'Administrative Cancellation',
+        })
+        .catch((err) => {
+          logger.error('Failed to send booking cancellation email to %s: %s', booking.customerEmail, err.message);
+        });
+    }
 
     return this.mapBookingToFrontend(booking.toObject());
   }

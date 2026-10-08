@@ -111,7 +111,6 @@ export interface GeneralSettingsData {
 
 export interface BookingSettingsData {
   bookingApproval: 'Automatic' | 'Manual';
-  minTravelers: number;
   maxTravelers: number;
   bookingDeadlineDays: number;
   waitlistEnabled: boolean;
@@ -199,12 +198,12 @@ export const INITIAL_AGENCY_PROFILE: CompleteAgencyProfile = {
     agencyId: '',
     agencyName: 'Loading Agency...',
     category: 'Tour Operator',
-    logo: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=200&q=80',
-    coverImage: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80',
+    logo: '',
+    coverImage: '',
     isVerified: false,
-    rating: 4.8,
+    rating: 0,
     reviewCount: 0,
-    yearsInBusiness: 'Verified Partner Agency',
+    yearsInBusiness: '',
     location: '',
     verificationStatus: 'Pending',
     totalPackages: 0,
@@ -270,7 +269,7 @@ export const INITIAL_AGENCY_PROFILE: CompleteAgencyProfile = {
     { id: 'p-bookings', title: 'Bookings', value: '0', growth: '0 Bookings', isPositive: true, type: 'bookings' },
     { id: 'p-revenue', title: 'Revenue', value: '₹0', growth: '₹0', isPositive: true, type: 'revenue' },
     { id: 'p-travelers', title: 'Travelers', value: '0', growth: '0 Travelers', isPositive: true, type: 'travelers' },
-    { id: 'p-rating', title: 'Avg. Rating', value: '4.8', growth: 'Top Rated', isPositive: true, type: 'rating' },
+    { id: 'p-rating', title: 'Avg. Rating', value: '0.0', growth: 'No ratings yet', isPositive: true, type: 'rating' },
   ],
   settings: {
     general: {
@@ -284,7 +283,6 @@ export const INITIAL_AGENCY_PROFILE: CompleteAgencyProfile = {
     },
     booking: {
       bookingApproval: 'Automatic',
-      minTravelers: 1,
       maxTravelers: 24,
       bookingDeadlineDays: 3,
       waitlistEnabled: true,

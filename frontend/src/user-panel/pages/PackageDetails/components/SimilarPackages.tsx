@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Star, Clock } from 'lucide-react';
-import { packagesData } from '../../../data/packages';
+import { ChevronRight, Star } from 'lucide-react';
+import { marketplaceService } from '../../../services/marketplace.service';
+import { TourPackage } from '../../../types/package';
 
 interface SimilarPackagesProps {
   currentPackageId: string;
@@ -9,8 +10,30 @@ interface SimilarPackagesProps {
 
 export const SimilarPackages: React.FC<SimilarPackagesProps> = ({ currentPackageId }) => {
   const navigate = useNavigate();
+  const [similarList, setSimilarList] = useState<TourPackage[]>([]);
 
-  const similarList = packagesData.filter((p) => p.id !== currentPackageId).slice(0, 4);
+  useEffect(() => {
+    let isMounted = true;
+    marketplaceService
+      .getFeaturedPackages(6)
+      .then((data) => {
+        if (isMounted) {
+          const filtered = (data || []).filter((p) => p.id !== currentPackageId).slice(0, 4);
+          setSimilarList(filtered);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setSimilarList([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentPackageId]);
+
+  if (similarList.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-3.5">
@@ -38,14 +61,22 @@ export const SimilarPackages: React.FC<SimilarPackagesProps> = ({ currentPackage
             className="w-64 sm:w-72 bg-white rounded-3xl overflow-hidden border border-slate-100/90 shadow-2xs hover:shadow-md transition-all shrink-0 flex flex-col justify-between cursor-pointer group"
           >
             <div className="relative h-36 w-full overflow-hidden bg-slate-100">
-              <img
-                src={item.coverImage}
-                alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold">
-                {item.duration}
-              </span>
+              {item.coverImage ? (
+                <img
+                  src={item.coverImage}
+                  alt={item.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-300 font-bold text-xs">
+                  No Image
+                </div>
+              )}
+              {item.duration && (
+                <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold">
+                  {item.duration}
+                </span>
+              )}
             </div>
 
             <div className="p-4 space-y-2.5">
@@ -54,10 +85,14 @@ export const SimilarPackages: React.FC<SimilarPackagesProps> = ({ currentPackage
               </h3>
 
               <div className="flex items-center justify-between gap-1 text-xs font-bold">
-                <span className="flex items-center gap-1 text-amber-500">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span>{item.rating}</span>
-                </span>
+                {item.rating ? (
+                  <span className="flex items-center gap-1 text-amber-500">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span>{item.rating}</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-xs font-medium">New</span>
+                )}
 
                 <div className="text-right">
                   <span className="text-base font-black text-[#0F172A]">{item.price}</span>

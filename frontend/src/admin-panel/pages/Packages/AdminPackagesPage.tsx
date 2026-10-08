@@ -48,6 +48,7 @@ export const AdminPackagesPage: React.FC = () => {
     destination: 'All Destinations',
     agency: 'All Agencies',
     category: 'All Categories',
+    adventureType: 'All Adventures',
     duration: 'All Durations',
     priceRange: 'All Prices',
     departureMonth: 'All Months',
@@ -63,7 +64,21 @@ export const AdminPackagesPage: React.FC = () => {
   const [editModalPackage, setEditModalPackage] = useState<AdminPackageItem | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    type: 'approve' | 'feature' | 'hide' | 'delete' | 'bulk_approve' | 'bulk_feature' | 'bulk_hide' | 'bulk_delete';
+    type:
+      | 'approve'
+      | 'activate'
+      | 'deactivate'
+      | 'feature'
+      | 'hide'
+      | 'archive'
+      | 'popular'
+      | 'trending'
+      | 'most_popular'
+      | 'delete'
+      | 'bulk_approve'
+      | 'bulk_feature'
+      | 'bulk_hide'
+      | 'bulk_delete';
     pkg: AdminPackageItem | null;
     selectedCount?: number;
   }>({
@@ -125,6 +140,7 @@ export const AdminPackagesPage: React.FC = () => {
       destination: 'All Destinations',
       agency: 'All Agencies',
       category: 'All Categories',
+      adventureType: 'All Adventures',
       duration: 'All Durations',
       priceRange: 'All Prices',
       departureMonth: 'All Months',
@@ -207,8 +223,26 @@ export const AdminPackagesPage: React.FC = () => {
         setSelectedPackage(pkg);
         setIsDrawerOpen(true);
         break;
+      case 'activate':
+        setConfirmModal({ isOpen: true, type: 'activate', pkg });
+        break;
+      case 'deactivate':
+        setConfirmModal({ isOpen: true, type: 'deactivate', pkg });
+        break;
+      case 'archive':
+        setConfirmModal({ isOpen: true, type: 'archive', pkg });
+        break;
+      case 'popular':
+        setConfirmModal({ isOpen: true, type: 'popular', pkg });
+        break;
+      case 'trending':
+        setConfirmModal({ isOpen: true, type: 'trending', pkg });
+        break;
+      case 'most_popular':
+        setConfirmModal({ isOpen: true, type: 'most_popular', pkg });
+        break;
       case 'edit':
-        setEditModalPackage(pkg);
+        showToast('Agency package contents cannot be modified by admin.', 'info');
         break;
       case 'approve':
         setConfirmModal({ isOpen: true, type: 'approve', pkg });
@@ -233,31 +267,72 @@ export const AdminPackagesPage: React.FC = () => {
     try {
       const { type, pkg } = confirmModal;
 
-      if (type === 'approve' && pkg) {
-        await adminPackageManagementService.approvePackage(pkg.id);
+      if ((type === 'approve' || type === 'activate') && pkg) {
+        await adminPackageManagementService.updatePackageStatus(pkg.id, 'ACTIVE');
         setPackages((prev) =>
           prev.map((p) => (p.id === pkg.id ? { ...p, approvalStatus: 'Approved', status: 'Active' } : p))
         );
         if (selectedPackage?.id === pkg.id) {
           setSelectedPackage((prev) => (prev ? { ...prev, approvalStatus: 'Approved', status: 'Active' } : null));
         }
-        showToast(`"${pkg.title}" has been approved and published!`, 'success');
-      } else if (type === 'feature' && pkg) {
-        await adminPackageManagementService.featurePackage(pkg.id);
+        showToast(`"${pkg.title}" is now Active and published!`, 'success');
+      } else if (type === 'deactivate' && pkg) {
+        await adminPackageManagementService.updatePackageStatus(pkg.id, 'INACTIVE');
         setPackages((prev) =>
-          prev.map((p) => (p.id === pkg.id ? { ...p, isFeatured: !p.isFeatured } : p))
+          prev.map((p) => (p.id === pkg.id ? { ...p, status: 'Inactive' } : p))
         );
         if (selectedPackage?.id === pkg.id) {
-          setSelectedPackage((prev) => (prev ? { ...prev, isFeatured: !prev.isFeatured } : null));
+          setSelectedPackage((prev) => (prev ? { ...prev, status: 'Inactive' } : null));
+        }
+        showToast(`"${pkg.title}" deactivated.`, 'info');
+      } else if (type === 'archive' && pkg) {
+        await adminPackageManagementService.updatePackageStatus(pkg.id, 'ARCHIVED');
+        setPackages((prev) =>
+          prev.map((p) => (p.id === pkg.id ? { ...p, status: 'Archived' } : p))
+        );
+        if (selectedPackage?.id === pkg.id) {
+          setSelectedPackage((prev) => (prev ? { ...prev, status: 'Archived' } : null));
+        }
+        showToast(`"${pkg.title}" archived.`, 'info');
+      } else if (type === 'popular' && pkg) {
+        const nextVal = !pkg.isPopular;
+        await adminPackageManagementService.updatePackageFlags(pkg.id, { isPopular: nextVal });
+        setPackages((prev) =>
+          prev.map((p) => (p.id === pkg.id ? { ...p, isPopular: nextVal } : p))
+        );
+        showToast(`Popular tag ${nextVal ? 'applied to' : 'removed from'} "${pkg.title}"`, 'success');
+      } else if (type === 'trending' && pkg) {
+        const nextVal = !pkg.isTrending;
+        await adminPackageManagementService.updatePackageFlags(pkg.id, { isTrending: nextVal });
+        setPackages((prev) =>
+          prev.map((p) => (p.id === pkg.id ? { ...p, isTrending: nextVal } : p))
+        );
+        showToast(`Trending tag ${nextVal ? 'applied to' : 'removed from'} "${pkg.title}"`, 'success');
+      } else if (type === 'most_popular' && pkg) {
+        const nextVal = !pkg.isMostPopular;
+        await adminPackageManagementService.updatePackageFlags(pkg.id, { isMostPopular: nextVal });
+        setPackages((prev) =>
+          prev.map((p) => (p.id === pkg.id ? { ...p, isMostPopular: nextVal } : p))
+        );
+        showToast(`Most Popular tag ${nextVal ? 'applied to' : 'removed from'} "${pkg.title}"`, 'success');
+      } else if (type === 'feature' && pkg) {
+        const nextVal = !pkg.isFeatured;
+        await adminPackageManagementService.updatePackageFlags(pkg.id, { isFeatured: nextVal });
+        setPackages((prev) =>
+          prev.map((p) => (p.id === pkg.id ? { ...p, isFeatured: nextVal } : p))
+        );
+        if (selectedPackage?.id === pkg.id) {
+          setSelectedPackage((prev) => (prev ? { ...prev, isFeatured: nextVal } : null));
         }
         showToast(`Feature status updated for "${pkg.title}"`, 'success');
       } else if (type === 'hide' && pkg) {
-        await adminPackageManagementService.hidePackage(pkg.id);
+        const isHidden = pkg.status === 'Hidden';
+        await adminPackageManagementService.updatePackageStatus(pkg.id, isHidden ? 'ACTIVE' : 'HIDDEN');
         setPackages((prev) =>
-          prev.map((p) => (p.id === pkg.id ? { ...p, status: p.status === 'Draft' ? 'Active' : 'Draft' } : p))
+          prev.map((p) => (p.id === pkg.id ? { ...p, status: isHidden ? 'Active' : 'Hidden' } : p))
         );
         if (selectedPackage?.id === pkg.id) {
-          setSelectedPackage((prev) => (prev ? { ...prev, status: prev.status === 'Draft' ? 'Active' : 'Draft' } : null));
+          setSelectedPackage((prev) => (prev ? { ...prev, status: isHidden ? 'Active' : 'Hidden' } : null));
         }
         showToast(`Visibility updated for "${pkg.title}"`, 'info');
       } else if (type === 'delete' && pkg) {

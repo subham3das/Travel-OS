@@ -28,7 +28,11 @@ export const validateRequest = (schemas: RequestValidationSchemas) => {
           field: Array.isArray(err.path) ? err.path.join('.') : String(err.path || 'field'),
           message: err.message || 'Invalid input value',
         }));
-        return next(new ValidationError('Request validation failed', validationErrors));
+        const mainMessage =
+          validationErrors.length > 0
+            ? validationErrors.map((err: any) => err.message).join('. ')
+            : 'Request validation failed';
+        return next(new ValidationError(mainMessage, validationErrors));
       }
       next(error);
     }

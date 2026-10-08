@@ -13,7 +13,7 @@ const PasswordResetSchema = new Schema<IPasswordReset>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     email: { type: String, required: true, lowercase: true },
-    token: { type: String, required: true, unique: true, index: true },
+    token: { type: String, required: true, unique: true },
     isUsed: { type: Boolean, default: false },
     expiresAt: { type: Date, required: true, index: { expires: '1h' } },
   },

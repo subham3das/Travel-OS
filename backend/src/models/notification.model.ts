@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export type NotificationRecipientType = 'ADMIN' | 'AGENCY' | 'USER';
+export type NotificationRecipientType = 'ADMIN' | 'AGENCY' | 'USER' | 'CAR_RENTAL';
 
 export type NotificationCategory =
   | 'Bookings'
@@ -59,6 +59,8 @@ export interface INotification extends Document {
   triggeredBy?: string;
   metadata?: Record<string, any>;
   isPinned?: boolean;
+  /** Discriminator: isolates agency vs car_rental notifications */
+  businessType?: 'agency' | 'car_rental';
   isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -71,19 +73,16 @@ const NotificationSchema = new Schema<INotification>(
   {
     recipientType: {
       type: String,
-      enum: ['ADMIN', 'AGENCY', 'USER'],
+      enum: ['ADMIN', 'AGENCY', 'USER', 'CAR_RENTAL'],
       default: 'AGENCY',
-      index: true,
     },
     recipientId: {
       type: Schema.Types.ObjectId,
-      index: true,
       default: null,
     },
     agencyId: {
       type: Schema.Types.ObjectId,
       ref: 'Agency',
-      index: true,
       default: null,
     },
     category: {
@@ -116,7 +115,6 @@ const NotificationSchema = new Schema<INotification>(
     isUnread: {
       type: Boolean,
       default: true,
-      index: true,
     },
     readAt: {
       type: Date,
@@ -182,10 +180,14 @@ const NotificationSchema = new Schema<INotification>(
       type: Boolean,
       default: false,
     },
+    businessType: {
+      type: String,
+      enum: ['agency', 'car_rental'],
+      default: 'agency',
+    },
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   {
@@ -200,6 +202,8 @@ NotificationSchema.index({ recipientType: 1, priority: 1, isDeleted: 1 });
 NotificationSchema.index({ agencyId: 1, isDeleted: 1, createdAt: -1 });
 NotificationSchema.index({ agencyId: 1, status: 1, isDeleted: 1 });
 NotificationSchema.index({ agencyId: 1, isUnread: 1, isDeleted: 1 });
+// Car Rental notification isolation index
+NotificationSchema.index({ agencyId: 1, businessType: 1, isDeleted: 1, createdAt: -1 });
 
 export const NotificationModel =
   mongoose.models.Notification ||

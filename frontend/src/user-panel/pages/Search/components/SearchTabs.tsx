@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type SearchTabType = 'all' | 'destinations' | 'packages' | 'agencies' | 'travelers' | 'bookings' | 'trips' | 'messages';
+export type SearchTabType = 'all' | 'destinations' | 'packages' | 'agencies' | 'cars' | 'travelers' | 'bookings' | 'trips' | 'messages';
 
 interface SearchTabsProps {
   activeTab: SearchTabType;
@@ -9,6 +9,7 @@ interface SearchTabsProps {
     destinations: number;
     packages: number;
     agencies: number;
+    cars?: number;
     travelers?: number;
     bookings?: number;
     trips?: number;
@@ -26,6 +27,7 @@ export const SearchTabs: React.FC<SearchTabsProps> = ({
     { id: 'packages', label: 'Packages', count: counts.packages },
     { id: 'destinations', label: 'Destinations', count: counts.destinations },
     { id: 'agencies', label: 'Agencies', count: counts.agencies },
+    { id: 'cars', label: 'Cars', count: counts.cars },
     { id: 'travelers', label: 'Travelers', count: counts.travelers },
     { id: 'bookings', label: 'Bookings', count: counts.bookings },
     { id: 'trips', label: 'Trips', count: counts.trips },

@@ -12,6 +12,8 @@ interface PaymentSectionProps {
   invoice: InvoicePreview;
   stepCompletion: StepCompletionStatus;
   termsAccepted: boolean;
+  isLoading?: boolean;
+  paymentError?: string | null;
   onProceedPayment: () => void;
 }
 
@@ -20,6 +22,8 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   invoice,
   stepCompletion,
   termsAccepted,
+  isLoading = false,
+  paymentError = null,
   onProceedPayment,
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
@@ -169,20 +173,47 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
           <span className="font-extrabold text-[#0F172A]">+91 98765 43210</span>
         </div>
 
+        {/* Failure / Error Notice */}
+        {paymentError && (
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold space-y-1">
+            <div className="flex items-center gap-2 font-bold text-rose-900">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              <span>Payment Unsuccessful</span>
+            </div>
+            <p className="text-[11px] text-rose-700">
+              {paymentError}
+            </p>
+            <p className="text-[10px] text-rose-600 font-medium pt-1">
+              Your details are safely saved. Click below to retry payment immediately.
+            </p>
+          </div>
+        )}
+
         {/* Button */}
         <button
           type="button"
-          disabled={!isProceedEnabled}
+          disabled={!isProceedEnabled || isLoading}
           onClick={onProceedPayment}
           className={`w-full py-4 px-6 rounded-2xl font-black text-sm sm:text-base shadow-lg transition-all flex items-center justify-center gap-2.5 focus:outline-none ${
-            isProceedEnabled
+            isProceedEnabled && !isLoading
               ? 'bg-[#FF4D6D] hover:bg-[#e03e5c] text-white shadow-[#FF4D6D]/25 cursor-pointer active:scale-[0.99]'
               : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
           }`}
         >
-          <Lock className="w-4 h-4 shrink-0" />
-          <span>Proceed to Payment (₹{paymentSummary.totalPayable.toLocaleString('en-IN')})</span>
-          <ChevronRight className="w-5 h-5 shrink-0" />
+          {isLoading ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+              <span>Contacting Razorpay Secure Gateway...</span>
+            </>
+          ) : (
+            <>
+              <Lock className="w-4 h-4 shrink-0" />
+              <span>
+                {paymentError ? 'Retry Payment' : 'Proceed to Payment'} (₹{paymentSummary.totalPayable.toLocaleString('en-IN')})
+              </span>
+              <ChevronRight className="w-5 h-5 shrink-0" />
+            </>
+          )}
         </button>
 
         {!isProceedEnabled && (

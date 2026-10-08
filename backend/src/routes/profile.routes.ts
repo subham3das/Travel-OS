@@ -7,6 +7,8 @@ import {
   UpdateProfileSchema,
   CheckUsernameParamsSchema,
 } from '../validations/profile.validation.js';
+import { travelProfileController } from '../controllers/travelProfile.controller.js';
+import { UpdateTravelProfileSchema } from '../validations/travelProfile.validation.js';
 import {
   TravelPreferencesSchema,
   NotificationPreferencesSchema,
@@ -40,6 +42,39 @@ router.patch(
   authenticate,
   validateRequest({ body: UpdateProfileSchema }),
   profileController.updateProfile
+);
+
+/**
+ * @openapi
+ * /profile/travel-profile:
+ *   get:
+ *     summary: Get One-Time Travel Profile & Saved Travelers stats
+ *     tags: [Travel Profile]
+ *     security:
+ *       - BearerAuth: []
+ */
+router.get('/travel-profile', authenticate, travelProfileController.getProfile);
+
+/**
+ * @openapi
+ * /profile/travel-profile:
+ *   put:
+ *     summary: Update Travel Profile
+ *     tags: [Travel Profile]
+ *     security:
+ *       - BearerAuth: []
+ */
+router.put(
+  '/travel-profile',
+  authenticate,
+  validateRequest({ body: UpdateTravelProfileSchema }),
+  travelProfileController.updateProfile
+);
+router.patch(
+  '/travel-profile',
+  authenticate,
+  validateRequest({ body: UpdateTravelProfileSchema }),
+  travelProfileController.updateProfile
 );
 
 /**

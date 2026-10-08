@@ -291,17 +291,6 @@ export const BookingTableRow: React.FC<BookingTableRowProps> = ({
                 <span>View Invoice</span>
               </button>
 
-              <button
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  onRowAction('modify', booking);
-                }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-              >
-                <Edit className="w-3.5 h-3.5 text-slate-400" />
-                <span>Modify Booking</span>
-              </button>
-
               {booking.bookingStatus !== 'Confirmed' && (
                 <button
                   onClick={() => {

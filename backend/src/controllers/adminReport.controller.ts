@@ -39,12 +39,12 @@ export class AdminReportController {
     }
   }
 
-  async getGeographicData(req: Request, res: Response) {
+  async getBookingFunnel(req: Request, res: Response) {
     try {
-      const data = await adminReportService.getGeographicData();
+      const data = await adminReportService.getBookingFunnel();
       res.status(200).json({ success: true, data });
     } catch (error: any) {
-      res.status(500).json({ success: false, message: error.message || 'Failed to fetch geographic data' });
+      res.status(500).json({ success: false, message: error.message || 'Failed to calculate booking funnel' });
     }
   }
 
@@ -90,6 +90,42 @@ export class AdminReportController {
       res.status(200).json({ success: true, data });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message || 'Failed to fetch quick stats' });
+    }
+  }
+
+  async getPackageAnalytics(req: Request, res: Response) {
+    try {
+      const data = await adminReportService.getPackageAnalytics();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to fetch package analytics' });
+    }
+  }
+
+  async getDepartureAnalytics(req: Request, res: Response) {
+    try {
+      const data = await adminReportService.getDepartureAnalytics();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to fetch departure analytics' });
+    }
+  }
+
+  async getBookingAnalytics(req: Request, res: Response) {
+    try {
+      const data = await adminReportService.getBookingAnalytics();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to fetch booking analytics' });
+    }
+  }
+
+  async getAgencyAnalytics(req: Request, res: Response) {
+    try {
+      const data = await adminReportService.getAgencyAnalytics();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to fetch agency analytics' });
     }
   }
 }

@@ -29,15 +29,8 @@ export const QuickActionsSection: React.FC = () => {
       onClick: () => navigate('/agency/packages'),
     },
     {
-      id: 'create-trip',
-      label: 'Create Trip',
-      icon: <Send className="w-5 h-5 text-indigo-600" />,
-      bgColor: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700',
-      onClick: () => navigate('/agency/trips'),
-    },
-    {
       id: 'view-bookings',
-      label: 'View Bookings',
+      label: 'Departures & Bookings',
       icon: <ShoppingBag className="w-5 h-5 text-purple-700" />,
       bgColor: 'bg-purple-50 hover:bg-purple-100 text-purple-800',
       onClick: () => navigate('/agency/bookings'),

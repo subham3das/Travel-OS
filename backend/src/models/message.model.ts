@@ -48,7 +48,6 @@ const MessageSchema = new Schema<IMessage>(
       type: Schema.Types.ObjectId,
       ref: 'Conversation',
       required: true,
-      index: true,
     },
     senderType: {
       type: String,
@@ -92,7 +91,6 @@ const MessageSchema = new Schema<IMessage>(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   {
@@ -100,8 +98,7 @@ const MessageSchema = new Schema<IMessage>(
   }
 );
 
-// Compound indexes for fast message retrieval
-MessageSchema.index({ conversationId: 1, isDeleted: 1, createdAt: 1 });
+// Compound index for fast message retrieval and chronological sorting
 MessageSchema.index({ conversationId: 1, isDeleted: 1, createdAt: -1 });
 
 export const MessageModel =

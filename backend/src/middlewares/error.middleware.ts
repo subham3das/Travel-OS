@@ -45,7 +45,10 @@ export const globalErrorHandler = (
   if (err.name === 'ValidationError') {
     statusCode = HTTP_STATUS.UNPROCESSABLE_ENTITY;
     errorCode = ERROR_CODES.VALIDATION_ERROR;
-    message = 'Validation failed on resource schema';
+    const validationDetails = Object.values(err.errors || {}).map((e: any) => `${e.path}: ${e.message}`);
+    message = validationDetails.length > 0 
+      ? `Validation failed on resource schema: ${validationDetails.join(', ')}` 
+      : 'Validation failed on resource schema';
     errors = Object.values(err.errors || {}).map((e: any) => ({
       field: e.path,
       message: e.message,

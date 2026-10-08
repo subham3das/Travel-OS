@@ -3,6 +3,8 @@ import { ChevronDown } from 'lucide-react';
 
 export type PackageFilterType =
   | 'All'
+  | 'Ready to Sell'
+  | 'Needs Setup'
   | 'Active'
   | 'Draft'
   | 'Hidden'
@@ -17,6 +19,8 @@ interface PackageFiltersProps {
 
 const CHIPS: PackageFilterType[] = [
   'All',
+  'Ready to Sell',
+  'Needs Setup',
   'Active',
   'Draft',
   'Hidden',

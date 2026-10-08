@@ -35,25 +35,27 @@ export const AgencyStats: React.FC<AgencyStatsProps> = ({ agency }) => {
       </div>
 
       {/* Dynamic Recommendation Banner */}
-      <div className="bg-emerald-50/80 rounded-2xl p-3 border border-emerald-100 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-            <ThumbsUp className="w-4 h-4 fill-current" />
+      {agency.reviewCount > 0 && (
+        <div className="bg-emerald-50/80 rounded-2xl p-3 border border-emerald-100 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+              <ThumbsUp className="w-4 h-4 fill-current" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-[#0F172A]">
+                Reviewed by <span className="text-emerald-700">{agency.reviewCount} Travelers</span>
+              </p>
+              <p className="text-[11px] font-semibold text-slate-500">
+                Average rating {agency.rating} out of 5
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-black text-[#0F172A]">
-              Recommended by <span className="text-emerald-700">2,456 Travelers</span>
-            </p>
-            <p className="text-[11px] font-semibold text-slate-500">
-              96% positive recommendation rate from verified bookings
-            </p>
-          </div>
-        </div>
 
-        <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-black shrink-0">
-          96% Rate
-        </span>
-      </div>
+          <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-black shrink-0">
+            ★ {agency.rating}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

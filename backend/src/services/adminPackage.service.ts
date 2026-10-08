@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { PackageModel, IPackage } from '../models/package.model.js';
 import { BookingModel } from '../models/booking.model.js';
 import { AuditLoggerService } from './auditLogger.service.js';
+import { packageReadinessService } from './packageReadiness.service.js';
 
 export interface PackageKPIStatsResult {
   totalPackages: { count: number; growth: string; isPositive: boolean };
@@ -50,6 +51,7 @@ export class AdminPackageService {
     destinationCountry?: string;
     destinationRegion?: string;
     agency?: string;
+    adventureType?: string;
     rating?: string;
     departureMonth?: string;
     sortBy: string;
@@ -66,6 +68,7 @@ export class AdminPackageService {
         { destinationCountry: searchRegex },
         { agencyName: searchRegex },
         { category: searchRegex },
+        { adventureType: searchRegex },
       ];
     }
 
@@ -90,6 +93,10 @@ export class AdminPackageService {
 
     if (query.category && query.category !== 'All' && query.category !== 'All Categories') {
       filter.category = new RegExp(`^${query.category}$`, 'i');
+    }
+
+    if (query.adventureType && query.adventureType !== 'All' && query.adventureType !== 'All Adventure Types') {
+      filter.adventureType = new RegExp(`^${query.adventureType}$`, 'i');
     }
 
     if (query.destinationCountry && query.destinationCountry !== 'All' && query.destinationCountry !== 'All Countries') {
@@ -137,7 +144,16 @@ export class AdminPackageService {
       PackageModel.countDocuments(filter),
     ]);
 
-    const mappedPackages = packages.map((pkg: any) => this.mapPackageToFrontend(pkg));
+    const mappedPackages = await Promise.all(
+      packages.map(async (pkg: any) => {
+        const readiness = await packageReadinessService.getPackageReadiness(pkg);
+        const mapped: any = this.mapPackageToFrontend(pkg);
+        mapped.visibilityStatus = readiness.visibilityStatus;
+        mapped.visibilityReason = readiness.visibilityReason;
+        mapped.readiness = readiness;
+        return mapped;
+      })
+    );
 
     return {
       packages: mappedPackages,
@@ -185,7 +201,11 @@ export class AdminPackageService {
       status: (b.status === 'CONFIRMED' ? 'Confirmed' : b.status === 'COMPLETED' ? 'Completed' : 'Cancelled') as 'Confirmed' | 'Completed' | 'Cancelled',
     }));
 
+    const readiness = await packageReadinessService.getPackageReadiness(pkg);
     const result: any = this.mapPackageToFrontend(pkg);
+    result.visibilityStatus = readiness.visibilityStatus;
+    result.visibilityReason = readiness.visibilityReason;
+    result.readiness = readiness;
     result.recentBookings = recentBookings;
     return result;
   }
@@ -446,17 +466,113 @@ export class AdminPackageService {
   }
 
   /**
+   * Update Status (Activate, Deactivate, Hide, Unhide, Archive)
+   */
+  async updateStatus(id: string, status: string, admin: any) {
+    const pkg = await PackageModel.findOne({
+      $or: mongoose.Types.ObjectId.isValid(id) ? [{ _id: id }, { packageId: id }] : [{ packageId: id }],
+      isDeleted: false,
+    });
+
+    if (!pkg) throw new Error('Package not found');
+
+    const upperStatus = status.toUpperCase();
+    pkg.status = upperStatus as any;
+    if (upperStatus === 'ACTIVE' || upperStatus === 'APPROVED') {
+      pkg.isActive = true;
+    } else if (['INACTIVE', 'HIDDEN', 'ARCHIVED', 'REJECTED'].includes(upperStatus)) {
+      pkg.isActive = false;
+    }
+
+    pkg.activities = pkg.activities || [];
+    pkg.activities.push({
+      id: new mongoose.Types.ObjectId().toString(),
+      adminName: admin?.name || 'Super Admin',
+      action: `Status Changed to ${upperStatus}`,
+      details: `Package status updated by Super Admin`,
+      timestamp: new Date().toLocaleString(),
+    });
+
+    await pkg.save();
+
+    await AuditLoggerService.log({
+      actor: {
+        id: admin?._id?.toString(),
+        name: admin?.name || 'Super Admin',
+        email: admin?.email,
+        role: 'Super Admin',
+      },
+      module: 'PACKAGES',
+      action: 'UPDATE_PACKAGE_STATUS',
+      eventType: 'UPDATE',
+      description: `Updated status of package "${pkg.title}" to ${upperStatus}`,
+      severity: 'Medium',
+    });
+
+    return this.mapPackageToFrontend(pkg.toObject());
+  }
+
+  /**
+   * Update CMS / Discovery Flags (Featured, Popular, Trending, Most Popular, Auto Rank)
+   */
+  async updateFlags(
+    id: string,
+    flags: {
+      isFeatured?: boolean;
+      isPopular?: boolean;
+      isTrending?: boolean;
+      isMostPopular?: boolean;
+      autoRankEnabled?: boolean;
+    },
+    admin: any
+  ) {
+    const pkg = await PackageModel.findOne({
+      $or: mongoose.Types.ObjectId.isValid(id) ? [{ _id: id }, { packageId: id }] : [{ packageId: id }],
+      isDeleted: false,
+    });
+
+    if (!pkg) throw new Error('Package not found');
+
+    if (flags.isFeatured !== undefined) pkg.isFeatured = flags.isFeatured;
+    if (flags.isPopular !== undefined) pkg.isPopular = flags.isPopular;
+    if (flags.isTrending !== undefined) pkg.isTrending = flags.isTrending;
+    if (flags.isMostPopular !== undefined) pkg.isMostPopular = flags.isMostPopular;
+    if (flags.autoRankEnabled !== undefined) pkg.autoRankEnabled = flags.autoRankEnabled;
+
+    await pkg.save();
+
+    await AuditLoggerService.log({
+      actor: {
+        id: admin?._id?.toString(),
+        name: admin?.name || 'Super Admin',
+        email: admin?.email,
+        role: 'Super Admin',
+      },
+      module: 'PACKAGES',
+      action: 'UPDATE_PACKAGE_FLAGS',
+      eventType: 'UPDATE',
+      description: `Updated discovery flags for package "${pkg.title}"`,
+      severity: 'Low',
+    });
+
+    return this.mapPackageToFrontend(pkg.toObject());
+  }
+
+  /**
    * Helper: Map MongoDB IPackage to Frontend AdminPackageItem Shape
    */
   public mapPackageToFrontend(pkg: any) {
-    let status: 'Active' | 'Draft' | 'Sold Out' | 'Pending' | 'Hidden' = 'Active';
-    if (!pkg.isActive) status = 'Hidden';
+    let status: 'Active' | 'Draft' | 'Sold Out' | 'Pending' | 'Hidden' | 'Inactive' | 'Archived' = 'Active';
+    if (pkg.status === 'ARCHIVED') status = 'Archived';
+    else if (pkg.status === 'HIDDEN' || !pkg.isActive) status = 'Hidden';
+    else if (pkg.status === 'INACTIVE') status = 'Inactive';
     else if (pkg.availableSeats <= 0) status = 'Sold Out';
     else if (pkg.status === 'DRAFT') status = 'Draft';
     else if (pkg.status === 'PENDING') status = 'Pending';
+    else status = 'Active';
 
     let approvalStatus: 'Approved' | 'Pending' | 'Rejected' | '—' = '—';
-    if (pkg.status === 'APPROVED') approvalStatus = 'Approved';
+    if (pkg.status === 'APPROVED' || pkg.status === 'ACTIVE') approvalStatus = 'Approved';
     else if (pkg.status === 'PENDING') approvalStatus = 'Pending';
     else if (pkg.status === 'REJECTED') approvalStatus = 'Rejected';
 
@@ -493,7 +609,12 @@ export class AdminPackageService {
       status,
       approvalStatus,
       isFeatured: !!pkg.isFeatured,
+      isPopular: !!pkg.isPopular,
+      isTrending: !!pkg.isTrending,
+      isMostPopular: !!pkg.isMostPopular,
+      autoRankEnabled: pkg.autoRankEnabled !== false,
       category: pkg.category || 'Adventure',
+      adventureType: pkg.adventureType || 'General Adventure',
       departureMonth: new Date(pkg.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long' }),
       lastUpdated: new Date(pkg.updatedAt || pkg.createdAt || Date.now()).toLocaleDateString('en-US', {
         month: 'short',

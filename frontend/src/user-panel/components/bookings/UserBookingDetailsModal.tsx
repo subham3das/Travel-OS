@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X, Calendar, CheckCircle2, ShieldCheck, CreditCard, ArrowRight } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 
+import { useNavigate } from 'react-router-dom';
+
 interface UserBookingDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -21,30 +23,20 @@ interface UserBookingDetailsModalProps {
 export const UserBookingDetailsModal: React.FC<UserBookingDetailsModalProps> = ({
   isOpen,
   onClose,
-  bookingData = {
-    id: 'BK-2024-00568',
-    packageName: 'Ladakh Adventure Expedition',
-    coverImage: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=600&auto=format&fit=crop',
-    departureDate: '15 Jun 2024',
-    returnDate: '22 Jun 2024',
-    travelerCount: 2,
-    packagePrice: 18999,
-    amountPaid: 37998, // fully paid
-    dueDate: '10 Jun 2024',
-  },
+  bookingData,
 }) => {
-  const { showToast } = useToast();
-  const [amountPaidState, setAmountPaidState] = useState(bookingData.amountPaid);
-  const totalAmount = bookingData.packagePrice * bookingData.travelerCount;
-  const remainingBalance = Math.max(0, totalAmount - amountPaidState);
-  const isFullyPaid = remainingBalance === 0;
-  const progressPct = Math.round((amountPaidState / totalAmount) * 100);
+  const navigate = useNavigate();
 
-  if (!isOpen) return null;
+  if (!isOpen || !bookingData) return null;
+
+  const totalAmount = bookingData.packagePrice * bookingData.travelerCount;
+  const remainingBalance = Math.max(0, totalAmount - bookingData.amountPaid);
+  const isFullyPaid = remainingBalance === 0;
+  const progressPct = totalAmount > 0 ? Math.round((bookingData.amountPaid / totalAmount) * 100) : 0;
 
   const handlePayNow = () => {
-    setAmountPaidState(totalAmount);
-    showToast('Payment successful! Your booking is now fully paid and confirmed.', 'success');
+    onClose();
+    navigate(`/booking/checkout/${bookingData.id}`);
   };
 
   return (
@@ -96,7 +88,7 @@ export const UserBookingDetailsModal: React.FC<UserBookingDetailsModalProps> = (
 
           <div className="flex justify-between">
             <span className="text-slate-500">Amount Paid</span>
-            <span className="text-emerald-600 font-black">₹{amountPaidState.toLocaleString('en-IN')}</span>
+            <span className="text-emerald-600 font-black">₹{bookingData.amountPaid.toLocaleString('en-IN')}</span>
           </div>
 
           <div className="flex justify-between pt-1 border-t border-purple-100">

@@ -4,6 +4,7 @@ import { envConfig } from './config/env.config.js';
 import { dbConnection } from './config/db.config.js';
 import { logger } from './config/logger.config.js';
 import { socketService } from './services/socket.service.js';
+import { couponService } from './services/coupon.service.js';
 
 let httpServer: http.Server | null = null;
 
@@ -21,6 +22,13 @@ const startServer = async () => {
 
     // 3. Establish MongoDB Connection BEFORE starting HTTP server
     await dbConnection.connect();
+
+    // 3.1. Auto-seed default coupons if collection is empty
+    try {
+      await couponService.seedDefaultCoupons();
+    } catch (seedErr: any) {
+      logger.warn('⚠ Could not seed default coupons: %s', seedErr?.message || seedErr);
+    }
 
     // 4. Start HTTP Server only after DB is healthy and ready
     httpServer = app.listen(envConfig.PORT, () => {

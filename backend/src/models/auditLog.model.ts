@@ -48,7 +48,6 @@ const AuditLogSchema = new Schema<IAuditLog>(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     timestamp: {
       type: String,
@@ -60,7 +59,7 @@ const AuditLogSchema = new Schema<IAuditLog>(
       index: true,
     },
     actor: {
-      id: { type: String, index: true },
+      id: { type: String },
       name: { type: String, required: true },
       email: { type: String },
       role: { type: String, default: 'Admin' },
@@ -74,7 +73,6 @@ const AuditLogSchema = new Schema<IAuditLog>(
     module: {
       type: String,
       required: true,
-      index: true,
     },
     action: {
       type: String,
@@ -93,7 +91,6 @@ const AuditLogSchema = new Schema<IAuditLog>(
       type: String,
       enum: ['Low', 'Medium', 'High', 'Critical'],
       default: 'Low',
-      index: true,
     },
     status: {
       type: String,

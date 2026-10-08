@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import {
   MapPin,
   Plus,
-  Edit2,
   Trash2,
   Flame,
-  ArrowUpDown,
   CheckCircle2,
+  Compass,
 } from 'lucide-react';
-import { TrendingDestinationItem } from '../../../../types/cmsManagement';
+import { TrendingDestinationItem, CMSSelectItem } from '../../../../types/cmsManagement';
+import { adminCMSManagementService } from '../../../../services/adminCMSManagement.service';
+import { CMSSelectionModal } from '../modals/CMSSelectionModal';
 
 interface TrendingDestinationsEditorProps {
   destinations: TrendingDestinationItem[];
@@ -21,31 +22,28 @@ export const TrendingDestinationsEditor: React.FC<TrendingDestinationsEditorProp
   onSaveDestination,
   onDeleteDestination,
 }) => {
-  const [editingDest, setEditingDest] = useState<TrendingDestinationItem | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
 
-  const [newName, setNewName] = useState('');
-  const [newCountry, setNewCountry] = useState('India');
-  const [newDescription, setNewDescription] = useState('');
-  const [newImageUrl, setNewImageUrl] = useState('');
-
-  const handleAddNew = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    onSaveDestination({
-      name: newName.trim(),
-      country: newCountry.trim(),
-      description: newDescription.trim(),
+  const handleConfirmFeature = async (
+    selectedItems: CMSSelectItem[],
+    options?: { priority?: number; customBadge?: string }
+  ) => {
+    const destinationsToFeature = selectedItems.map((item, idx) => ({
+      name: item.name || item.destination || '',
+      country: item.country || 'India',
       imageUrl:
-        newImageUrl.trim() ||
-        'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=800&auto=format&fit=crop',
-      isTrending: true,
-      isEnabled: true,
-    });
-    setNewName('');
-    setNewDescription('');
-    setNewImageUrl('');
-    setIsAddingNew(false);
+        item.coverImage ||
+        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800',
+      priority: (options?.priority || 1) + idx,
+    }));
+
+    try {
+      await adminCMSManagementService.bulkCreateTrendingDestinations(destinationsToFeature);
+      setIsAddingNew(false);
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message || 'Failed to feature destinations');
+    }
   };
 
   return (
@@ -55,175 +53,98 @@ export const TrendingDestinationsEditor: React.FC<TrendingDestinationsEditorProp
         <div>
           <h2 className="text-sm font-black text-[#0F172A]">Trending Destinations</h2>
           <p className="text-[11px] text-slate-400 font-semibold">
-            Manage holiday destinations highlighted on the storefront homepage
+            Select destinations from verified tour packages to feature as trending on the storefront
           </p>
         </div>
         <button
           type="button"
-          onClick={() => setIsAddingNew(!isAddingNew)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6356E5] hover:bg-[#5244e0] text-white text-xs font-black shadow-xs cursor-pointer transition-all"
+          onClick={() => setIsAddingNew(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-xs cursor-pointer transition-all"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>{isAddingNew ? 'Close Form' : 'Add Destination'}</span>
+          <span>Feature Destination</span>
         </button>
       </div>
 
-      {/* Add New Form */}
-      {isAddingNew && (
-        <form
-          onSubmit={handleAddNew}
-          className="p-4 rounded-2xl bg-purple-50/40 border border-purple-200 space-y-3 text-xs"
-        >
-          <span className="font-black text-[#0F172A] block">Add New Trending Destination</span>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                Destination Name
-              </label>
-              <input
-                type="text"
-                required
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Goa, Bali, Leh Ladakh"
-                className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-[#0F172A]"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                Country
-              </label>
-              <input
-                type="text"
-                required
-                value={newCountry}
-                onChange={(e) => setNewCountry(e.target.value)}
-                placeholder="e.g. India, Indonesia, UAE"
-                className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-[#0F172A]"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                Description / Highlights
-              </label>
-              <input
-                type="text"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Brief highlights shown on destination card"
-                className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-[#0F172A]"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                Image URL
-              </label>
-              <input
-                type="url"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
-                className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 font-semibold text-[#0F172A]"
-              />
-            </div>
+      {/* Empty State */}
+      {destinations.length === 0 ? (
+        <div className="py-12 px-4 text-center border-2 border-dashed border-slate-100 rounded-3xl space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+            <Compass className="w-6 h-6" />
           </div>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setIsAddingNew(false)}
-              className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-1.5 rounded-xl bg-[#6356E5] text-white font-black shadow-xs"
-            >
-              Add Destination
-            </button>
+          <div>
+            <h3 className="text-sm font-black text-slate-800">No Trending Destinations Featured</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-0.5">
+              Select verified destinations from the database to highlight on the homepage.
+            </p>
           </div>
-        </form>
-      )}
-
-      {/* Destinations Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-        {destinations.map((dest) => (
-          <div
-            key={dest.id}
-            className={`p-3.5 rounded-2xl border transition-all ${
-              dest.isEnabled
-                ? 'bg-slate-50/70 border-slate-200 hover:border-purple-200'
-                : 'bg-slate-100/60 border-slate-200 opacity-60'
-            }`}
+          <button
+            type="button"
+            onClick={() => setIsAddingNew(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-black shadow-sm hover:bg-blue-700 cursor-pointer"
           >
-            <div className="relative h-28 rounded-xl overflow-hidden bg-slate-200 border border-slate-200 mb-2.5">
-              <img src={dest.imageUrl} alt={dest.name} className="w-full h-full object-cover" />
-              {dest.isTrending && (
-                <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center gap-0.5 shadow-xs">
-                  <Flame className="w-2.5 h-2.5 fill-white" /> Trending
-                </span>
-              )}
-              <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-slate-900/80 text-white text-[9px] font-bold">
-                Order #{dest.displayOrder}
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black text-[#0F172A]">{dest.name}</h3>
-                <span className="text-[10px] text-slate-400 font-bold">{dest.country}</span>
-              </div>
-              <p className="text-[10px] text-slate-500 font-medium line-clamp-2">
-                {dest.description}
-              </p>
-
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onSaveDestination({ id: dest.id, isEnabled: !dest.isEnabled })
+            <Plus className="w-4 h-4" />
+            <span>Select Destination</span>
+          </button>
+        </div>
+      ) : (
+        /* Destinations Grid */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+          {destinations.map((dest) => (
+            <div
+              key={dest.id}
+              className="p-3 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-blue-200 transition-all flex flex-col justify-between gap-3 group"
+            >
+              <div className="relative h-28 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                <img
+                  src={
+                    dest.imageUrl ||
+                    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600'
                   }
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-black cursor-pointer ${
-                    dest.isEnabled
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-slate-200 text-slate-600'
-                  }`}
-                >
-                  {dest.isEnabled ? 'Active' : 'Hidden'}
-                </button>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onSaveDestination({ id: dest.id, isTrending: !dest.isTrending })
-                    }
-                    className={`p-1 rounded-md text-[10px] font-bold cursor-pointer ${
-                      dest.isTrending
-                        ? 'text-rose-600 hover:bg-rose-50'
-                        : 'text-slate-400 hover:bg-slate-100'
-                    }`}
-                    title="Toggle Trending Flame Badge"
-                  >
-                    <Flame className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteDestination(dest.id)}
-                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  alt={dest.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute top-2 left-2 flex items-center gap-1 bg-slate-900/70 backdrop-blur-xs px-2 py-0.5 rounded-full text-white text-[9px] font-black">
+                  <Flame className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                  <span>Trending</span>
+                </div>
+                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-xs px-1.5 py-0.5 rounded-md text-[#0F172A] text-[9px] font-bold">
+                  P-{dest.priority}
                 </div>
               </div>
+
+              <div className="flex items-center justify-between gap-2 px-1">
+                <div>
+                  <h4 className="text-xs font-black text-[#0F172A]">{dest.name}</h4>
+                  <p className="text-[10px] text-slate-400 font-semibold">{dest.country || 'India'}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDeleteDestination(dest.id)}
+                  className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                  title="Remove from trending"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Universal Reusable CMS Selection Modal */}
+      <CMSSelectionModal
+        isOpen={isAddingNew}
+        onClose={() => setIsAddingNew(false)}
+        type="destinations"
+        title="Feature Trending Destinations"
+        subtitle="Browse available destinations discovered from tour packages"
+        alreadyFeaturedIds={destinations.map((d) => d.id)}
+        onConfirm={handleConfirmFeature}
+        defaultBadgeText="Trending Now"
+        createButtonRoute="/admin/packages"
+        createButtonText="Create Package with Destination"
+      />
     </div>
   );
 };

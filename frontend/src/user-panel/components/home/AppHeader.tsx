@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, MessageSquare } from 'lucide-react';
-import { Logo } from '../common/Logo';
+import { BrandLogo } from '../../../common/brand';
 import { userNotificationService } from '../../services/userNotification.service';
 import { userSocketService } from '../../services/userSocket.service';
 
@@ -60,23 +60,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     { label: 'Home', path: '/home' },
     { label: 'Explore', path: '/explore' },
     { label: 'My Trips', path: '/my-trips' },
-    { label: 'Community', path: '/community' },
+    { label: 'Car Rental', path: '/car-rental' },
     { label: 'Profile', path: '/profile' },
   ];
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-slate-100/80 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Left: Brand Name & Icon */}
+        {/* Left: Brand Logo (Full Wordmark) */}
         <div className="flex items-center gap-8">
           <button
             onClick={() => navigate('/home')}
-            className="flex items-center gap-2 text-[#0F172A] hover:opacity-90 transition-opacity focus:outline-none"
+            className="flex items-center hover:opacity-90 transition-opacity focus:outline-none cursor-pointer"
+            aria-label="ApnaTrip Home"
           >
-            <svg className="w-6 h-6 text-[#FF4D6D] fill-current" viewBox="0 0 24 24">
-              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-            </svg>
-            <span className="text-xl sm:text-2xl font-black tracking-tight">ApnaTrip</span>
+            <BrandLogo
+              theme="light"
+              className="h-8 sm:h-9 w-auto"
+              alt="ApnaTrip"
+            />
           </button>
 
           {/* Desktop Navigation Links */}

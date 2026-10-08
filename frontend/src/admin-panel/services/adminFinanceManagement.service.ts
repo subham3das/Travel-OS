@@ -29,11 +29,11 @@ export const initialFinanceKPIStats: FinanceKPIStats = {
 export const initialSettlementRows: AgencySettlementRow[] = [];
 export const initialFinancialTimeline: FinancialTimelineItem[] = [];
 export const initialAgencySidebarData: AgencySidebarData = {
-  agencyId: 'ag-default',
+  agencyId: '',
   agencyName: 'Agency Profile',
-  agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
-  verified: true,
-  rating: 4.8,
+  agencyLogo: '',
+  verified: false,
+  rating: 0.0,
   revenueOverview: {
     totalRevenue: '₹0',
     bookings: 0,
@@ -102,13 +102,12 @@ class AdminFinanceManagementService {
    * 4. Destination Revenue
    */
   public async getDestinationRevenue(): Promise<DestinationRevenueItem[]> {
-    return [
-      { destination: 'Manali, HP', amount: '₹78.5 L', heightPercent: 95 },
-      { destination: 'Goa Beaches', amount: '₹64.2 L', heightPercent: 80 },
-      { destination: 'Kashmir Valley', amount: '₹52.8 L', heightPercent: 65 },
-      { destination: 'Kerala Backwaters', amount: '₹41.5 L', heightPercent: 52 },
-      { destination: 'Rajasthan Heritage', amount: '₹36.0 L', heightPercent: 45 },
-    ];
+    try {
+      const res = await adminApiClient.get<DestinationRevenueItem[]>('/admin/finance/destinations');
+      return res.data || [];
+    } catch {
+      return [];
+    }
   }
 
   public async getDestinationRevenues(): Promise<DestinationRevenueItem[]> {
@@ -119,8 +118,12 @@ class AdminFinanceManagementService {
    * 5. Top Performing Agencies
    */
   public async getTopAgencies(): Promise<TopPerformingAgencyItem[]> {
-    const res = await adminApiClient.get<TopPerformingAgencyItem[]>('/admin/finance/top-agencies');
-    return res.data || [];
+    try {
+      const res = await adminApiClient.get<TopPerformingAgencyItem[]>('/admin/finance/top-agencies');
+      return res.data || [];
+    } catch {
+      return [];
+    }
   }
 
   public async getTopPerformingAgencies(): Promise<TopPerformingAgencyItem[]> {
@@ -131,51 +134,48 @@ class AdminFinanceManagementService {
    * 6. Financial Summary Data
    */
   public async getFinancialSummary(): Promise<FinancialSummaryData> {
-    return {
-      grossRevenue: { value: '₹24.68 Cr', growth: '+18.6%', isPositive: true },
-      netRevenue: { value: '₹3.74 Cr', growth: '+16.2%', isPositive: true },
-      totalRefunds: { value: '₹1.32 Cr', growth: '-4.3%', isPositive: true },
-      totalDiscounts: { value: '₹84.5 L', growth: '+8.1%', isPositive: true },
-      taxesPaid: { value: '₹1.85 Cr', growth: '+14.5%', isPositive: true },
-      gatewayCharges: { value: '₹48.2 L', growth: '+12.0%', isPositive: true },
-    };
+    try {
+      const res = await adminApiClient.get<FinancialSummaryData>('/admin/finance/summary');
+      return res.data || initialFinancialSummary;
+    } catch {
+      return initialFinancialSummary;
+    }
   }
 
   /**
    * 7. Refund Analytics
    */
   public async getRefundAnalytics(): Promise<RefundAnalyticsData> {
-    return {
-      totalRequests: 142,
-      approved: 128,
-      pending: 8,
-      rejected: 6,
-      trends: [
-        { month: 'Jan', requests: 18, approved: 16 },
-        { month: 'Feb', requests: 24, approved: 22 },
-        { month: 'Mar', requests: 30, approved: 28 },
-        { month: 'Apr', requests: 34, approved: 30 },
-        { month: 'May', requests: 36, approved: 32 },
-      ],
-    };
+    try {
+      const res = await adminApiClient.get<RefundAnalyticsData>('/admin/finance/refunds');
+      return res.data || initialRefundAnalytics;
+    } catch {
+      return initialRefundAnalytics;
+    }
   }
 
   /**
    * 8. Agency Settlements Queue
    */
   public async getSettlements(): Promise<SettlementRecord[]> {
-    const res = await adminApiClient.get<SettlementRecord[]>('/admin/finance/settlements');
-    return res.data || [];
+    try {
+      const res = await adminApiClient.get<SettlementRecord[]>('/admin/finance/settlements');
+      return res.data || [];
+    } catch {
+      return [];
+    }
   }
 
   /**
    * 9. Financial Timeline
    */
   public async getFinancialTimeline(): Promise<FinancialTimelineEvent[]> {
-    return [
-      { id: 'ev-1', type: 'payout', title: 'Automated Bi-Weekly Payout Cycle Disbursed', description: 'Transferred settlements to 48 verified agencies', time: 'Today • 02:00 PM', amount: '₹1.45 Cr', badge: 'Payout' },
-      { id: 'ev-2', type: 'target_achieved', title: 'GST Quarterly Reconciliation Finished', description: 'Input tax credit matched with Razorpay statements', time: 'Yesterday • 06:30 PM', amount: '₹36.2 L', badge: 'Tax' },
-    ];
+    try {
+      const res = await adminApiClient.get<FinancialTimelineEvent[]>('/admin/finance/timeline');
+      return res.data || [];
+    } catch {
+      return [];
+    }
   }
 
   /**
@@ -198,27 +198,28 @@ class AdminFinanceManagementService {
    * 11. Agency Sidebar Profile Data
    */
   public async getAgencySidebarData(agencyId: string): Promise<AgencySidebarProfileData> {
+    try {
+      const res = await adminApiClient.get<AgencySidebarProfileData>(`/admin/finance/agency/${agencyId}`);
+      if (res.success && res.data) {
+        return res.data;
+      }
+    } catch {
+      // fallback to empty
+    }
     return {
       agencyId,
-      agencyName: 'Wanderlust Holidays Ltd',
-      agencyLogo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
-      verified: true,
-      rating: 4.9,
+      agencyName: 'Agency Profile',
+      agencyLogo: '',
+      verified: false,
+      rating: 0.0,
       revenueOverview: {
-        totalRevenue: '₹4.85 Cr',
-        bookings: 145,
-        avgBookingValue: '₹33,450',
-        totalCommission: '₹48.5 L',
+        totalRevenue: '₹0',
+        bookings: 0,
+        avgBookingValue: '₹0',
+        totalCommission: '₹0',
       },
-      settlementHistory: [
-        { id: 'st-1', date: 'May 31, 2024', amount: '₹6.94 L', status: 'Settled' },
-        { id: 'st-2', date: 'May 15, 2024', amount: '₹5.82 L', status: 'Settled' },
-      ],
-      monthlyTrends: [
-        { month: 'Jan', revenue: 4200000, profit: 420000 },
-        { month: 'Feb', revenue: 4600000, profit: 460000 },
-        { month: 'Mar', revenue: 5200000, profit: 520000 },
-      ],
+      settlementHistory: [],
+      monthlyTrends: [],
     };
   }
 

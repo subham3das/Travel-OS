@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getTripById, Trip } from '../../data/trips';
+import { Trip } from '../../data/trips';
 import { useToast } from '../../context/ToastContext';
 import { tripService } from '../../services/trip.service';
 
@@ -8,15 +8,12 @@ import { TripHero } from './components/TripHero';
 import { BookingCard } from './components/BookingCard';
 import { TripStatusSection } from './components/TripStatusSection';
 import { QuickActions } from './components/QuickActions';
-import { TripTimeline } from './components/TripTimeline';
 import { TravelerCard } from './components/TravelerCard';
 import { AgencyCard } from './components/AgencyCard';
 import { HotelCard } from './components/HotelCard';
 import { TransportCard } from './components/TransportCard';
 import { WeatherCard } from './components/WeatherCard';
 import { ChecklistCard } from './components/ChecklistCard';
-import { ExpensesCard } from './components/ExpensesCard';
-import { StickyItineraryButton } from './components/StickyItineraryButton';
 
 export const TripDetailsPage: React.FC = () => {
   const { tripId, id } = useParams<{ tripId?: string; id?: string }>();
@@ -24,29 +21,54 @@ export const TripDetailsPage: React.FC = () => {
   const { showToast } = useToast();
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
-  const targetId = tripId || id || 'trip-001';
-  const fallbackTrip = getTripById(targetId);
-  const [trip, setTrip] = useState<Trip>(fallbackTrip);
+  const targetId = tripId || id || '';
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [loading, setLoading] = useState(Boolean(targetId));
 
   useEffect(() => {
     let isMounted = true;
+    if (!targetId) {
+      setLoading(false);
+      return;
+    }
     tripService.getTripById(targetId).then((res) => {
       if (isMounted && res) {
         setTrip(res);
       }
     }).catch((err) => {
-      console.warn('Using local fallback trip:', err);
+      console.warn('Trip API unreachable:', err);
+    }).finally(() => {
+      if (isMounted) setLoading(false);
     });
     return () => { isMounted = false; };
   }, [targetId]);
 
-  const handleScrollToItinerary = () => {
-    const elem = document.getElementById('itinerary-section');
-    if (elem) elem.scrollIntoView({ behavior: 'smooth' });
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center space-y-3">
+        <div className="w-9 h-9 border-3 border-[#6356E5]/20 border-t-[#6356E5] rounded-full animate-spin" />
+        <p className="text-xs font-black text-slate-500">Loading trip details...</p>
+      </div>
+    );
+  }
+
+  if (!trip) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center p-6 text-center space-y-4 font-sans">
+        <div className="w-16 h-16 rounded-3xl bg-rose-50 text-rose-500 flex items-center justify-center font-black text-2xl">✕</div>
+        <h2 className="text-xl font-black text-[#0F172A]">Trip Not Found</h2>
+        <p className="text-xs font-semibold text-slate-500 max-w-sm">
+          The requested trip details could not be loaded or the server is unavailable.
+        </p>
+        <button onClick={() => navigate('/my-trips')} className="px-5 py-2.5 rounded-xl bg-[#6356E5] text-white text-xs font-bold cursor-pointer">
+          Back to My Trips
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#6356E5]/20 selection:text-[#6356E5] pb-32">
+    <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#6356E5]/20 selection:text-[#6356E5] pb-12">
       {/* 1. Hero Cover */}
       <TripHero trip={trip} />
 
@@ -60,35 +82,24 @@ export const TripDetailsPage: React.FC = () => {
         {/* 4. Quick Actions */}
         <QuickActions trip={trip} onOpenInvoice={() => setIsInvoiceOpen(true)} />
 
-        {/* 5. Trip Timeline */}
-        <div id="itinerary-section">
-          <TripTimeline trip={trip} />
-        </div>
-
-        {/* 6. Traveler Details */}
+        {/* 5. Traveler Details */}
         <TravelerCard trip={trip} />
 
-        {/* 7. Agency Card */}
+        {/* 6. Agency Card */}
         <AgencyCard trip={trip} />
 
-        {/* 8. Hotel Card */}
+        {/* 7. Hotel Card */}
         <HotelCard trip={trip} />
 
-        {/* 9. Transport Card */}
+        {/* 8. Transport Card */}
         <TransportCard trip={trip} />
 
-        {/* 10. Weather Forecast */}
+        {/* 9. Weather Forecast */}
         <WeatherCard trip={trip} />
 
-        {/* 11. Trip Checklist */}
+        {/* 10. Trip Checklist */}
         <ChecklistCard trip={trip} />
-
-        {/* 12. Expenses Summary */}
-        <ExpensesCard trip={trip} />
       </main>
-
-      {/* 13. Sticky Bottom CTA */}
-      <StickyItineraryButton onViewItinerary={handleScrollToItinerary} />
 
       {/* Invoice Modal */}
       {isInvoiceOpen && (

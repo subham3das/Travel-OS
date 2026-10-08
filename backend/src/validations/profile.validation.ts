@@ -25,6 +25,7 @@ export const UpdateProfileSchema = z.object({
   accessibilityRequirements: z.string().max(300).optional(),
   country: z.string().max(100).optional(),
   isPublicProfile: z.boolean().optional(),
+  theme: z.enum(['Light', 'Dark', 'System', 'light', 'dark', 'system']).transform(v => (v.charAt(0).toUpperCase() + v.slice(1).toLowerCase()) as 'Light' | 'Dark' | 'System').optional(),
 });
 
 export const CheckUsernameParamsSchema = z.object({

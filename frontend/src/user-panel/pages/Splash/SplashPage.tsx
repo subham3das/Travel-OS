@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Logo } from '../../components/common/Logo';
+import { BrandIcon } from '../../../common/brand';
 import { useAuth } from '../../hooks/useAuth';
 
 export const SplashPage: React.FC = () => {
@@ -57,7 +57,7 @@ export const SplashPage: React.FC = () => {
         transition={{ duration: 0.8, ease: 'easeOut' }}
         className="relative z-10 p-6 flex flex-col items-center"
       >
-        <Logo size="lg" showSubtitle />
+        <BrandIcon className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl" alt="ApnaTrip" />
       </motion.div>
 
       {/* Footer Branding Loading Dots */}

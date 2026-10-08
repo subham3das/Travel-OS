@@ -3,17 +3,13 @@ import { ChevronRight, Footprints, Anchor, Mountain, Waves, Tent } from 'lucide-
 import { PackageActivity } from '../../../types/package';
 
 interface ActivitiesSectionProps {
-  activities: PackageActivity[];
+  activities?: PackageActivity[];
 }
 
 export const ActivitiesSection: React.FC<ActivitiesSectionProps> = ({ activities }) => {
-  const defaultActivities: PackageActivity[] = activities && activities.length > 0 ? activities : [
-    { id: 'a1', title: 'Trekking', iconName: 'Trekking', imageUrl: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=400&auto=format&fit=crop' },
-    { id: 'a2', title: 'Boating', iconName: 'Boating', imageUrl: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=400&auto=format&fit=crop' },
-    { id: 'a3', title: 'Caving', iconName: 'Caving', imageUrl: 'https://images.unsplash.com/photo-1568849676085-51415703900f?q=80&w=400&auto=format&fit=crop' },
-    { id: 'a4', title: 'Waterfalls', iconName: 'Waterfalls', imageUrl: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=400&auto=format&fit=crop' },
-    { id: 'a5', title: 'Camping', iconName: 'Camping', imageUrl: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=400&auto=format&fit=crop' },
-  ];
+  if (!activities || activities.length === 0) {
+    return null;
+  }
 
   const getIcon = (title: string) => {
     const lower = title.toLowerCase();
@@ -31,14 +27,16 @@ export const ActivitiesSection: React.FC<ActivitiesSectionProps> = ({ activities
         <h2 className="text-lg sm:text-xl font-extrabold text-[#0F172A] tracking-tight">
           Top Activities
         </h2>
-        <button className="text-xs font-bold text-[#6356E5] hover:underline flex items-center gap-0.5 cursor-pointer">
-          <span>View All</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
+        {activities.length > 5 && (
+          <button className="text-xs font-bold text-[#6356E5] hover:underline flex items-center gap-0.5 cursor-pointer">
+            <span>View All</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-5 gap-3">
-        {defaultActivities.map((act) => (
+        {activities.map((act) => (
           <div
             key={act.id}
             className="bg-white rounded-2xl overflow-hidden border border-slate-100/90 shadow-2xs hover:shadow-md transition-all flex flex-col group cursor-pointer"

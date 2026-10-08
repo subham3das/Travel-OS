@@ -6,6 +6,7 @@ import {
   LoginSchema,
   RefreshTokenSchema,
   ForgotPasswordSchema,
+  VerifyResetTokenSchema,
   ResetPasswordSchema,
   ChangePasswordSchema,
   VerifyEmailSchema,
@@ -147,6 +148,19 @@ router.post(
   authRateLimiter,
   validateRequest({ body: ForgotPasswordSchema }),
   authController.forgotPassword
+);
+
+/**
+ * @openapi
+ * /auth/verify-reset-token:
+ *   get:
+ *     summary: Verify Password Reset Token Validity
+ *     tags: [Authentication]
+ */
+router.get(
+  '/verify-reset-token',
+  validateRequest({ query: VerifyResetTokenSchema }),
+  authController.verifyResetToken
 );
 
 /**

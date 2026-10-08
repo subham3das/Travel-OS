@@ -14,8 +14,11 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ trip, onOpenInvoice 
   const handleAction = (actionId: string) => {
     switch (actionId) {
       case 'itinerary': {
-        const elem = document.getElementById('itinerary-section');
-        if (elem) elem.scrollIntoView({ behavior: 'smooth' });
+        if (trip?.packageId) {
+          navigate(`/package/${trip.packageId}`);
+        } else {
+          navigate(`/trips/${trip.id}/documents`);
+        }
         break;
       }
       case 'documents':

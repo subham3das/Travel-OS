@@ -11,6 +11,9 @@ import {
   Ticket,
   ArrowUpRight,
   ArrowDownRight,
+  Compass,
+  Package,
+  Car,
 } from 'lucide-react';
 import { StatItem } from '../../types/dashboard';
 
@@ -32,10 +35,16 @@ export const StatCard: React.FC<StatCardProps> = ({ stat, delay = 0 }) => {
         return <Users className="w-5 h-5" />;
       case 'bookings':
         return <CalendarCheck className="w-5 h-5" />;
+      case 'departures':
       case 'trips':
-        return <Plane className="w-5 h-5" />;
+        return <Compass className="w-5 h-5" />;
+      case 'package':
+        return <Package className="w-5 h-5" />;
+      case 'car':
+        return <Car className="w-5 h-5" />;
       case 'approvals':
         return <Hourglass className="w-5 h-5" />;
+      case 'coupon':
       case 'tickets':
       default:
         return <Ticket className="w-5 h-5" />;

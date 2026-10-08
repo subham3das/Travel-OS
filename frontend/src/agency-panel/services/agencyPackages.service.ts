@@ -1,7 +1,14 @@
 import { agencyApiClient } from './agencyApiClient';
 
-export type PackageStatus = 'Active' | 'Draft' | 'Hidden' | 'Archived';
+export type PackageStatus = 'Active' | 'Draft' | 'Hidden' | 'Archived' | 'Inactive';
 export type PackageCategory = 'Domestic' | 'International';
+
+export interface PackageReadinessInfo {
+  isBookable: boolean;
+  status: 'READY' | 'NEEDS_SETUP';
+  label: 'Ready to Sell' | 'Needs Setup';
+  missingRequirements: string[];
+}
 
 export interface AgencyPackage {
   id: string;
@@ -16,7 +23,9 @@ export interface AgencyPackage {
   status: PackageStatus;
   lastUpdated: string;
   packageType: PackageCategory;
+  adventureType?: string;
   coverImage: string;
+  readiness?: PackageReadinessInfo;
   raw?: any;
 }
 
@@ -25,6 +34,11 @@ export interface AgencyPackageStats {
   published: number;
   draft: number;
   archived: number;
+  readyToSell?: number;
+  needsSetup?: number;
+  incomplete?: number;
+  soldOut?: number;
+  bookingClosed?: number;
 }
 
 export interface AgencyPackageFilters {

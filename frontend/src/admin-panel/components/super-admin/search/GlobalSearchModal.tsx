@@ -25,6 +25,9 @@ import {
   Star,
   Clock,
   ExternalLink,
+  Car,
+  Ticket,
+  Layout,
 } from 'lucide-react';
 import {
   GlobalSearchCategory,
@@ -166,12 +169,20 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         return `Bookings (${count})`;
       case 'packages':
         return `Packages (${count})`;
+      case 'departures':
+        return `Departures (${count})`;
+      case 'car-rentals':
+        return `Car Rentals (${count})`;
+      case 'coupons':
+        return `Coupons (${count})`;
+      case 'cms':
+        return `CMS Content (${count})`;
       case 'payments':
         return `Payments (${count})`;
       case 'support':
         return `Support Tickets (${count})`;
       case 'trips':
-        return `Trips (${count})`;
+        return `Departures (${count})`;
       case 'reviews':
         return `Reviews (${count})`;
       case 'reports':
@@ -193,12 +204,19 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         return <CalendarCheck className="w-4 h-4 text-blue-600" />;
       case 'packages':
         return <Package className="w-4 h-4 text-amber-600" />;
+      case 'departures':
+      case 'trips':
+        return <Compass className="w-4 h-4 text-indigo-600" />;
+      case 'car-rentals':
+        return <Car className="w-4 h-4 text-cyan-600" />;
+      case 'coupons':
+        return <Ticket className="w-4 h-4 text-pink-500" />;
+      case 'cms':
+        return <Layout className="w-4 h-4 text-purple-600" />;
       case 'payments':
         return <CreditCard className="w-4 h-4 text-emerald-600" />;
       case 'support':
         return <Headphones className="w-4 h-4 text-rose-600" />;
-      case 'trips':
-        return <Compass className="w-4 h-4 text-indigo-600" />;
       case 'reviews':
         return <Star className="w-4 h-4 text-amber-500" />;
       case 'reports':
@@ -249,15 +267,15 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
 
   const filterTabs: { id: GlobalSearchCategory; label: string; icon: React.ReactNode }[] = [
     { id: 'all', label: 'All', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
-    { id: 'users', label: 'Users', icon: <Users className="w-3.5 h-3.5" /> },
-    { id: 'agencies', label: 'Agencies', icon: <Building2 className="w-3.5 h-3.5" /> },
-    { id: 'bookings', label: 'Bookings', icon: <CalendarCheck className="w-3.5 h-3.5" /> },
     { id: 'packages', label: 'Packages', icon: <Package className="w-3.5 h-3.5" /> },
-    { id: 'payments', label: 'Payments', icon: <CreditCard className="w-3.5 h-3.5" /> },
-    { id: 'trips', label: 'Trips', icon: <Compass className="w-3.5 h-3.5" /> },
-    { id: 'support', label: 'Support', icon: <Headphones className="w-3.5 h-3.5" /> },
-    { id: 'reports', label: 'Reports', icon: <FileText className="w-3.5 h-3.5" /> },
-    { id: 'settings', label: 'Settings', icon: <Settings className="w-3.5 h-3.5" /> },
+    { id: 'departures', label: 'Departures', icon: <Compass className="w-3.5 h-3.5" /> },
+    { id: 'bookings', label: 'Bookings', icon: <CalendarCheck className="w-3.5 h-3.5" /> },
+    { id: 'agencies', label: 'Agencies', icon: <Building2 className="w-3.5 h-3.5" /> },
+    { id: 'car-rentals', label: 'Car Rentals', icon: <Car className="w-3.5 h-3.5" /> },
+    { id: 'users', label: 'Users', icon: <Users className="w-3.5 h-3.5" /> },
+    { id: 'coupons', label: 'Coupons', icon: <Ticket className="w-3.5 h-3.5" /> },
+    { id: 'cms', label: 'CMS Content', icon: <Layout className="w-3.5 h-3.5" /> },
+    { id: 'support', label: 'Support Tickets', icon: <Headphones className="w-3.5 h-3.5" /> },
   ];
 
   return (

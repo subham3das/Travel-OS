@@ -7,11 +7,12 @@ import { DestinationStep } from '../../components/packageWizard/steps/Destinatio
 import { PricingStep } from '../../components/packageWizard/steps/PricingStep';
 import { DeparturesStep } from '../../components/packageWizard/steps/DeparturesStep';
 import { ItineraryStep } from '../../components/packageWizard/steps/ItineraryStep';
+import { AccommodationStep } from '../../components/packageWizard/steps/AccommodationStep';
 import { GalleryStep } from '../../components/packageWizard/steps/GalleryStep';
 import { InclusionsStep } from '../../components/packageWizard/steps/InclusionsStep';
 import { PoliciesStep } from '../../components/packageWizard/steps/PoliciesStep';
 import { PreviewStep } from '../../components/packageWizard/steps/PreviewStep';
-import { getDetailedPackageById } from '../../data/packageDetails';
+import { agencyPackagesService } from '../../services/agencyPackages.service';
 import { PackageType, TripDifficulty } from '../../types/packageWizard';
 
 const WizardStepSwitcher: React.FC = () => {
@@ -29,12 +30,14 @@ const WizardStepSwitcher: React.FC = () => {
     case 5:
       return <ItineraryStep />;
     case 6:
-      return <GalleryStep />;
+      return <AccommodationStep />;
     case 7:
-      return <InclusionsStep />;
+      return <GalleryStep />;
     case 8:
-      return <PoliciesStep />;
+      return <InclusionsStep />;
     case 9:
+      return <PoliciesStep />;
+    case 10:
       return <PreviewStep />;
     default:
       return <BasicInformationStep />;
@@ -46,58 +49,68 @@ const EditPackageDataPreloader: React.FC = () => {
   const { updateStep1, updateStep2, updateStep3, updateStepDepartures, updateStep5 } = usePackageWizard();
 
   useEffect(() => {
-    const pkg = getDetailedPackageById(packageId || 'pkg-ladakh-1');
-    if (pkg) {
-      const mappedType: PackageType = 'Adventure';
-      const mappedDifficulty: TripDifficulty = pkg.tripDifficulty === 'Challenging' ? 'Difficult' : (pkg.tripDifficulty as TripDifficulty);
+    if (!packageId) return;
 
-      updateStep1({
-        packageName: pkg.packageName,
-        shortDescription: pkg.description.slice(0, 140),
-        packageType: mappedType,
-        tripDifficulty: mappedDifficulty,
-      });
+    agencyPackagesService
+      .getPackageById(packageId)
+      .then((pkg) => {
+        if (!pkg) return;
+        const mappedType: PackageType = pkg.packageType || 'Adventure';
+        const mappedDifficulty: TripDifficulty =
+          pkg.tripDifficulty === 'Challenging'
+            ? 'Difficult'
+            : (pkg.tripDifficulty as TripDifficulty) || 'Moderate';
 
-      updateStep2({
-        primaryDestination: pkg.destination.split(',')[0] || pkg.destination,
-        pickupCity: 'Leh Airport',
-        dropOffCity: 'Leh Airport',
-      });
-
-      updateStep3({
-        originalPrice: pkg.originalPrice,
-        discountedPrice: pkg.price,
-        minTravelers: pkg.minTravelers,
-        maxTravelers: pkg.maxTravelers,
-      });
-
-      if (pkg.upcomingDepartures && pkg.upcomingDepartures.length > 0) {
-        updateStepDepartures({
-          departures: pkg.upcomingDepartures.map((d, i) => ({
-            id: d.id || `dep-${i + 1}`,
-            departureDate: d.departureDate === '15 Jun 2024' ? '2026-09-10' : '2026-09-24',
-            departureTime: '09:00',
-            timezone: 'Asia/Kolkata (IST)',
-            pickupLocation: pkg.accommodation.pickupLocation || 'Leh Airport (IXL)',
-            reportingTime: '07:30 AM',
-            bookingClosingDate: d.departureDate === '15 Jun 2024' ? '2026-09-05' : '2026-09-19',
-            bookingClosingTime: '23:59',
-            minimumTravelers: pkg.minTravelers || 8,
-            maximumTravelers: pkg.maxTravelers || 20,
-            bookedTravelers: d.seatsFilled || 0,
-            availableSeats: (pkg.maxTravelers || 20) - (d.seatsFilled || 0),
-            status: d.status === 'READY_FOR_TRIP' ? 'Sold Out' : 'Upcoming',
-            returnDate: d.departureDate === '15 Jun 2024' ? '2026-09-16' : '2026-09-30',
-            returnTime: '09:00',
-          })),
+        updateStep1({
+          packageName: pkg.packageName || pkg.title || '',
+          shortDescription: (pkg.description || '').slice(0, 140),
+          packageType: mappedType,
+          tripDifficulty: mappedDifficulty,
         });
-      }
 
-      updateStep5({
-        coverImage: pkg.coverImage,
+        updateStep2({
+          primaryDestination: pkg.destination ? pkg.destination.split(',')[0] : '',
+          pickupCity: pkg.pickupLocation || '',
+          dropOffCity: pkg.dropOffLocation || '',
+        });
+
+        updateStep3({
+          originalPrice: pkg.originalPrice || pkg.price || 0,
+          discountedPrice: pkg.price || 0,
+          maxTravelers: pkg.maxTravelers || 20,
+        });
+
+        if (pkg.upcomingDepartures && pkg.upcomingDepartures.length > 0) {
+          updateStepDepartures({
+            departures: pkg.upcomingDepartures.map((d: any, i: number) => ({
+              id: d.id || `dep-${i + 1}`,
+              departureDate: d.departureDate || '',
+              departureTime: d.departureTime || '09:00',
+              timezone: 'Asia/Kolkata (IST)',
+              pickupLocation: d.pickupLocation || 'Airport',
+              reportingTime: d.reportingTime || '07:30 AM',
+              bookingClosingDate: d.bookingClosingDate || '',
+              bookingClosingTime: '23:59',
+              maximumTravelers: d.maximumTravelers || pkg.maxTravelers || 20,
+              bookedTravelers: d.bookedTravelers || d.seatsFilled || 0,
+              availableSeats: d.availableSeats || 20,
+              status: d.status || 'Upcoming',
+              returnDate: d.returnDate || '',
+              returnTime: d.returnTime || '09:00',
+            })),
+          });
+        }
+
+        if (pkg.coverImage) {
+          updateStep5({
+            coverImage: pkg.coverImage,
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load package for edit:', err);
       });
-    }
-  }, [packageId]);
+  }, [packageId, updateStep1, updateStep2, updateStep3, updateStepDepartures, updateStep5]);
 
   return (
     <WizardLayout>

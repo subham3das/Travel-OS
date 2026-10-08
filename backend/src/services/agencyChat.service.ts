@@ -44,9 +44,11 @@ export class AgencyChatService {
     const agencyObjectId = new mongoose.Types.ObjectId(agencyId);
     const isArchivedFilter = options.filter === 'Archived';
 
-    // Base query
+    // Base query: isolate Tour Package chats from Car Rental chats
     const query: any = {
       agencyId: agencyObjectId,
+      conversationType: { $ne: 'CAR_RENTAL' },
+      businessType: { $ne: 'car_rental' },
       isDeleted: false,
       isArchived: isArchivedFilter,
     };
@@ -208,9 +210,16 @@ export class AgencyChatService {
     const total = enrichedList.length;
     const paginatedConversations = enrichedList.slice(skip, skip + limit);
 
-    // Calculate overall unread count for the agency
+    // Calculate overall unread count for the tour agency
     const totalUnreadCount = await ConversationModel.aggregate([
-      { $match: { agencyId: agencyObjectId, isDeleted: false } },
+      {
+        $match: {
+          agencyId: agencyObjectId,
+          conversationType: { $ne: 'CAR_RENTAL' },
+          businessType: { $ne: 'car_rental' },
+          isDeleted: false,
+        },
+      },
       { $group: { _id: null, total: { $sum: '$unreadAgencyCount' } } },
     ]);
 

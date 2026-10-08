@@ -19,9 +19,12 @@ export interface CheckoutTraveler {
 
 export interface CheckoutPayload {
   packageId?: string;
+  departureId?: string;
+  travelerIds?: string[];
   startDate?: string;
   endDate?: string;
   travelDate?: string;
+  departureDate?: string;
   returnDate?: string;
   leadTraveler: {
     fullName: string;
@@ -112,10 +115,10 @@ class BookingService {
   /**
    * Verify and confirm payment for booking
    */
-  async verifyPayment(payload: VerifyPaymentPayload): Promise<{ booking: any; transactionId: string; status: string }> {
-    const res = await apiClient.post<{ booking: any; transactionId: string; status: string }>('/bookings/verify-payment', payload);
-    if (!res.data?.booking) {
-      throw new Error(res.message || 'Payment verification failed');
+  async verifyPayment(payload: VerifyPaymentPayload): Promise<{ booking?: any; bookingId?: string; transactionId: string; status: string; invoiceNumber?: string }> {
+    const res = await apiClient.post<any>('/bookings/verify-payment', payload);
+    if (!res.data || (!res.data.booking && !res.data.bookingId && !res.data.verified)) {
+      throw new Error(res.message || (res as any).error || 'Payment verification failed');
     }
     return res.data;
   }

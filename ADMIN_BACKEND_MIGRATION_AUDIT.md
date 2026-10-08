@@ -226,7 +226,16 @@ Complete customer and traveler lifecycle management module. Allows Super Admins 
 * `UserKPISection`: 6 metric cards (Total Users, Active, New Today, Premium, Suspended, Verified Travelers).
 * `UserFilterPanel`: Search input, status dropdown, verification status, membership tier, country/state/city cascaders.
 * `UsersTable` & `UserTableRow`: Sortable columns, traveler avatar, email, phone, location, total bookings, total spent, status badge, action dropdown.
-* `UserDetailsDrawer`: 5-tab inspector (Overview, Bookings History, Transaction Ledger, Support Tickets, Security & Audit Logs).
+* `UserDetailsDrawer`: Deep slide-over inspector featuring:
+  * Profile overview & contact details
+  * Bookings History & Transaction Ledger
+  * **Enterprise KYC Workspace**:
+    * `AdminKycCard`: Telemetry header with verification status badge and fast-action approval/rejection triggers
+    * `DocumentSummary`: Live counters (Total, Verified, Pending, Rejected, Missing)
+    * `KycDocumentCard`: Document inspection cards with masked IDs (`•••• •••• 4289`), status badges, and action buttons
+    * `DocumentPreviewModal`: Visual inspection stage with zoom (0.5x–3x), 90° rotation, brightness/contrast filters, and prev/next navigation
+    * `KycTimeline`: Chronological audit trail of document transitions and reviewer notes
+    * `KycActionBar`: Sticky administrative decision bar
 * `CreateUserModal`: New user creation form with validation.
 * `EditUserModal`: Profile updater modal.
 * `UserActionConfirmModal`: Suspension, ban, and deletion confirmation modal.
@@ -240,6 +249,9 @@ Complete customer and traveler lifecycle management module. Allows Super Admins 
 | 6 User KPI Cards | Backend Aggregation (`/api/admin/users/stats`) | ✅ |
 | Paginated Users Table | Backend Query (`/api/admin/users`) | ✅ |
 | 5-Tab Traveler Deep Inspector | Backend Query (`/api/admin/users/:id`) | ✅ |
+| Traveler KYC Telemetry | Backend Query (`/api/admin/users/:id/kyc`) | ✅ |
+| Overall KYC Decision Review | Backend Action (`POST /api/admin/users/:id/kyc/review`) | ✅ |
+| Document-Level Decision Review | Backend Action (`POST /api/admin/users/:id/kyc/documents/:docId/review`) | ✅ |
 | Create Traveler User | Backend Action (`/api/admin/users`) | ✅ |
 | Update Traveler Profile | Backend Action (`/api/admin/users/:id`) | ✅ |
 | Delete / Purge User | Backend Action (`/api/admin/users/:id`) | ✅ |
@@ -252,12 +264,12 @@ Complete customer and traveler lifecycle management module. Allows Super Admins 
 * **None.** All seeded dummy traveler accounts (`arjun.mehta`, `diya.sharma`, etc.) purged from MongoDB Atlas. `adminUserManagement.service.ts` directly consumes live MongoDB endpoints.
 
 ### 5. Existing Backend Resources
-* **Model:** `UserModel` (`backend/src/models/user.model.ts`), `BookingModel`, `PaymentModel`, `AuditLogModel`.
-* **Controller:** `adminUserManagementController` (`backend/src/controllers/adminUserManagement.controller.ts`).
-* **Service:** `adminUserManagementService` (`backend/src/services/adminUserManagement.service.ts`).
+* **Model:** `UserModel` (`backend/src/models/user.model.ts`), `UserKycModel` (`backend/src/models/userKyc.model.ts`), `TravelProfileModel` (`backend/src/models/travelProfile.model.ts`), `BookingModel`, `PaymentModel`, `AuditLogModel`.
+* **Controller:** `adminUserManagementController` (`backend/src/controllers/adminUserManagement.controller.ts`), `UserKycController` (`backend/src/controllers/userKyc.controller.ts`).
+* **Service:** `adminUserManagementService` (`backend/src/services/adminUserManagement.service.ts`), `UserKycService` (`backend/src/services/userKyc.service.ts`).
 
 ### 6. Database Mapping
-* MongoDB Collections: `users`, `bookings`, `payments`, `audit_logs`.
+* MongoDB Collections: `users`, `user_kycs`, `travel_profiles`, `bookings`, `payments`, `audit_logs`.
 
 ### 7. Final Status
 * **Coverage:** **100% Production Ready**

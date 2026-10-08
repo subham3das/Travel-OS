@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  FileCheck2,
   Sparkles,
   Megaphone,
   Image as ImageIcon,
-  CalendarClock,
-  HardDrive,
+  MessageSquarePlus,
+  Tag,
+  Compass,
 } from 'lucide-react';
 import { CMSKPIStats as CMSKPIStatsType } from '../../../types/cmsManagement';
 
@@ -16,52 +16,52 @@ interface CMSKPIStatsProps {
 export const CMSKPIStats: React.FC<CMSKPIStatsProps> = ({ stats }) => {
   const cards = [
     {
-      id: 'published',
-      label: stats.publishedContent.label,
-      value: stats.publishedContent.value,
-      growth: stats.publishedContent.growth,
-      icon: <FileCheck2 className="w-5 h-5" />,
+      id: 'banners',
+      label: stats.publishedBanners?.label || 'Active Banners',
+      value: stats.publishedBanners?.value ?? 0,
+      subtitle: stats.publishedBanners?.subtitle || 'Live on Hero',
+      icon: <ImageIcon className="w-5 h-5" />,
       colorClasses: 'bg-purple-50 text-[#6356E5] border-purple-100',
     },
     {
-      id: 'campaigns',
-      label: stats.activeCampaigns.label,
-      value: stats.activeCampaigns.value,
-      growth: stats.activeCampaigns.growth,
-      icon: <Sparkles className="w-5 h-5" />,
-      colorClasses: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    },
-    {
       id: 'announcements',
-      label: stats.liveAnnouncements.label,
-      value: stats.liveAnnouncements.value,
-      growth: stats.liveAnnouncements.growth,
+      label: stats.liveAnnouncements?.label || 'Live Broadcasts',
+      value: stats.liveAnnouncements?.value ?? 0,
+      subtitle: stats.liveAnnouncements?.subtitle || 'Platform Alert',
       icon: <Megaphone className="w-5 h-5" />,
       colorClasses: 'bg-amber-50 text-amber-600 border-amber-100',
     },
     {
-      id: 'banners',
-      label: stats.activeBanners.label,
-      value: stats.activeBanners.value,
-      growth: stats.activeBanners.growth,
-      icon: <ImageIcon className="w-5 h-5" />,
+      id: 'campaigns',
+      label: stats.publishedCampaigns?.label || 'Active Campaigns',
+      value: stats.publishedCampaigns?.value ?? 0,
+      subtitle: stats.publishedCampaigns?.subtitle || 'Festival & Sales',
+      icon: <Sparkles className="w-5 h-5" />,
+      colorClasses: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    },
+    {
+      id: 'popups',
+      label: stats.publishedPopups?.label || 'Active Popups',
+      value: stats.publishedPopups?.value ?? 0,
+      subtitle: stats.publishedPopups?.subtitle || 'Modal Trigger',
+      icon: <MessageSquarePlus className="w-5 h-5" />,
       colorClasses: 'bg-blue-50 text-blue-600 border-blue-100',
     },
     {
-      id: 'scheduled',
-      label: stats.scheduledItems.label,
-      value: stats.scheduledItems.value,
-      growth: stats.scheduledItems.growth,
-      icon: <CalendarClock className="w-5 h-5" />,
-      colorClasses: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+      id: 'coupons',
+      label: stats.activeCoupons?.label || 'Coupons in System',
+      value: stats.activeCoupons?.value ?? 0,
+      subtitle: stats.activeCoupons?.subtitle || 'Promotional',
+      icon: <Tag className="w-5 h-5" />,
+      colorClasses: 'bg-rose-50 text-rose-600 border-rose-100',
     },
     {
-      id: 'storage',
-      label: stats.mediaStorage.label,
-      value: stats.mediaStorage.value,
-      growth: stats.mediaStorage.growth,
-      icon: <HardDrive className="w-5 h-5" />,
-      colorClasses: 'bg-slate-100 text-slate-700 border-slate-200',
+      id: 'showcases',
+      label: stats.totalShowcases?.label || 'Featured Showcases',
+      value: stats.totalShowcases?.value ?? 0,
+      subtitle: stats.totalShowcases?.subtitle || 'Curated',
+      icon: <Compass className="w-5 h-5" />,
+      colorClasses: 'bg-indigo-50 text-indigo-600 border-indigo-100',
     },
   ];
 
@@ -79,7 +79,7 @@ export const CMSKPIStats: React.FC<CMSKPIStatsProps> = ({ stats }) => {
               {c.icon}
             </div>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-600 border border-emerald-100">
-              {c.growth}
+              Live DB
             </span>
           </div>
 
@@ -87,8 +87,11 @@ export const CMSKPIStats: React.FC<CMSKPIStatsProps> = ({ stats }) => {
             <span className="text-2xl font-black text-[#0F172A] tracking-tight block">
               {c.value}
             </span>
-            <span className="text-[11px] font-bold text-slate-400 block truncate mt-0.5">
+            <span className="text-[11px] font-bold text-slate-700 block truncate mt-0.5">
               {c.label}
+            </span>
+            <span className="text-[9px] font-medium text-slate-400 block truncate">
+              {c.subtitle}
             </span>
           </div>
         </div>

@@ -1,6 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ShoppingBag, Users, Clock, Compass, MessageSquare, ChevronRight } from 'lucide-react';
+import {
+  MapPin,
+  ShoppingBag,
+  Users,
+  Clock,
+  Compass,
+  MessageSquare,
+  ChevronRight,
+  Car,
+} from 'lucide-react';
 import { GroupedSearchResults, SearchResultItem } from '../../../data/search';
 import { SearchTabType } from './SearchTabs';
 import { DestinationCard } from './DestinationCard';
@@ -29,35 +38,43 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     return <NoResults query={query} onSuggestionClick={onSuggestionClick} />;
   }
 
-  const renderGenericCard = (item: SearchResultItem, icon: React.ReactNode) => (
-    <div
-      key={item.id}
-      onClick={() => navigate(item.targetUrl)}
-      className="bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-3 group select-none"
-    >
-      <div className="flex items-center gap-3.5 min-w-0">
-        <img
-          src={item.image}
-          alt={item.title}
-          className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-slate-100"
-        />
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="text-sm font-extrabold text-[#0F172A] truncate group-hover:text-[#583BE8] transition-colors">
-              {item.title}
-            </h4>
-            {item.badge && (
-              <span className="px-2 py-0.5 rounded-full bg-purple-50 text-[#583BE8] text-[10px] font-black shrink-0">
-                {item.badge}
-              </span>
-            )}
+  const renderGenericCard = (item: SearchResultItem, icon: React.ReactNode) => {
+    const destinationPath = item.route || item.targetUrl;
+
+    return (
+      <div
+        key={item.id}
+        onClick={() => {
+          if (destinationPath) {
+            navigate(destinationPath);
+          }
+        }}
+        className="bg-white rounded-3xl p-4 border border-slate-100/90 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-3 group select-none"
+      >
+        <div className="flex items-center gap-3.5 min-w-0">
+          <img
+            src={item.image || item.imageUrl || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800'}
+            alt={item.title}
+            className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-slate-100"
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-extrabold text-[#0F172A] truncate group-hover:text-[#583BE8] transition-colors">
+                {item.title}
+              </h4>
+              {item.badge && (
+                <span className="px-2 py-0.5 rounded-full bg-purple-50 text-[#583BE8] text-[10px] font-black shrink-0">
+                  {item.badge}
+                </span>
+              )}
+            </div>
+            <p className="text-xs font-medium text-slate-400 truncate">{item.subtitle}</p>
           </div>
-          <p className="text-xs font-medium text-slate-400 truncate">{item.subtitle}</p>
         </div>
+        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-[#583BE8] transition-colors shrink-0" />
       </div>
-      <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-[#583BE8] transition-colors shrink-0" />
-    </div>
-  );
+    );
+  };
 
   const renderSectionHeader = (
     title: string,
@@ -94,50 +111,32 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       {/* ALL TAB */}
       {activeTab === 'all' && (
         <div className="space-y-6">
-          {/* Bookings */}
-          {results.bookings.length > 0 && (
-            <div className="space-y-3">
-              {renderSectionHeader('Bookings', <Clock className="w-4 h-4 text-[#583BE8]" />, 'bookings')}
-              <div className="space-y-2.5">
-                {results.bookings.slice(0, 3).map((item) => renderGenericCard(item, <Clock className="w-4 h-4" />))}
-              </div>
-            </div>
-          )}
-
-          {/* Trips */}
-          {results.trips.length > 0 && (
-            <div className="space-y-3">
-              {renderSectionHeader('Trips', <Compass className="w-4 h-4 text-emerald-600" />, 'trips')}
-              <div className="space-y-2.5">
-                {results.trips.slice(0, 3).map((item) => renderGenericCard(item, <Compass className="w-4 h-4" />))}
-              </div>
-            </div>
-          )}
-
-          {/* Messages */}
-          {results.messages.length > 0 && (
-            <div className="space-y-3">
-              {renderSectionHeader('Messages', <MessageSquare className="w-4 h-4 text-sky-600" />, 'messages')}
-              <div className="space-y-2.5">
-                {results.messages.slice(0, 3).map((item) => renderGenericCard(item, <MessageSquare className="w-4 h-4" />))}
-              </div>
-            </div>
-          )}
-
-          {/* Packages Group */}
-          {results.packages.length > 0 && (
+          {/* Packages Group - Primary Travel Marketplace Offering */}
+          {results.packages && results.packages.length > 0 && (
             <div className="space-y-3">
               {renderSectionHeader('Packages', <ShoppingBag className="w-4 h-4 text-purple-600" />, 'packages')}
               <div className="space-y-3">
-                {results.packages.slice(0, 3).map((item) => (
+                {results.packages.slice(0, 5).map((item) => (
                   <PackageCard key={item.id} item={item} />
                 ))}
               </div>
             </div>
           )}
 
+          {/* Destinations Group */}
+          {results.destinations && results.destinations.length > 0 && (
+            <div className="space-y-3">
+              {renderSectionHeader('Destinations', <MapPin className="w-4 h-4 text-[#FF4D6D]" />, 'destinations')}
+              <div className="space-y-3">
+                {results.destinations.slice(0, 3).map((item) => (
+                  <DestinationCard key={item.id} item={item} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Agencies Group */}
-          {results.agencies.length > 0 && (
+          {results.agencies && results.agencies.length > 0 && (
             <div className="space-y-3">
               {renderSectionHeader('Agencies', <Users className="w-4 h-4 text-amber-600" />, 'agencies')}
               <div className="space-y-3">
@@ -148,14 +147,52 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             </div>
           )}
 
-          {/* Destinations Group */}
-          {results.destinations.length > 0 && (
+          {/* Cars Group */}
+          {results.cars && results.cars.length > 0 && (
             <div className="space-y-3">
-              {renderSectionHeader('Destinations', <MapPin className="w-4 h-4 text-[#FF4D6D]" />, 'destinations')}
+              {renderSectionHeader('Cars & Rentals', <Car className="w-4 h-4 text-indigo-600" />, 'cars')}
+              <div className="space-y-2.5">
+                {results.cars.slice(0, 3).map((item) => renderGenericCard(item, <Car className="w-4 h-4" />))}
+              </div>
+            </div>
+          )}
+
+          {/* Trips */}
+          {results.trips && results.trips.length > 0 && (
+            <div className="space-y-3">
+              {renderSectionHeader('Trips', <Compass className="w-4 h-4 text-emerald-600" />, 'trips')}
+              <div className="space-y-2.5">
+                {results.trips.slice(0, 3).map((item) => renderGenericCard(item, <Compass className="w-4 h-4" />))}
+              </div>
+            </div>
+          )}
+
+          {/* Bookings */}
+          {results.bookings && results.bookings.length > 0 && (
+            <div className="space-y-3">
+              {renderSectionHeader('Bookings', <Clock className="w-4 h-4 text-[#583BE8]" />, 'bookings')}
+              <div className="space-y-2.5">
+                {results.bookings.slice(0, 3).map((item) => renderGenericCard(item, <Clock className="w-4 h-4" />))}
+              </div>
+            </div>
+          )}
+
+          {/* Travelers Group */}
+          {results.travelers && results.travelers.length > 0 && (
+            <div className="space-y-3">
+              {renderSectionHeader('Travelers', <Users className="w-4 h-4 text-sky-600" />, 'travelers')}
               <div className="space-y-3">
-                {results.destinations.slice(0, 3).map((item) => (
-                  <DestinationCard key={item.id} item={item} />
-                ))}
+                {results.travelers.slice(0, 3).map((item) => renderGenericCard(item, <Users className="w-4 h-4" />))}
+              </div>
+            </div>
+          )}
+
+          {/* Messages */}
+          {results.messages && results.messages.length > 0 && (
+            <div className="space-y-3">
+              {renderSectionHeader('Messages', <MessageSquare className="w-4 h-4 text-sky-600" />, 'messages')}
+              <div className="space-y-2.5">
+                {results.messages.slice(0, 3).map((item) => renderGenericCard(item, <MessageSquare className="w-4 h-4" />))}
               </div>
             </div>
           )}
@@ -177,6 +214,15 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           {renderSectionHeader('Trips', <Compass className="w-4 h-4 text-emerald-600" />, 'trips')}
           <div className="space-y-2.5">
             {results.trips.map((item) => renderGenericCard(item, <Compass className="w-4 h-4" />))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'cars' && (
+        <div className="space-y-3">
+          {renderSectionHeader('Cars & Rentals', <Car className="w-4 h-4 text-indigo-600" />, 'cars')}
+          <div className="space-y-2.5">
+            {(results.cars || []).map((item) => renderGenericCard(item, <Car className="w-4 h-4" />))}
           </div>
         </div>
       )}
@@ -227,26 +273,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         <div className="space-y-3">
           {renderSectionHeader('Travelers', <Users className="w-4 h-4 text-sky-600" />, 'travelers')}
           <div className="space-y-3">
-            {[
-              { id: 'trv-subham', name: 'Subham Das', username: '@subham_travels', bio: 'Explorer of Northeast India & Himalayan peaks', trips: 18, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop' },
-              { id: 'trv-ananya', name: 'Ananya Sharma', username: '@ananya_wild', bio: 'Solo traveler & wildlife photographer', trips: 24, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop' },
-            ].map((trv) => (
-              <div
-                key={trv.id}
-                onClick={() => navigate(`/community/user/${trv.id}`)}
-                className="bg-white rounded-3xl p-4 border border-slate-100 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-3 group"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <img src={trv.avatar} alt={trv.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
-                  <div className="min-w-0">
-                    <h4 className="text-sm font-extrabold text-[#0F172A] truncate group-hover:text-[#6356E5]">{trv.name}</h4>
-                    <p className="text-xs font-semibold text-slate-400">{trv.username} • {trv.trips} Trips Completed</p>
-                    <p className="text-xs font-medium text-slate-500 truncate">{trv.bio}</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-[#6356E5] shrink-0" />
-              </div>
-            ))}
+            {(results.travelers || []).map((trv) => renderGenericCard(trv, <Users className="w-4 h-4" />))}
           </div>
         </div>
       )}

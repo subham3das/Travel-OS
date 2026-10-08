@@ -7,7 +7,10 @@ import { AuditLoggerService } from './auditLogger.service.js';
 import { mailService } from './mail.service.js';
 import { envConfig } from '../config/env.config.js';
 import { logger } from '../config/logger.config.js';
+import { NotificationModel } from '../models/notification.model.js';
 import { NotificationDispatcher } from './notificationDispatcher.service.js';
+import { ApprovalRequestModel } from '../models/approvalRequest.model.js';
+import { PartnerUserModel } from '../models/partnerUser.model.js';
 
 export interface AgencyRequestFiltersQuery {
   page?: number;
@@ -31,6 +34,9 @@ export interface FormattedAgencyRequestItem {
   ownerEmail: string;
   ownerPhone: string;
   businessType: string;
+  businessTypes?: string[];
+  carRentalVerificationStatus?: string;
+  carRentalProfile?: any;
   submittedDate: string;
   gstNumber: string;
   website: string;
@@ -104,8 +110,86 @@ export class AdminAgencyRequestService {
    * Helper to format IAgency into frontend AgencyRequestItem DTO
    */
   private formatAgencyItem(agency: IAgency, activities: any[] = []): FormattedAgencyRequestItem {
-    const totalDocs = agency.documents?.length || 6;
-    const uploadedDocs = agency.documents?.filter((d: any) => d.fileUrl && d.fileUrl !== '#')?.length || 0;
+    const rawDocs = agency.documents || [];
+    logger.info('🔍 [ADMIN DTO DEBUG] formatAgencyItem input agency %s: rawDocs=%d, bankName="%s", accNum="%s"',
+      agency._id,
+      rawDocs.length,
+      agency.bankDetails?.bankName || '',
+      agency.bankDetails?.accountNumber || ''
+    );
+
+    const mappedDocuments: any[] = [];
+    const seenDocTypes = new Set<string>();
+
+    for (let i = 0; i < rawDocs.length; i++) {
+      const doc: any = rawDocs[i];
+      if (!doc) continue;
+      const fileUrl = doc.fileUrl || doc.url || doc.dataUrl || doc.documentUrl || doc.secureUrl || doc.secure_url || '';
+      if (!fileUrl || fileUrl === '#') continue;
+
+      const docType = doc.type || 'KYC Document';
+      seenDocTypes.add(docType.toLowerCase());
+
+      mappedDocuments.push({
+        id: doc.id || `doc-${agency._id}-${i}`,
+        name: doc.name || doc.title || docType,
+        type: docType,
+        status: doc.status || 'Pending',
+        fileUrl,
+        url: fileUrl,
+        size: doc.size || 0,
+        sizeFormatted: doc.sizeFormatted,
+        rejectionReason: doc.rejectionReason,
+        customReason: doc.customReason,
+        internalNote: doc.internalNote,
+        reuploadedAt: doc.reuploadedAt,
+        reuploadedFileUrl: doc.reuploadedFileUrl,
+        uploadedAt: doc.uploadedAt
+          ? new Date(doc.uploadedAt).toLocaleDateString('en-IN', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : 'Recently',
+      });
+    }
+
+    // Synthesize fallback documents if missing from agency.documents array but present on agency.owner
+    if (!seenDocTypes.has('government id') && !seenDocTypes.has('aadhaar') && agency.owner?.governmentIdUrl) {
+      mappedDocuments.push({
+        id: `doc-${agency._id}-gov`,
+        name: `Owner Government ID (${agency.owner?.governmentIdType || 'Aadhaar'})`,
+        type: 'Government ID',
+        status: 'Pending',
+        fileUrl: agency.owner.governmentIdUrl,
+        uploadedAt: 'Recently',
+      });
+    }
+    if (!seenDocTypes.has('address proof') && !seenDocTypes.has('office address proof') && agency.owner?.addressProofUrl) {
+      mappedDocuments.push({
+        id: `doc-${agency._id}-addr`,
+        name: 'Office Address Proof',
+        type: 'Address Proof',
+        status: 'Pending',
+        fileUrl: agency.owner.addressProofUrl,
+        uploadedAt: 'Recently',
+      });
+    }
+    if (!seenDocTypes.has('owner photo') && !seenDocTypes.has('selfie') && agency.owner?.selfieUrl) {
+      mappedDocuments.push({
+        id: `doc-${agency._id}-selfie`,
+        name: 'Owner Photo / Selfie',
+        type: 'Owner Photo',
+        status: 'Pending',
+        fileUrl: agency.owner.selfieUrl,
+        uploadedAt: 'Recently',
+      });
+    }
+
+    const uploadedDocs = mappedDocuments.length;
+    const totalDocs = Math.max(uploadedDocs, 6);
 
     let mappedReviewStatus: 'Pending' | 'Under Review' | 'Approved' | 'Rejected' = 'Pending';
     if (agency.verificationStatus === 'APPROVED' || agency.verificationStatus === 'VERIFIED') {
@@ -131,17 +215,41 @@ export class AdminAgencyRequestService {
       agency.verificationChecklist && agency.verificationChecklist.length > 0
         ? agency.verificationChecklist.map((item: any) => {
             if (item.label && item.label.toLowerCase().includes('bank')) {
-              return { ...item, status: isBankVerified ? 'Verified' : 'Under Review' };
+              return { ...item, status: isBankVerified ? 'Verified' : (agency.bankDetails?.accountNumber ? 'Under Review' : 'Pending') };
             }
             return item;
           })
         : [
-            { id: 'vc1', label: 'GST Verification', status: agency.gstNumber ? 'Verified' : 'Pending' },
-            { id: 'vc2', label: 'PAN Verification', status: agency.owner?.panNumber ? 'Verified' : 'Pending' },
-            { id: 'vc3', label: 'Business License', status: agency.registrationNumber ? 'Verified' : 'Pending' },
-            { id: 'vc4', label: 'Bank Settlement Account & IFSC Verification', status: isBankVerified ? 'Verified' : 'Under Review' },
-            { id: 'vc5', label: 'KYC Verification', status: agency.owner?.governmentIdUrl ? 'Verified' : 'Pending' },
-            { id: 'vc6', label: 'Office Address Proof', status: agency.owner?.addressProofUrl ? 'Verified' : 'Pending' },
+            {
+              id: 'vc1',
+              label: 'GST Verification',
+              status: agency.gstNumber ? 'Verified' : (mappedDocuments.some((d: any) => d.type.toLowerCase().includes('gst')) ? 'Under Review' : 'Pending'),
+            },
+            {
+              id: 'vc2',
+              label: 'PAN Verification',
+              status: (agency.owner?.panNumber || agency.panNumber) ? 'Verified' : (mappedDocuments.some((d: any) => d.type.toLowerCase().includes('pan')) ? 'Under Review' : 'Pending'),
+            },
+            {
+              id: 'vc3',
+              label: 'Business License',
+              status: agency.registrationNumber ? 'Verified' : (mappedDocuments.some((d: any) => d.type.toLowerCase().includes('registration') || d.type.toLowerCase().includes('license')) ? 'Under Review' : 'Pending'),
+            },
+            {
+              id: 'vc4',
+              label: 'Bank Settlement Account & IFSC Verification',
+              status: isBankVerified ? 'Verified' : (agency.bankDetails?.accountNumber ? 'Under Review' : 'Pending'),
+            },
+            {
+              id: 'vc5',
+              label: 'KYC Verification',
+              status: (agency.owner?.governmentIdUrl || mappedDocuments.some((d: any) => d.type.toLowerCase().includes('gov') || d.type.toLowerCase().includes('aadhaar'))) ? 'Verified' : 'Pending',
+            },
+            {
+              id: 'vc6',
+              label: 'Office Address Proof',
+              status: (agency.owner?.addressProofUrl || mappedDocuments.some((d: any) => d.type.toLowerCase().includes('address'))) ? 'Verified' : 'Pending',
+            },
           ];
 
     // Standardized timeline if empty
@@ -181,7 +289,7 @@ export class AdminAgencyRequestService {
         ? agency.reviewNotes[agency.reviewNotes.length - 1].note
         : '';
 
-    return {
+    const formattedItem: FormattedAgencyRequestItem = {
       id: agency._id.toString(),
       applicationId: agency.applicationId || `ATP-AGY-2026-${agency._id.toString().slice(-6).toUpperCase()}`,
       agencyName: agency.agencyDisplayName || agency.legalBusinessName || agency.name,
@@ -189,45 +297,25 @@ export class AdminAgencyRequestService {
         agency.logo ||
         agency.profile?.logoUrl ||
         'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
-      ownerName: agency.owner?.name || agency.ownerName || 'Agency Principal',
-      ownerEmail: agency.owner?.email || agency.email,
-      ownerPhone: agency.owner?.phone || agency.phone,
-      businessType: agency.businessType || 'Tour Operator',
+      ownerName: agency.owner?.name || agency.ownerName || '',
+      ownerEmail: agency.owner?.email || agency.email || '',
+      ownerPhone: agency.owner?.phone || agency.phone || '',
+      businessType: agency.businessType || 'Travel Agency',
       submittedDate: submittedDateStr,
-      gstNumber: agency.gstNumber || 'Not Provided',
-      website: agency.website || agency.profile?.website || '—',
-      establishedYear: agency.yearEstablished || '2022',
-      officeAddress: agency.businessAddress || (agency.city ? `${agency.city}, ${agency.state || ''}` : 'India'),
-      aadhaarNumber: agency.owner?.aadhaarNumber ? `XXXX XXXX ${agency.owner.aadhaarNumber.slice(-4)}` : 'XXXX XXXX 1234',
-      panNumber: agency.owner?.panNumber || '—',
-      city: agency.city || 'Mumbai',
-      state: agency.state || 'Maharashtra',
+      gstNumber: agency.gstNumber || '',
+      website: agency.website || agency.profile?.website || '',
+      establishedYear: agency.yearEstablished || '',
+      officeAddress: agency.businessAddress || (agency.city && agency.state ? `${agency.city}, ${agency.state}` : agency.city || agency.businessAddress || ''),
+      aadhaarNumber: agency.owner?.aadhaarNumber ? `XXXX XXXX ${agency.owner.aadhaarNumber.slice(-4)}` : '',
+      panNumber: agency.owner?.panNumber || agency.panNumber || '',
+      city: agency.city || '',
+      state: agency.state || '',
       documentsUploadedCount: uploadedDocs,
       documentsTotalCount: totalDocs,
       verificationStatus: mappedDocStatus,
       reviewStatus: mappedReviewStatus,
       verificationChecklist: checklist as any,
-      documents: (agency.documents || []).map((doc: any) => ({
-        id: doc.id || `doc-${Math.random()}`,
-        name: doc.name,
-        type: doc.type,
-        status: doc.status || 'Pending',
-        fileUrl: doc.fileUrl,
-        rejectionReason: doc.rejectionReason,
-        customReason: doc.customReason,
-        internalNote: doc.internalNote,
-        reuploadedAt: doc.reuploadedAt,
-        reuploadedFileUrl: doc.reuploadedFileUrl,
-        uploadedAt: doc.uploadedAt
-          ? new Date(doc.uploadedAt).toLocaleDateString('en-IN', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          : submittedDateStr,
-      })),
+      documents: mappedDocuments,
       requestedDocuments: agency.requestedDocuments || [],
       requestedDocumentsDetails: agency.requestedDocumentsDetails || [],
       documentRequestMessage: agency.documentRequestMessage || '',
@@ -276,7 +364,19 @@ export class AdminAgencyRequestService {
           },
       reviewNotes: latestNote,
       complianceScore: agency.complianceScore || 85,
+      businessTypes: agency.businessTypes || ['agency'],
+      carRentalVerificationStatus: agency.carRentalVerificationStatus || 'NOT_REGISTERED',
+      carRentalProfile: agency.carRentalProfile || null,
     };
+
+    logger.info('🔍 [ADMIN DTO DEBUG] formatAgencyItem output %s: docsCount=%d, bankName="%s", accNum="%s"',
+      agency._id,
+      mappedDocuments.length,
+      agency.bankDetails?.bankName || '',
+      agency.bankDetails?.accountNumber || ''
+    );
+
+    return formattedItem;
   }
 
   /**
@@ -298,9 +398,11 @@ export class AdminAgencyRequestService {
       pendingLast30,
       pendingPrev30,
     ] = await Promise.all([
-      // Current pending
+      // Current pending (only completed and submitted applications)
       AgencyModel.countDocuments({
         isDeleted: false,
+        onboardingStatus: { $in: ['UNDER_REVIEW', 'DOCUMENTS_SUBMITTED'] },
+        paymentStatus: 'PAID',
         verificationStatus: { $in: ['PENDING', 'UNDER_REVIEW', 'MISSING_DOCS'] },
       }),
       // Approved today
@@ -318,11 +420,15 @@ export class AdminAgencyRequestService {
       // Under Review
       AgencyModel.countDocuments({
         isDeleted: false,
+        onboardingStatus: { $in: ['UNDER_REVIEW', 'DOCUMENTS_SUBMITTED'] },
+        paymentStatus: 'PAID',
         verificationStatus: 'UNDER_REVIEW',
       }),
       // Missing Docs
       AgencyModel.countDocuments({
         isDeleted: false,
+        onboardingStatus: { $in: ['UNDER_REVIEW', 'DOCUMENTS_SUBMITTED'] },
+        paymentStatus: 'PAID',
         verificationStatus: 'MISSING_DOCS',
       }),
       // Average approval duration
@@ -435,6 +541,10 @@ export class AdminAgencyRequestService {
         { state: searchRegex },
       ];
     }
+
+    // Exclude draft / unpaid premature registrations from Admin workspace
+    query.onboardingStatus = { $in: ['UNDER_REVIEW', 'DOCUMENTS_SUBMITTED', 'APPROVED', 'REJECTED'] };
+    query.paymentStatus = { $ne: 'PENDING' };
 
     // Status filter
     if (params.status && params.status !== 'All Status') {
@@ -660,28 +770,38 @@ export class AdminAgencyRequestService {
     let passwordHash = agency.passwordHash;
     let isNewAccount = false;
 
-    // Step 2 & 7: Check if agency already has an active account or generate new credentials
-    if (!agencyId || !passwordHash) {
-      isNewAccount = true;
+    // Check if partner already has a PartnerUser account
+    const partnerUser = await PartnerUserModel.findOne({ email: registeredEmail });
+    if (partnerUser && partnerUser.passwordHash) {
+      passwordHash = partnerUser.passwordHash;
+    }
+
+    if (!agencyId) {
       agencyId = this.generateAgencyId();
+    }
+
+    // Only generate temp password if no existing password hash exists
+    if (!passwordHash) {
+      isNewAccount = true;
       tempPassword = this.generateSecureTempPassword();
       passwordHash = await bcrypt.hash(tempPassword, 10);
+    }
 
-      // Step 2 (Email Delivery First / Rollback Safety):
-      // If email sending fails, do not activate account without credentials
-      try {
-        await mailService.sendAgencyApprovedEmail({
-          to: registeredEmail,
-          ownerName,
-          agencyName: agency.name,
-          agencyId,
-          approvalDateFormatted,
-          loginLink,
-          loginEmail: registeredEmail,
-          tempPassword,
-        });
-      } catch (mailError: any) {
-        logger.error('Failed to send agency approval email: %s', mailError.message);
+    // Send Approval Email
+    try {
+      await mailService.sendAgencyApprovedEmail({
+        to: registeredEmail,
+        ownerName,
+        agencyName: agency.name,
+        agencyId,
+        approvalDateFormatted,
+        loginLink,
+        loginEmail: registeredEmail,
+        tempPassword,
+      });
+    } catch (mailError: any) {
+      logger.error('Failed to send agency approval email: %s', mailError.message);
+      if (isNewAccount) {
         throw new Error(
           `Agency approval aborted: Failed to deliver credentials email (${mailError.message}). Account was not created.`
         );
@@ -690,6 +810,7 @@ export class AdminAgencyRequestService {
 
     // Step 1 & 5: Activate Account & Store Database Fields
     agency.verificationStatus = 'APPROVED';
+    agency.onboardingStatus = 'APPROVED';
     agency.status = 'ACTIVE';
     agency.agencyId = agencyId;
     agency.loginEmail = registeredEmail;
@@ -738,6 +859,22 @@ export class AdminAgencyRequestService {
 
     await agency.save();
 
+    // Synchronize ApprovalRequestModel in MongoDB
+    try {
+      await ApprovalRequestModel.updateMany(
+        { $or: [{ agencyId: agency._id }, { applicationId: agency.applicationId }] },
+        {
+          $set: {
+            registrationStatus: 'Approved',
+            reviewedAt: now,
+            approvedBy: new mongoose.Types.ObjectId(adminUser._id || adminUser.id),
+          },
+        }
+      );
+    } catch (apprErr: any) {
+      logger.warn('Failed to update ApprovalRequestModel on approval: %s', apprErr?.message || apprErr);
+    }
+
     // Step 8: Admin Activity Log
     await AuditLoggerService.log({
       actor: {
@@ -770,6 +907,186 @@ export class AdminAgencyRequestService {
     return {
       success: true,
       message: `Agency "${agency.name}" approved successfully with Agency ID ${agencyId}. Credentials dispatched to ${registeredEmail}.`,
+      agency: this.formatAgencyItem(agency),
+      updatedStats,
+    };
+  }
+
+  /**
+   * 5b. APPROVE CAR RENTAL BUSINESS INDEPENDENTLY
+   */
+  public async approveCarRentalRequest(id: string, adminUser: any, notes?: string, reqContext?: any) {
+    const isObjectId = mongoose.Types.ObjectId.isValid(id);
+    const query: any = { isDeleted: false };
+    if (isObjectId) {
+      query.$or = [{ _id: id }, { applicationId: id }];
+    } else {
+      query.applicationId = id;
+    }
+
+    const agency = await AgencyModel.findOne(query);
+    if (!agency) throw new Error('Agency application not found.');
+
+    const currentTypes = agency.businessTypes || ['agency'];
+    if (!currentTypes.includes('car_rental')) {
+      currentTypes.push('car_rental');
+    }
+
+    agency.businessTypes = currentTypes;
+    agency.carRentalVerificationStatus = 'APPROVED';
+    agency.carRentalApprovedAt = new Date();
+    agency.carRentalApprovedBy = adminUser?._id?.toString() || adminUser?.id || 'Admin';
+
+    // If account was not active yet, activate it
+    if (agency.status !== 'ACTIVE') {
+      agency.status = 'ACTIVE';
+      agency.canLogin = true;
+    }
+
+    // Append timeline event
+    agency.timeline = agency.timeline || [];
+    agency.timeline.push({
+      id: `t-car-appr-${Date.now()}`,
+      title: 'Car Rental Business Approved',
+      timestamp: new Date().toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      completed: true,
+      actor: adminUser.name || 'Super Admin',
+      desc: 'Car Rental business operations approved and unlocked for partner dashboard.',
+    });
+
+    if (notes) {
+      agency.reviewNotes = agency.reviewNotes || [];
+      agency.reviewNotes.push({
+        id: `note-${Date.now()}`,
+        adminId: adminUser._id?.toString() || adminUser.id,
+        adminName: adminUser.name || 'Super Admin',
+        note: `Car Rental Approval Note: ${notes.trim()}`,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    await agency.save();
+
+    // Log administrative audit trail
+    await AuditLoggerService.log({
+      actor: {
+        id: adminUser._id?.toString() || adminUser.id,
+        name: adminUser.name || 'Super Admin',
+        email: adminUser.email,
+        role: adminUser.role?.name || 'SUPER_ADMIN',
+      },
+      module: 'CarRental',
+      action: 'Car Rental Approved',
+      eventType: 'UPDATE',
+      description: `Car Rental capability APPROVED for provider "${agency.name}" (${agency.applicationId}).`,
+      severity: 'Medium',
+      status: 'Success',
+      metadata: {
+        agencyId: agency._id.toString(),
+        applicationId: agency.applicationId,
+        notes: notes || '',
+      },
+      ipAddress: reqContext?.ip || '127.0.0.1',
+      browser: reqContext?.browser,
+    });
+
+    // Notify Partner
+    try {
+      await NotificationModel.create({
+        recipientType: 'AGENCY',
+        agencyId: agency._id,
+        category: 'agency',
+        title: 'Car Rental Business Approved! 🚗',
+        description: 'Your Car Rental business profile has been approved. You can now manage your fleet, bookings, and drivers.',
+        priority: 'HIGH',
+        status: 'UNREAD',
+        isUnread: true,
+        targetRoute: '/agency/car-rental/dashboard',
+        relatedEntityType: 'CarRental',
+      });
+    } catch (err) {
+      logger.error('Failed to dispatch car rental approval notification to agency', err);
+    }
+
+    const updatedStats = await this.getSummaryStats();
+
+    return {
+      success: true,
+      message: `Car Rental business approved successfully for "${agency.name}".`,
+      agency: this.formatAgencyItem(agency),
+      updatedStats,
+    };
+  }
+
+  /**
+   * 5c. REJECT CAR RENTAL BUSINESS INDEPENDENTLY
+   */
+  public async rejectCarRentalRequest(id: string, adminUser: any, reason: string, notes?: string, reqContext?: any) {
+    const isObjectId = mongoose.Types.ObjectId.isValid(id);
+    const query: any = { isDeleted: false };
+    if (isObjectId) {
+      query.$or = [{ _id: id }, { applicationId: id }];
+    } else {
+      query.applicationId = id;
+    }
+
+    const agency = await AgencyModel.findOne(query);
+    if (!agency) throw new Error('Agency application not found.');
+
+    agency.carRentalVerificationStatus = 'REJECTED';
+    agency.carRentalRejectionReason = reason;
+
+    agency.timeline = agency.timeline || [];
+    agency.timeline.push({
+      id: `t-car-rej-${Date.now()}`,
+      title: 'Car Rental Verification Rejected',
+      timestamp: new Date().toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      completed: true,
+      actor: adminUser.name || 'Super Admin',
+      desc: `Car Rental application rejected. Reason: ${reason}`,
+      color: 'rose',
+    });
+
+    await agency.save();
+
+    await AuditLoggerService.log({
+      actor: {
+        id: adminUser._id?.toString() || adminUser.id,
+        name: adminUser.name || 'Super Admin',
+        email: adminUser.email,
+        role: adminUser.role?.name || 'SUPER_ADMIN',
+      },
+      module: 'CarRental',
+      action: 'Car Rental Rejected',
+      eventType: 'UPDATE',
+      description: `Car Rental capability REJECTED for provider "${agency.name}" (${agency.applicationId}). Reason: ${reason}`,
+      severity: 'Medium',
+      status: 'Success',
+      metadata: {
+        agencyId: agency._id.toString(),
+        applicationId: agency.applicationId,
+        reason,
+        notes: notes || '',
+      },
+    });
+
+    const updatedStats = await this.getSummaryStats();
+
+    return {
+      success: true,
+      message: `Car Rental application for "${agency.name}" was rejected.`,
       agency: this.formatAgencyItem(agency),
       updatedStats,
     };
@@ -1051,6 +1368,7 @@ export class AdminAgencyRequestService {
     if (!agency) throw new Error('Agency application not found.');
 
     agency.verificationStatus = 'REJECTED';
+    agency.onboardingStatus = 'REJECTED';
     agency.status = 'REJECTED';
     agency.rejectionReason = reason;
     agency.reviewedBy = new mongoose.Types.ObjectId(adminUser._id || adminUser.id);
@@ -1085,6 +1403,23 @@ export class AdminAgencyRequestService {
     }
 
     await agency.save();
+
+    // Synchronize ApprovalRequestModel in MongoDB
+    try {
+      await ApprovalRequestModel.updateMany(
+        { $or: [{ agencyId: agency._id }, { applicationId: agency.applicationId }] },
+        {
+          $set: {
+            registrationStatus: 'Rejected',
+            reviewedAt: new Date(),
+            rejectedReason: reason,
+            approvedBy: new mongoose.Types.ObjectId(adminUser._id || adminUser.id),
+          },
+        }
+      );
+    } catch (apprErr: any) {
+      logger.warn('Failed to update ApprovalRequestModel on rejection: %s', apprErr?.message || apprErr);
+    }
 
     // Audit Log
     await AuditLoggerService.log({

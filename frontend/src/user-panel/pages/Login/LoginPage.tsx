@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
 import { Header } from '../../components/common/Header';
+import { BrandLogo } from '../../../common/brand';
 import { AuthLayout } from '../../components/layouts/AuthLayout';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
@@ -138,30 +139,28 @@ export const LoginPage: React.FC = () => {
       heroTitle="Welcome back to your adventure"
       heroSubtitle="Log in to access your saved trips, connect with fellow travelers, and discover exclusive deals."
     >
-      {/* Header bar - Only back arrow */}
+      {/* Top Header bar with clean back button */}
       <Header
         showBack={true}
         showProgress={false}
         showSkip={false}
       />
 
-      {/* Main Content Form Container */}
-      <div className="w-full flex-1 flex flex-col justify-between p-6 sm:p-8 pt-2 sm:pt-4 max-w-md mx-auto relative z-10">
-        <div className="space-y-4 sm:space-y-5">
-          {/* Top Brand Text */}
-          <div className="flex justify-center pb-1">
-            <span className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-              ApnaTrip
-            </span>
+      {/* Main Content Form Container: Centered, Clean SaaS Spacing */}
+      <div className="w-full flex-1 flex flex-col justify-center px-6 sm:px-10 py-6 max-w-[440px] mx-auto z-10">
+        <div className="space-y-6">
+          {/* Top Brand Logo */}
+          <div className="flex justify-center">
+            <BrandLogo theme="light" className="h-10 sm:h-12 w-auto" alt="ApnaTrip" />
           </div>
 
           {/* Title & Subtitle */}
-          <div className="space-y-1">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
+          <div className="space-y-1 text-center">
+            <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
               Welcome back
-            </h2>
-            <p className="text-sm sm:text-base text-slate-500 font-medium">
-              Login to continue your adventure
+            </h1>
+            <p className="text-xs sm:text-sm font-medium text-slate-500">
+              Log in to continue your adventure and access your trips
             </p>
           </div>
 
@@ -172,7 +171,7 @@ export const LoginPage: React.FC = () => {
           )}
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-3.5">
+          <form onSubmit={handleLogin} className="space-y-4">
             <Input
               type="email"
               placeholder="Email address"
@@ -181,7 +180,7 @@ export const LoginPage: React.FC = () => {
                 setEmail(e.target.value);
                 if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
               }}
-              leftIcon={<Mail className="w-4 h-4" />}
+              leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
               error={errors.email}
               autoComplete="email"
             />
@@ -195,11 +194,11 @@ export const LoginPage: React.FC = () => {
                   setPassword(e.target.value);
                   if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
                 }}
-                leftIcon={<Lock className="w-4 h-4" />}
+                leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
                 error={errors.password}
                 autoComplete="current-password"
               />
-              <div className="flex justify-end pr-1">
+              <div className="flex justify-end pr-1 pt-0.5">
                 <button
                   type="button"
                   onClick={() => navigate('/forgot-password')}
@@ -215,29 +214,29 @@ export const LoginPage: React.FC = () => {
               loading={loading}
               disabled={loading}
               showArrow
-              className="mt-2"
+              className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#FF4D6D] to-[#FF3358] hover:opacity-95 text-white font-extrabold text-sm shadow-md shadow-[#FF4D6D]/20 transition-all cursor-pointer mt-1"
             >
               Login
             </Button>
           </form>
 
           {/* Or Continue With Divider */}
-          <div className="flex items-center justify-center gap-3 my-4">
-            <div className="h-[1px] bg-slate-200 flex-1 max-w-[70px] sm:max-w-[90px]" />
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider shrink-0">
+          <div className="flex items-center justify-center gap-3 my-2">
+            <div className="h-px bg-slate-200/80 flex-1" />
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
               or continue with
             </span>
-            <div className="h-[1px] bg-slate-200 flex-1 max-w-[70px] sm:max-w-[90px]" />
+            <div className="h-px bg-slate-200/80 flex-1" />
           </div>
 
           {/* Social Icons (Google & Facebook) */}
-          <div className="flex items-center justify-center gap-5 pt-1">
+          <div className="flex items-center justify-center gap-4">
             <SocialButton provider="google" onClick={handleGoogleLogin} />
             <SocialButton provider="facebook" onClick={handleFacebookLogin} />
           </div>
 
           {/* Signup Link */}
-          <p className="text-center text-sm font-medium text-slate-600 pt-1 pb-2">
+          <p className="text-center text-xs sm:text-sm font-medium text-slate-500 pt-1">
             Don't have an account?{' '}
             <Link
               to="/signup"
@@ -249,16 +248,8 @@ export const LoginPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Seamless Bottom Visual Mountain Landscape Artwork */}
-      <div className="relative w-full h-44 sm:h-52 overflow-hidden mt-auto pointer-events-none">
-        <img
-          src={bgAuth}
-          alt="Travel Mountain Landscape"
-          className="w-full h-full object-cover object-top"
-        />
-        {/* Soft smooth top-fade gradient into white page background */}
-        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white to-transparent" />
-      </div>
+      {/* Subtle bottom spacing to ensure perfect vertical balance */}
+      <div className="h-6 shrink-0" />
     </AuthLayout>
   );
 };

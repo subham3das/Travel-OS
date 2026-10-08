@@ -10,6 +10,18 @@ export type AgencyVerificationStatus =
 
 export type AgencyStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'REJECTED';
 
+export type PartnerOnboardingStatus =
+  | 'ACCOUNT_CREATED'
+  | 'EMAIL_VERIFIED'
+  | 'PHONE_VERIFIED'
+  | 'PAYMENT_PENDING'
+  | 'PAYMENT_COMPLETED'
+  | 'DOCUMENTS_SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'SUSPENDED';
+
 export interface IAgencyDocumentItem {
   id: string;
   name: string;
@@ -75,11 +87,16 @@ export interface IReviewNote {
 export interface IAgency extends Document {
   applicationId: string;
   agencyId?: string;
+  ownerId?: mongoose.Types.ObjectId;
   name: string;
   legalBusinessName?: string;
   agencyDisplayName?: string;
   email: string;
   phone: string;
+  paymentStatus?: 'PENDING' | 'PAID' | 'FAILED';
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED';
+  whatsappNumber?: string;
+  supportMessage?: string;
   ownerName: string;
   businessType?: string;
   yearEstablished?: string;
@@ -186,6 +203,7 @@ export interface IAgency extends Document {
   documentRequestMessage?: string;
 
   // Status, Credentials & Governance
+  onboardingStatus?: PartnerOnboardingStatus;
   verificationStatus: AgencyVerificationStatus;
   status: AgencyStatus;
   reviewedBy?: mongoose.Types.ObjectId;
@@ -214,6 +232,58 @@ export interface IAgency extends Document {
   submissionIp?: string;
   submissionBrowser?: string;
   draftData?: Record<string, any>;
+
+  // Multi-Business Provider Capabilities
+  businessTypes?: ('agency' | 'car_rental')[];
+  activeBusiness?: 'agency' | 'car_rental';
+  carRentalVerificationStatus?: 'NOT_REGISTERED' | 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED' | 'SUSPENDED';
+  carRentalRequestedChanges?: {
+    issues: string[];
+    message?: string;
+    requestedAt?: Date;
+    requestedBy?: any;
+  };
+  carRentalProfile?: {
+    businessName?: string;
+    ownerName?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    pinCode?: string;
+    panNumber?: string;
+    gstNumber?: string;
+    businessLicenseNumber?: string;
+    profilePhotoUrl?: string;
+    coverPhotoUrl?: string;
+    description?: string;
+    workingHours?: string;
+    emergencyContact?: string;
+    fleetSize?: number;
+    operatingCities?: string[];
+    documents?: IAgencyDocumentItem[];
+    bankDetails?: {
+      accountHolderName?: string;
+      bankName?: string;
+      accountNumber?: string;
+      ifscCode?: string;
+      upiId?: string;
+    };
+    supportedVehicleServices?: ('driver_booking' | 'self_drive_car' | 'self_drive_bike')[];
+  };
+  carRentalApprovedAt?: Date;
+  carRentalApprovedBy?: mongoose.Types.ObjectId | string;
+  carRentalRejectionReason?: string;
+
+  // Discovery & CMS Controls
+  isTrending?: boolean;
+  isFeatured?: boolean;
+  isPopular?: boolean;
+  isMostPopular?: boolean;
+  isHomepageFeatured?: boolean;
+  autoRankEnabled?: boolean;
 
   // Performance metrics
   rating?: number;
@@ -315,13 +385,16 @@ const ReviewNoteSchema = new Schema<IReviewNote>(
 
 const AgencySchema = new Schema<IAgency>(
   {
-    applicationId: { type: String, required: true, unique: true, index: true },
-    agencyId: { type: String, unique: true, sparse: true, index: true },
+    applicationId: { type: String, required: true, unique: true },
+    agencyId: { type: String, unique: true, sparse: true },
+    ownerId: { type: Schema.Types.ObjectId, ref: 'PartnerUser', index: true },
     name: { type: String, required: true, trim: true, index: true },
     legalBusinessName: { type: String, trim: true },
     agencyDisplayName: { type: String, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true, index: true },
     phone: { type: String, required: true, trim: true },
+    whatsappNumber: { type: String, trim: true },
+    supportMessage: { type: String, trim: true },
     ownerName: { type: String, required: true, trim: true },
     businessType: { type: String, default: 'Tour Operator' },
     yearEstablished: { type: String },
@@ -434,6 +507,23 @@ const AgencySchema = new Schema<IAgency>(
     documentRequestMessage: { type: String },
 
     // Review & Status
+    onboardingStatus: {
+      type: String,
+      enum: [
+        'ACCOUNT_CREATED',
+        'EMAIL_VERIFIED',
+        'PHONE_VERIFIED',
+        'PAYMENT_PENDING',
+        'PAYMENT_COMPLETED',
+        'DOCUMENTS_SUBMITTED',
+        'UNDER_REVIEW',
+        'APPROVED',
+        'REJECTED',
+        'SUSPENDED',
+      ],
+      default: 'ACCOUNT_CREATED',
+      index: true,
+    },
     verificationStatus: {
       type: String,
       enum: ['PENDING', 'UNDER_REVIEW', 'VERIFIED', 'APPROVED', 'REJECTED', 'MISSING_DOCS'],
@@ -446,11 +536,81 @@ const AgencySchema = new Schema<IAgency>(
       default: 'PENDING',
       index: true,
     },
+    paymentStatus: {
+      type: String,
+      enum: ['PENDING', 'PAID', 'FAILED'],
+      default: 'PENDING',
+      index: true,
+    },
+    approvalStatus: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED'],
+      default: 'PENDING',
+      index: true,
+    },
     reviewedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
     reviewedAt: { type: Date },
     approvedAt: { type: Date },
     approvedBy: { type: Schema.Types.Mixed },
     rejectionReason: { type: String },
+
+    // Multi-Business Provider Capabilities
+    businessTypes: {
+      type: [{ type: String, enum: ['agency', 'car_rental'] }],
+      default: ['agency'],
+    },
+    activeBusiness: {
+      type: String,
+      enum: ['agency', 'car_rental'],
+      default: 'agency',
+    },
+    carRentalVerificationStatus: {
+      type: String,
+      enum: ['NOT_REGISTERED', 'PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED', 'SUSPENDED'],
+      default: 'NOT_REGISTERED',
+      index: true,
+    },
+    carRentalRequestedChanges: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
+    carRentalProfile: {
+      businessName: { type: String, trim: true },
+      ownerName: { type: String, trim: true },
+      phone: { type: String, trim: true },
+      email: { type: String, trim: true, lowercase: true },
+      address: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      country: { type: String, default: 'India' },
+      pinCode: { type: String, trim: true },
+      panNumber: { type: String, trim: true },
+      gstNumber: { type: String, trim: true },
+      businessLicenseNumber: { type: String, trim: true },
+      profilePhotoUrl: { type: String },
+      coverPhotoUrl: { type: String },
+      description: { type: String },
+      workingHours: { type: String, default: '09:00 AM - 08:00 PM' },
+      emergencyContact: { type: String },
+      fleetSize: { type: Number, default: 1 },
+      operatingCities: [{ type: String }],
+      documents: { type: [AgencyDocumentItemSchema], default: [] },
+      bankDetails: {
+        accountHolderName: { type: String },
+        bankName: { type: String },
+        accountNumber: { type: String },
+        ifscCode: { type: String },
+        upiId: { type: String },
+      },
+      supportedVehicleServices: {
+        type: [String],
+        enum: ['driver_booking', 'self_drive_car', 'self_drive_bike'],
+        default: ['driver_booking'],
+      },
+    },
+    carRentalApprovedAt: { type: Date },
+    carRentalApprovedBy: { type: Schema.Types.Mixed },
+    carRentalRejectionReason: { type: String },
 
     // Credentials & Login Security
     loginEmail: { type: String, lowercase: true, trim: true, index: true },
@@ -473,16 +633,26 @@ const AgencySchema = new Schema<IAgency>(
     submissionBrowser: { type: String },
     draftData: { type: Schema.Types.Mixed, default: {} },
 
+    // Discovery & CMS Controls
+    isTrending: { type: Boolean, default: false, index: true },
+    isFeatured: { type: Boolean, default: false, index: true },
+    isPopular: { type: Boolean, default: false, index: true },
+    isMostPopular: { type: Boolean, default: false, index: true },
+    isHomepageFeatured: { type: Boolean, default: false, index: true },
+    autoRankEnabled: { type: Boolean, default: true },
+
     // Metrics
     rating: { type: Number, default: 4.8 },
     totalBookings: { type: Number, default: 0 },
     totalRevenue: { type: Number, default: 0 },
-    isDeleted: { type: Boolean, default: false, index: true },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
 AgencySchema.index({ createdAt: -1 });
+AgencySchema.index({ verificationStatus: 1, isDeleted: 1, createdAt: -1 });
+AgencySchema.index({ carRentalVerificationStatus: 1, isDeleted: 1, createdAt: -1 });
 AgencySchema.index({ name: 'text', email: 'text', city: 'text', gstNumber: 'text', applicationId: 'text' });
 
 export const AgencyModel =

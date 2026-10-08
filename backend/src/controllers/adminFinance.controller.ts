@@ -30,6 +30,15 @@ export class AdminFinanceController {
     }
   }
 
+  async getDestinationRevenue(req: Request, res: Response): Promise<void> {
+    try {
+      const destinations = await adminFinanceService.getDestinationRevenue();
+      res.status(200).json({ success: true, data: destinations });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to retrieve destination revenue' });
+    }
+  }
+
   async getTopAgencies(req: Request, res: Response): Promise<void> {
     try {
       const agencies = await adminFinanceService.getTopAgencies();
@@ -39,12 +48,49 @@ export class AdminFinanceController {
     }
   }
 
+  async getFinancialSummary(req: Request, res: Response): Promise<void> {
+    try {
+      const summary = await adminFinanceService.getFinancialSummary();
+      res.status(200).json({ success: true, data: summary });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to retrieve financial summary' });
+    }
+  }
+
+  async getRefundAnalytics(req: Request, res: Response): Promise<void> {
+    try {
+      const refunds = await adminFinanceService.getRefundAnalytics();
+      res.status(200).json({ success: true, data: refunds });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to retrieve refund analytics' });
+    }
+  }
+
   async getSettlements(req: Request, res: Response): Promise<void> {
     try {
       const settlements = await adminFinanceService.getSettlements();
       res.status(200).json({ success: true, data: settlements });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message || 'Failed to retrieve settlements' });
+    }
+  }
+
+  async getFinancialTimeline(req: Request, res: Response): Promise<void> {
+    try {
+      const timeline = await adminFinanceService.getFinancialTimeline();
+      res.status(200).json({ success: true, data: timeline });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to retrieve financial timeline' });
+    }
+  }
+
+  async getAgencySidebar(req: Request, res: Response): Promise<void> {
+    try {
+      const agencyId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const data = await adminFinanceService.getAgencySidebarData(agencyId);
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || 'Failed to retrieve agency finance profile' });
     }
   }
 

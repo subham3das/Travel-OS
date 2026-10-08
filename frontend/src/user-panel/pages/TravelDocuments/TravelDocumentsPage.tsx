@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Download, CheckCircle2, WifiOff } from 'lucide-react';
-import { getTripById, Trip } from '../../data/trips';
-import { getDocumentsByTripId, TravelDocument } from '../../data/documents';
+import { Trip } from '../../data/trips';
+import { TravelDocument } from '../../data/documents';
 import { tripService } from '../../services/trip.service';
+import { useToast } from '../../context/ToastContext';
 
 import { TripSummaryCard } from './components/TripSummaryCard';
 import { DocumentsList } from './components/DocumentsList';
@@ -17,19 +18,25 @@ import { BottomNavigation } from '../../components/common/BottomNavigation';
 export const TravelDocumentsPage: React.FC = () => {
   const { tripId, id } = useParams<{ tripId?: string; id?: string }>();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  const targetId = tripId || id || 'trip-001';
-  const [trip, setTrip] = useState<Trip>(getTripById(targetId));
-  const [documents, setDocuments] = useState<TravelDocument[]>(getDocumentsByTripId(targetId));
+  const targetId = tripId || id || '';
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [documents, setDocuments] = useState<TravelDocument[]>([]);
 
   useEffect(() => {
     let isMounted = true;
+    if (!targetId) {
+      setLoading(false);
+      return;
+    }
+
     Promise.all([
       tripService.getTripById(targetId).catch(() => null),
-      tripService.getTripDocuments(targetId).catch(() => null),
+      tripService.getTripDocuments(targetId).catch(() => []),
     ]).then(([liveTrip, liveDocs]) => {
       if (isMounted) {
         if (liveTrip) setTrip(liveTrip);
@@ -70,13 +77,16 @@ export const TravelDocumentsPage: React.FC = () => {
 
           <button
             onClick={() => {
-              const element = document.createElement('a');
-              const file = new Blob(['Mock Travel Documents Package ZIP'], { type: 'text/plain' });
-              element.href = URL.createObjectURL(file);
-              element.download = 'travel-documents-package.zip';
-              document.body.appendChild(element);
-              element.click();
-              document.body.removeChild(element);
+              if (documents.length === 0) {
+                showToast('No travel documents available for this trip.', 'info');
+                return;
+              }
+              const primaryDoc = documents.find((d) => d.downloadUrl && d.downloadUrl !== '#');
+              if (primaryDoc?.downloadUrl) {
+                window.open(primaryDoc.downloadUrl, '_blank');
+              } else {
+                showToast('No downloadable documents available at this time.', 'info');
+              }
             }}
             className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer focus:outline-none"
             title="Download All Documents"
@@ -97,13 +107,15 @@ export const TravelDocumentsPage: React.FC = () => {
         )}
 
         {/* 1. Trip Summary Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <TripSummaryCard trip={trip} />
-        </motion.div>
+        {trip && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <TripSummaryCard trip={trip} />
+          </motion.div>
+        )}
 
         {/* 2. Information Banner */}
         <motion.div
@@ -140,7 +152,7 @@ export const TravelDocumentsPage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.2 }}
             >
-              <DownloadAllCard />
+              <DownloadAllCard documents={documents} />
             </motion.div>
 
             {/* 5. Need Help Card */}
@@ -149,7 +161,7 @@ export const TravelDocumentsPage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.25 }}
             >
-              <SupportCard agencyId={trip.agencyId} />
+              <SupportCard agencyId={trip?.agencyId} />
             </motion.div>
           </>
         )}

@@ -21,6 +21,7 @@ import {
   getSubmittedApplication,
   checkAgencyVerificationStatus,
 } from '../../services/agencyOnboarding.service';
+import { BrandLogo } from '../../../common/brand';
 import { useAgencyAuthContext } from '../../services/agencyAuth.service';
 import { AgencyVerificationStatus } from '../../types/agency';
 
@@ -242,22 +243,7 @@ export const AgencySubmittedOnboardingPage: React.FC = () => {
 
       {/* ── Top Header with Brand Logo ── */}
       <header className="py-4 px-6 flex justify-center items-center bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-20">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[#583BE8] flex items-center justify-center shadow-md shadow-[#583BE8]/25 shrink-0">
-            <svg className="w-4.5 h-4.5 text-white" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 21.5C12 21.5 19 15.5 19 10C19 6.13401 15.866 3 12 3C8.13401 3 5 6.13401 5 10C5 15.5 12 21.5 12 21.5Z"
-                fill="white"
-                fillOpacity="0.25"
-              />
-              <circle cx="12" cy="9.5" r="3.5" stroke="white" strokeWidth="1.8" />
-              <path d="M12 7.5L13.5 11L12 10L10.5 11L12 7.5Z" fill="white" />
-            </svg>
-          </div>
-          <span className="text-2xl font-extrabold text-[#0F172A] tracking-tight">
-            Apna<span className="text-[#583BE8]">Trip</span>
-          </span>
-        </div>
+        <BrandLogo theme="light" className="h-8 w-auto" alt="ApnaTrip" />
       </header>
 
       {/* ── Main Container ── */}

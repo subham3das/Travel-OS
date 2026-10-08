@@ -7,20 +7,21 @@ interface WizardProgressProps {
 }
 
 const STEP_PERCENTAGES: Record<number, number> = {
-  1: 11,
-  2: 22,
-  3: 33,
-  4: 44,
-  5: 55,
-  6: 66,
-  7: 77,
-  8: 88,
-  9: 100,
+  1: 10,
+  2: 20,
+  3: 30,
+  4: 40,
+  5: 50,
+  6: 60,
+  7: 70,
+  8: 80,
+  9: 90,
+  10: 100,
 };
 
 export const WizardProgress: React.FC<WizardProgressProps> = ({
   currentStep,
-  totalSteps = 9,
+  totalSteps = 10,
 }) => {
   const percentage = STEP_PERCENTAGES[currentStep] || Math.round((currentStep / totalSteps) * 100);
 

@@ -1,11 +1,9 @@
 import React, { useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Plus, CheckCircle2, AlertCircle } from 'lucide-react';
 import { usePackageWizard } from '../../../hooks/usePackageWizard';
 import { PackageSummaryHeader } from './itinerary/PackageSummaryHeader';
-import { DayNavigator } from './itinerary/DayNavigator';
-import { DayEditor } from './itinerary/DayEditor';
-import { CollapsedDayCard } from './itinerary/CollapsedDayCard';
+import { DayPlanningCard } from './itinerary/DayPlanningCard';
 import { ItineraryDay } from '../../../types/itinerary';
 
 export const ItineraryStep: React.FC = () => {
@@ -16,6 +14,10 @@ export const ItineraryStep: React.FC = () => {
     deleteItineraryDay,
     duplicateItineraryDay,
     moveItineraryDay,
+    addPlanItem,
+    updatePlanItem,
+    removePlanItem,
+    movePlanItem,
   } = usePackageWizard();
 
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -26,165 +28,124 @@ export const ItineraryStep: React.FC = () => {
   };
 
   const days = step4.days || [];
-  const activeDayId = step4.activeDayId || days[0]?.id || '';
-  const activeDay = days.find((d) => d.id === activeDayId) || days[0];
+  const packageDaysCount = draft?.step2?.days || 4;
+  const isDurationMatched = days.length === packageDaysCount;
 
-  const handleSelectDay = (id: string) => {
-    updateStep4({ activeDayId: id });
-    setTimeout(() => {
-      dayRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  };
-
-  const handleUpdateActiveDay = (data: Partial<ItineraryDay>) => {
-    if (!activeDay) return;
-    const updatedDays = days.map((d) => (d.id === activeDay.id ? { ...d, ...data } : d));
+  const handleUpdateDay = (dayId: string, data: Partial<ItineraryDay>) => {
+    const updatedDays = days.map((d) => (d.id === dayId ? { ...d, ...data } : d));
     updateStep4({ days: updatedDays });
   };
 
-  const validateDay = (day: ItineraryDay): boolean => {
-    if (!day.title || day.title.trim().length === 0) {
-      alert(`Please enter a Day Title for Day ${day.dayNumber}.`);
-      return false;
-    }
-    if (!day.description || day.description.trim().length === 0) {
-      alert(`Please enter a Description for Day ${day.dayNumber}.`);
-      return false;
-    }
-    if (!day.activities || day.activities.length === 0) {
-      alert(`Please add at least one activity for Day ${day.dayNumber}.`);
-      return false;
-    }
-    return true;
+  const handleScrollToDay = (id: string) => {
+    updateStep4({ activeDayId: id });
+    dayRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const handleAddDayMobile = (currentDay: ItineraryDay) => {
-    if (!validateDay(currentDay)) return;
-
+  const handleAddDay = () => {
     addItineraryDay();
-    // Smooth scroll to the newly created day
     setTimeout(() => {
       const nextDays = draft?.step4?.days || [];
       const newCreatedDayId = nextDays[nextDays.length - 1]?.id;
       if (newCreatedDayId && dayRefs.current[newCreatedDayId]) {
         dayRefs.current[newCreatedDayId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    }, 150);
+    }, 100);
   };
 
-  const inactiveDays = days.filter((d) => d.id !== activeDay?.id);
-
   return (
-    <div className="space-y-6 select-none">
+    <div className="space-y-6 select-none max-w-4xl mx-auto">
       {/* 1. Package Summary Header Card */}
       <PackageSummaryHeader />
 
-      {/* 2. Section Header */}
-      <div className="space-y-1">
-        <h2 className="text-base sm:text-lg font-black text-[#0F172A]">Itinerary Builder</h2>
-        <p className="text-xs font-semibold text-slate-400">Build your day-by-day itinerary</p>
-      </div>
-
-      {/* Duration Mismatch Validation Warning */}
-      {draft?.step2?.days && days.length !== draft.step2.days && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-xs font-bold text-amber-900 flex items-center gap-3 shadow-2xs">
-          <div className="w-8 h-8 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center shrink-0 font-black">
-            !
-          </div>
-          <div>
-            <h4 className="font-black text-amber-950">Itinerary Duration Mismatch</h4>
-            <p className="text-[11px] font-semibold text-amber-800">
-              Itinerary duration ({days.length} Days) does not match package duration ({draft.step2.days} Days). Please add or remove days to match package duration before publishing.
-            </p>
-          </div>
+      {/* 2. Section Header & Duration Status */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-3xl border border-slate-100 shadow-2xs">
+        <div className="space-y-0.5">
+          <h2 className="text-base sm:text-lg font-black text-[#0F172A] tracking-tight">
+            Day-wise Itinerary Notes
+          </h2>
+          <p className="text-xs font-semibold text-slate-400">
+            Outline key highlights and activities planned for each day of the journey.
+          </p>
         </div>
-      )}
 
-      {/* ── 3A. MOBILE PROGRESSIVE ACCORDION FLOW (≤768px) ── */}
-      <div className="block md:hidden space-y-3">
-        {days.map((day) => {
-          const isExpanded = day.id === activeDayId;
-
-          return (
-            <div
-              key={day.id}
-              ref={(el) => {
-                dayRefs.current[day.id] = el;
-              }}
-              className="transition-all duration-300"
-            >
-              {isExpanded ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-3"
-                >
-                  <DayEditor
-                    day={day}
-                    totalDays={days.length}
-                    onUpdateDay={handleUpdateActiveDay}
-                    onDuplicateDay={() => duplicateItineraryDay(day.id)}
-                    onMoveUp={() => moveItineraryDay(day.id, 'up')}
-                    onMoveDown={() => moveItineraryDay(day.id, 'down')}
-                    onDeleteDay={() => deleteItineraryDay(day.id)}
-                  />
-
-                  {/* Progressive Add Day Button at bottom of expanded form */}
-                  <button
-                    type="button"
-                    onClick={() => handleAddDayMobile(day)}
-                    className="w-full py-3.5 rounded-2xl border-2 border-dashed border-[#583BE8] bg-purple-50/60 hover:bg-purple-100/60 text-[#583BE8] text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-98"
-                  >
-                    <Plus className="w-4 h-4 stroke-[2.5]" />
-                    <span>Add Day</span>
-                  </button>
-                </motion.div>
-              ) : (
-                <CollapsedDayCard day={day} onExpand={handleSelectDay} />
-              )}
+        {/* Duration Match Pill */}
+        <div className="shrink-0 flex items-center gap-2">
+          {isDurationMatched ? (
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black shadow-2xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>{days.length} of {packageDaysCount} Days Planned</span>
             </div>
-          );
-        })}
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-black shadow-2xs">
+              <AlertCircle className="w-4 h-4 text-amber-600" />
+              <span>
+                {days.length} of {packageDaysCount} Days ({days.length < packageDaysCount ? `Need ${packageDaysCount - days.length} more` : `Remove ${days.length - packageDaysCount}`})
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── 3B. DESKTOP TWO-COLUMN LAYOUT (>768px) ── */}
-      <div className="hidden md:flex items-start gap-5">
-        {/* Left Column: Vertical Day Navigator */}
-        <div className="shrink-0">
-          <DayNavigator
-            days={days}
-            activeDayId={activeDay?.id || ''}
-            onSelectDay={handleSelectDay}
-            onAddDay={addItineraryDay}
-          />
-        </div>
+      {/* 3. Quick Day Jump Navigation Strip */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none sticky top-16 z-20 bg-[#F8F9FC]/90 backdrop-blur-md py-2 px-1">
+        {days.map((day) => (
+          <button
+            key={day.id}
+            type="button"
+            onClick={() => handleScrollToDay(day.id)}
+            className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200/80 text-xs font-extrabold text-[#0F172A] hover:border-[#583BE8] hover:text-[#583BE8] transition-all cursor-pointer shrink-0 shadow-2xs active:scale-98"
+          >
+            Day {day.dayNumber}
+          </button>
+        ))}
 
-        {/* Right Column: Active Day Editor & Remaining Collapsed Days */}
-        <div className="flex-1 min-w-0 space-y-4">
-          {activeDay && (
-            <DayEditor
-              day={activeDay}
+        <button
+          type="button"
+          onClick={handleAddDay}
+          className="px-3.5 py-1.5 rounded-xl bg-purple-50 text-[#583BE8] border border-purple-200/70 text-xs font-extrabold flex items-center gap-1 hover:bg-purple-100 transition-all cursor-pointer shrink-0 active:scale-98"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Add Day</span>
+        </button>
+      </div>
+
+      {/* 4. Sequential Day Planning Cards */}
+      <div className="space-y-5">
+        {days.map((day) => (
+          <div
+            key={day.id}
+            ref={(el) => {
+              dayRefs.current[day.id] = el;
+            }}
+            className="scroll-mt-32"
+          >
+            <DayPlanningCard
+              day={day}
               totalDays={days.length}
-              onUpdateDay={handleUpdateActiveDay}
-              onDuplicateDay={() => duplicateItineraryDay(activeDay.id)}
-              onMoveUp={() => moveItineraryDay(activeDay.id, 'up')}
-              onMoveDown={() => moveItineraryDay(activeDay.id, 'down')}
-              onDeleteDay={() => deleteItineraryDay(activeDay.id)}
+              onUpdateDay={(data) => handleUpdateDay(day.id, data)}
+              onDuplicateDay={() => duplicateItineraryDay(day.id)}
+              onMoveUp={() => moveItineraryDay(day.id, 'up')}
+              onMoveDown={() => moveItineraryDay(day.id, 'down')}
+              onDeleteDay={() => deleteItineraryDay(day.id)}
+              onAddPlan={addPlanItem}
+              onUpdatePlan={updatePlanItem}
+              onRemovePlan={removePlanItem}
+              onMovePlan={movePlanItem}
             />
-          )}
+          </div>
+        ))}
+      </div>
 
-          {/* Collapsed Inactive Days Cards (Desktop) */}
-          {inactiveDays.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <p className="text-xs font-extrabold text-slate-400 px-1">Other Days</p>
-              {inactiveDays.map((d) => (
-                <CollapsedDayCard key={d.id} day={d} onExpand={handleSelectDay} />
-              ))}
-            </div>
-          )}
-        </div>
+      {/* 5. Bottom Add Day Bar */}
+      <div className="pt-2 pb-6">
+        <button
+          type="button"
+          onClick={handleAddDay}
+          className="w-full py-4 rounded-3xl border-2 border-dashed border-[#583BE8]/60 bg-white hover:bg-purple-50/50 text-[#583BE8] text-sm font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-99"
+        >
+          <Plus className="w-5 h-5 stroke-[2.5]" />
+          <span>Add Day {days.length + 1} Planning Card</span>
+        </button>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 // Wrapped inside isolated SuperAdminThemeProvider
 
 import React from 'react';
-import { Route, Outlet } from 'react-router-dom';
+import { Route, Outlet, Navigate } from 'react-router-dom';
 import { AdminProtectedRoute } from './AdminProtectedRoute';
 import { AdminLayout } from '../layouts/AdminLayout/AdminLayout';
 import { SuperAdminThemeProvider } from '../context/SuperAdminThemeContext';
@@ -14,14 +14,15 @@ import { AdminDashboardPage } from '../pages/Dashboard/AdminDashboardPage';
 import { AdminAgenciesPage } from '../pages/Agencies/AdminAgenciesPage';
 import { AdminAgencyDetailsPage } from '../pages/AgencyDetails/AdminAgencyDetailsPage';
 import { AdminVerificationPendingPage } from '../pages/VerificationPending/AdminVerificationPendingPage';
+import { AdminCarRentalApprovalsPage } from '../pages/CarRentalApprovals/AdminCarRentalApprovalsPage';
 import { AdminUsersPage } from '../pages/Users/AdminUsersPage';
 import { AdminPackagesPage } from '../pages/Packages/AdminPackagesPage';
 import { AdminBookingsPage } from '../pages/Bookings/AdminBookingsPage';
 import { AdminPaymentsPage } from '../pages/Payments/AdminPaymentsPage';
 import { AdminFinancePage } from '../pages/Finance/AdminFinancePage';
-import { AdminTripsPage } from '../pages/Trips/AdminTripsPage';
+import { AdminCouponsPage } from '../pages/Coupons/AdminCouponsPage';
+import { AdminDeparturesPage } from '../pages/Departures/AdminDeparturesPage';
 import { AdminReviewsPage } from '../pages/Reviews/AdminReviewsPage';
-import { AdminCommunityPage } from '../pages/Community/AdminCommunityPage';
 import { AdminSupportPage } from '../pages/Support/AdminSupportPage';
 import { AdminNotificationsPage } from '../pages/Notifications/AdminNotificationsPage';
 import { AdminReportsPage } from '../pages/Reports/AdminReportsPage';
@@ -62,6 +63,8 @@ export const AdminRoutes = () => (
         <Route path="/admin/agencies/:agencyId" element={<AdminAgencyDetailsPage />} />
         <Route path="/admin/verification-pending" element={<AdminVerificationPendingPage />} />
         <Route path="/super-admin/agency-requests" element={<AdminVerificationPendingPage />} />
+        <Route path="/admin/car-rental-approvals" element={<AdminCarRentalApprovalsPage />} />
+        <Route path="/super-admin/car-rental-approvals" element={<AdminCarRentalApprovalsPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/super-admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/packages" element={<AdminPackagesPage />} />
@@ -72,12 +75,14 @@ export const AdminRoutes = () => (
         <Route path="/super-admin/payments" element={<AdminPaymentsPage />} />
         <Route path="/admin/finance" element={<AdminFinancePage />} />
         <Route path="/super-admin/finance" element={<AdminFinancePage />} />
-        <Route path="/admin/trips" element={<AdminTripsPage />} />
-        <Route path="/super-admin/trips" element={<AdminTripsPage />} />
+        <Route path="/admin/coupons" element={<AdminCouponsPage />} />
+        <Route path="/super-admin/coupons" element={<AdminCouponsPage />} />
+        <Route path="/admin/departures" element={<AdminDeparturesPage />} />
+        <Route path="/super-admin/departures" element={<AdminDeparturesPage />} />
+        <Route path="/admin/trips" element={<Navigate to="/admin/departures" replace />} />
+        <Route path="/super-admin/trips" element={<Navigate to="/admin/departures" replace />} />
         <Route path="/admin/reviews" element={<AdminReviewsPage />} />
         <Route path="/super-admin/reviews" element={<AdminReviewsPage />} />
-        <Route path="/admin/community" element={<AdminCommunityPage />} />
-        <Route path="/super-admin/community" element={<AdminCommunityPage />} />
         <Route path="/admin/support" element={<AdminSupportPage />} />
         <Route path="/super-admin/support" element={<AdminSupportPage />} />
         <Route path="/admin/notifications" element={<AdminNotificationsPage />} />

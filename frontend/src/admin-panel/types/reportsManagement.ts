@@ -24,15 +24,25 @@ export interface ReportKPIStats {
 
 export type ReportCategory = 'All' | 'Financial' | 'Bookings' | 'Users' | 'Agencies' | 'Trips' | 'Marketing' | 'Community';
 
+export interface BookingFunnelItem {
+  step: string;
+  count: number;
+  dropoff: string;
+}
+
 export interface ReportItem {
   id: string;
   name: string;
-  category: ReportCategory;
+  category: ReportCategory | string;
   lastGenerated: string;
   owner: string;
+  status?: string;
+  downloadUrl?: string;
   isFavorite?: boolean;
   availableFormats: ('PDF' | 'Excel' | 'CSV')[];
-  scheduleStatus?: 'Daily' | 'Weekly' | 'Monthly' | 'On Demand';
+  scheduleStatus?: string;
+  fileSize?: string;
+  dataCount?: number;
 }
 
 export interface RevenueTrendDataPoint {
@@ -40,13 +50,6 @@ export interface RevenueTrendDataPoint {
   date: string;
   thisPeriod: number; // in Lakhs
   lastPeriod: number; // in Lakhs
-}
-
-export interface GeographicRegionData {
-  state: string;
-  percentage: number;
-  revenue: string;
-  color: string;
 }
 
 export interface TopDestinationReportItem {

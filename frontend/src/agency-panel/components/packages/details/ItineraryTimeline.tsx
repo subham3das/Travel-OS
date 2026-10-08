@@ -75,12 +75,15 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ itinerary 
                     <div className="space-y-1.5 pt-1">
                       <span className="text-[10px] font-black uppercase text-slate-400 block">Activities</span>
                       <div className="flex flex-wrap gap-1.5">
-                        {day.activities.map((act, i) => (
-                          <span key={i} className="px-2.5 py-1 rounded-lg bg-white border border-purple-100 text-purple-900 font-extrabold flex items-center gap-1 max-w-full truncate">
-                            <CheckCircle2 className="w-3 h-3 text-[#583BE8] shrink-0" />
-                            <span className="truncate">{act}</span>
-                          </span>
-                        ))}
+                        {day.activities.map((act, i) => {
+                          const cleanAct = act.replace(/^\d{1,2}:\d{2}\s*[-–—]?\s*/, '');
+                          return (
+                            <span key={i} className="px-2.5 py-1 rounded-lg bg-white border border-purple-100 text-purple-900 font-extrabold flex items-center gap-1 max-w-full truncate">
+                              <CheckCircle2 className="w-3 h-3 text-[#583BE8] shrink-0" />
+                              <span className="truncate">{cleanAct}</span>
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

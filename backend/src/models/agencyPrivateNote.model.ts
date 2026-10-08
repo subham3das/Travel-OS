@@ -21,13 +21,11 @@ const AgencyPrivateNoteSchema = new Schema<IAgencyPrivateNote>(
       type: Schema.Types.ObjectId,
       ref: 'Agency',
       required: true,
-      index: true,
     },
     customerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     bookingId: {
       type: Schema.Types.ObjectId,
@@ -49,7 +47,6 @@ const AgencyPrivateNoteSchema = new Schema<IAgencyPrivateNote>(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   {

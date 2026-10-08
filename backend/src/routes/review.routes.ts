@@ -7,7 +7,10 @@ const router = Router();
 // Public: get reviews
 router.get('/', reviewController.getReviews);
 
-// Authenticated: submit review
-router.post('/', authenticate, reviewController.submitReview);
+// Authenticated: submit generic review
+router.post('/', authenticate, (req, res, next) => reviewController.submitReview(req, res).catch(next));
+
+// Authenticated: submit package review with verified booking check
+router.post('/package', authenticate, (req, res, next) => reviewController.submitPackageReview(req, res).catch(next));
 
 export default router;

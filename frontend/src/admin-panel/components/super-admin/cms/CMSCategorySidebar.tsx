@@ -7,7 +7,6 @@ import {
   Compass,
   Sparkles,
   MessageSquarePlus,
-  Layers,
   Search,
   ChevronRight,
 } from 'lucide-react';
@@ -24,7 +23,6 @@ interface CMSCategorySidebarProps {
     trips: number;
     campaigns: number;
     popups: number;
-    sections: number;
   };
 }
 
@@ -47,8 +45,16 @@ export const CMSCategorySidebar: React.FC<CMSCategorySidebarProps> = ({
       label: 'Platform Announcements',
       description: 'Global notification ticker & banners',
       icon: <Megaphone className="w-4 h-4" />,
-      badge: '⭐ Live',
+      badge: `${counts.announcements} Live`,
       badgeColor: 'bg-amber-100 text-amber-800 font-black',
+    },
+    {
+      id: 'discovery' as CMSCategoryTab,
+      label: 'Discovery Control',
+      description: 'Pin overrides & section visibility',
+      icon: <Compass className="w-4 h-4" />,
+      badge: 'Engine',
+      badgeColor: 'bg-purple-100 text-[#583BE8] font-black',
     },
     {
       id: 'destinations' as CMSCategoryTab,
@@ -61,9 +67,9 @@ export const CMSCategorySidebar: React.FC<CMSCategorySidebarProps> = ({
     {
       id: 'agencies' as CMSCategoryTab,
       label: 'Featured Agencies',
-      description: 'Promote top certified agency partners',
+      description: 'Promote top verified agency partners',
       icon: <Building2 className="w-4 h-4" />,
-      badge: '⭐ Top 8',
+      badge: `${counts.agencies}`,
       badgeColor: 'bg-emerald-100 text-emerald-800 font-black',
     },
     {
@@ -77,31 +83,23 @@ export const CMSCategorySidebar: React.FC<CMSCategorySidebarProps> = ({
     {
       id: 'campaigns' as CMSCategoryTab,
       label: 'Promotional Campaigns',
-      description: 'Seasonal sales & promotional events',
+      description: 'Seasonal sales & coupon events',
       icon: <Sparkles className="w-4 h-4" />,
-      badge: `${counts.campaigns} Active`,
+      badge: `${counts.campaigns}`,
       badgeColor: 'bg-rose-100 text-rose-700 font-bold',
     },
     {
       id: 'popups' as CMSCategoryTab,
       label: 'Popup Manager',
-      description: 'App download & lead capture modals',
+      description: 'App download & promo modals',
       icon: <MessageSquarePlus className="w-4 h-4" />,
       badge: `${counts.popups}`,
       badgeColor: 'bg-purple-100 text-purple-700',
     },
     {
-      id: 'sections' as CMSCategoryTab,
-      label: 'Homepage Sections',
-      description: 'Reorder & enable/disable sections',
-      icon: <Layers className="w-4 h-4" />,
-      badge: `${counts.sections} Total`,
-      badgeColor: 'bg-slate-100 text-slate-700',
-    },
-    {
       id: 'seo' as CMSCategoryTab,
       label: 'SEO & Meta Tags',
-      description: 'Social graph cards & search indexing',
+      description: 'Per-page search engine indexing',
       icon: <Search className="w-4 h-4" />,
       badge: 'Active',
       badgeColor: 'bg-emerald-100 text-emerald-700',
@@ -152,7 +150,7 @@ export const CMSCategorySidebar: React.FC<CMSCategorySidebarProps> = ({
 
               <div className="flex items-center gap-1.5 shrink-0 pl-1">
                 <span
-                  className={`px-1.5 py-0.5 rounded-lg text-[9px] ${
+                  className={`px-1.5 py-0.5 rounded-lg text-[9px] font-bold ${
                     isActive ? 'bg-white/25 text-white' : item.badgeColor
                   }`}
                 >

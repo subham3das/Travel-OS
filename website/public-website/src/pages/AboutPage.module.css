@@ -1,0 +1,74 @@
+.page {
+  min-height: 100vh;
+  padding-bottom: 6rem;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.hero {
+  position: relative;
+  padding: 8.5rem 0 5.5rem;
+  overflow: hidden;
+  background: radial-gradient(ellipse at top, rgba(37, 99, 235, 0.07), transparent 70%);
+}
+
+.heroGlow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 450px;
+  background: radial-gradient(ellipse at top, rgba(37, 99, 235, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.heroContent {
+  max-width: 820px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.heroTitle {
+  font-family: var(--font-sans);
+  font-size: clamp(2.5rem, 6vw, 4.25rem);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 1.5rem 0 1.25rem;
+  color: var(--text-primary);
+}
+
+.heroItalic {
+  font-style: italic;
+  color: var(--brand-primary);
+}
+
+.heroSub {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 680px;
+  margin: 0 auto 2.25rem;
+}
+
+.heroCtas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.section {
+  padding: 5.5rem 0;
+  position: relative;
+}
+
+.sectionBordered {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:global(.dark) .sectionBordered {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}

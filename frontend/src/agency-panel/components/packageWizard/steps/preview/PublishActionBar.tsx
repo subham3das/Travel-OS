@@ -9,6 +9,7 @@ export const PublishActionBar: React.FC = () => {
 
   const [isPublishing, setIsPublishing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdPackageId, setCreatedPackageId] = useState<string | undefined>(undefined);
 
   const handlePublish = async () => {
     setIsPublishing(true);
@@ -19,6 +20,7 @@ export const PublishActionBar: React.FC = () => {
         subtitle: draft.step1.shortDescription || '',
         description: draft.step1.shortDescription || '',
         category: (draft.step1.packageType as string) || 'Domestic',
+        adventureType: draft.step1.adventureType || 'General Adventure',
         durationDays: draft.step2.days || 3,
         durationNights: draft.step2.nights || 2,
         destination: draft.step2.primaryDestination || (draft.step2.destinationsCovered || []).join(', ') || 'Himalayan Circuit',
@@ -35,14 +37,38 @@ export const PublishActionBar: React.FC = () => {
         itinerary: (draft.step4.days || []).map((d) => ({
           day: d.dayNumber,
           title: d.title,
-          description: d.description,
+          description: d.description || '',
+          plans: (d.plans || []).map((p) => ({
+            text: p.text,
+            icon: p.icon || '',
+            notes: p.notes || '',
+          })),
           meals: (d.meals || []).join(', '),
           stay: d.stay || 'Hotel',
         })),
+        accommodationConfirmed: Boolean(draft.stepAccommodation?.accommodationConfirmed),
+        accommodations: draft.stepAccommodation?.accommodationConfirmed
+          ? (draft.stepAccommodation?.hotels || []).map((h) => ({
+              hotelName: h.hotelName,
+              hotelImages: h.hotelImages || [],
+              category: h.category || 'Hotel',
+              address: h.address || '',
+              city: h.city || '',
+              amenities: h.amenities || [],
+              roomType: h.roomType || '',
+              checkIn: h.checkIn || '',
+              checkOut: h.checkOut || '',
+              shortDescription: h.shortDescription || '',
+              dayRange: h.dayRange || '',
+            }))
+          : [],
         isDraft: false,
       };
 
-      await agencyPackagesService.createPackage(payload);
+      const created = await agencyPackagesService.createPackage(payload);
+      if (created && (created.packageId || (created as any).id || (created as any)._id)) {
+        setCreatedPackageId(created.packageId || (created as any).id || (created as any)._id);
+      }
       resetDraft();
       setShowSuccessModal(true);
     } catch (err: any) {
@@ -104,7 +130,11 @@ export const PublishActionBar: React.FC = () => {
       </div>
 
       {/* Success Modal */}
-      <PublishSuccessModal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} />
+      <PublishSuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        packageId={createdPackageId}
+      />
     </>
   );
 };

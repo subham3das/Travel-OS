@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Briefcase,
+  Car,
   MessageSquare,
   Building2,
   Tag,
@@ -12,7 +13,6 @@ import {
   X,
 } from 'lucide-react';
 import {
-  getNotifications,
   NotificationCategory,
   NotificationItem,
 } from '../../data/notifications';
@@ -23,21 +23,34 @@ import { BottomNavigation } from '../../components/common/BottomNavigation';
 
 export const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<NotificationItem[]>(getNotifications());
   const [selectedCategory, setSelectedCategory] = useState<NotificationCategory>('all');
-
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    userNotificationService.getNotifications().then((liveList) => {
-      if (isMounted && liveList && liveList.length > 0) {
-        setNotifications(liveList);
+    const loadNotifications = async () => {
+      try {
+        const liveNotifs = await userNotificationService.getNotifications();
+        if (isMounted) {
+          setNotifications(liveNotifs);
+        }
+      } catch {
+        if (isMounted) {
+          setNotifications([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-    });
+    };
+
+    loadNotifications();
 
     const unsubscribeNew = userSocketService.subscribe('notification:new', (newNotif: any) => {
       if (!isMounted) return;
@@ -84,7 +97,7 @@ export const NotificationsPage: React.FC = () => {
   const filterChips: { id: NotificationCategory; label: string; icon: React.ReactNode }[] = [
     { id: 'all', label: 'All', icon: null },
     { id: 'bookings', label: 'Bookings', icon: <Briefcase className="w-3.5 h-3.5 text-blue-500" /> },
-    { id: 'community', label: 'Community', icon: <MessageSquare className="w-3.5 h-3.5 text-purple-500" /> },
+    { id: 'rentals', label: 'Rentals', icon: <Car className="w-3.5 h-3.5 text-rose-500" /> },
     { id: 'agency', label: 'Agency', icon: <Building2 className="w-3.5 h-3.5 text-emerald-500" /> },
     { id: 'offers', label: 'Offers', icon: <Tag className="w-3.5 h-3.5 text-orange-500" /> },
   ];
@@ -132,6 +145,8 @@ export const NotificationsPage: React.FC = () => {
     'This Week',
     'Earlier',
   ];
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] flex flex-col font-sans selection:bg-[#6356E5]/20 selection:text-[#6356E5]">
@@ -210,7 +225,12 @@ export const NotificationsPage: React.FC = () => {
           <button
             type="button"
             onClick={handleMarkAllRead}
-            className="ml-auto text-[11px] font-black text-[#6356E5] hover:underline cursor-pointer shrink-0 flex items-center gap-1 pl-2"
+            disabled={unreadCount === 0}
+            className={`ml-auto text-[11px] font-black shrink-0 flex items-center gap-1 pl-2 transition-opacity ${
+              unreadCount === 0
+                ? 'text-slate-400 cursor-not-allowed opacity-50'
+                : 'text-[#6356E5] hover:underline cursor-pointer'
+            }`}
           >
             <CheckCheck className="w-3.5 h-3.5" />
             <span>Mark all read</span>
@@ -228,8 +248,17 @@ export const NotificationsPage: React.FC = () => {
             </div>
             <h3 className="text-base font-black text-[#0F172A]">No Notifications Yet</h3>
             <p className="text-xs font-medium text-slate-500 max-w-xs mx-auto">
-              We'll notify you when something important happens with your bookings, community posts, or trip updates.
+              We'll notify you when something important happens with your bookings, car rentals, or trip updates.
             </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => navigate('/home')}
+                className="px-5 py-2.5 rounded-2xl bg-[#6356E5] hover:bg-[#5244d4] text-white text-xs font-black transition-colors cursor-pointer"
+              >
+                Back to Home
+              </button>
+            </div>
           </div>
         ) : (
           sections.map((sec) => {

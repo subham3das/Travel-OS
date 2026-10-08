@@ -62,7 +62,6 @@ const AdminSchema = new Schema<IAdmin>(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
       match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
     },
     password: {
@@ -171,7 +170,6 @@ const AdminSchema = new Schema<IAdmin>(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   {
@@ -179,5 +177,8 @@ const AdminSchema = new Schema<IAdmin>(
     collection: 'admins',
   }
 );
+
+AdminSchema.index({ email: 1, isDeleted: 1 });
+AdminSchema.index({ role: 1, isActive: 1, isDeleted: 1 });
 
 export const AdminModel = mongoose.model<IAdmin>('Admin', AdminSchema);

@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 import { OnboardingStepper } from '../../components/OnboardingStepper';
 import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
+import { registrationDraftClient } from '../../services/registrationDraftClient.service';
+import { UniversalImageUploader } from '../../../components/common/UniversalImageUploader';
 
 const STORAGE_KEY = 'apnatrip_agency_onboarding_profile';
 const BUSINESS_STORAGE_KEY = 'apnatrip_agency_onboarding_business';
@@ -154,6 +156,15 @@ export const AgencyProfileOnboardingPage: React.FC = () => {
   const [showAddDestModal, setShowAddDestModal] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+
+  // Load from MongoDB draft on mount
+  useEffect(() => {
+    registrationDraftClient.getDraft().then((draft) => {
+      if (draft?.profileDetails && Object.keys(draft.profileDetails).length > 0) {
+        setFormData((prev) => ({ ...prev, ...draft.profileDetails }));
+      }
+    });
+  }, []);
 
   // Calculate Years of Experience from Step 1 establishment year
   useEffect(() => {
@@ -283,9 +294,18 @@ export const AgencyProfileOnboardingPage: React.FC = () => {
     isDestinationsValid &&
     isLanguagesValid;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isFormValid) {
+      try {
+        await registrationDraftClient.saveDraft({
+          serviceType: 'agency',
+          profileDetails: formData,
+          currentStep: 2,
+        });
+      } catch (err) {
+        console.warn('Draft save error:', err);
+      }
       navigate('/agency/onboarding/verification');
     }
   };
@@ -371,121 +391,29 @@ export const AgencyProfileOnboardingPage: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100/90 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
                 {/* Agency Logo Upload */}
-                <div className="sm:col-span-1 flex flex-col items-center sm:items-start space-y-2">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    Agency Logo <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="file"
-                    ref={logoInputRef}
-                    onChange={handleLogoUpload}
-                    accept="image/png, image/jpeg, image/jpg"
-                    className="hidden"
+                <div className="sm:col-span-1">
+                  <UniversalImageUploader
+                    label="Agency Logo *"
+                    helpText="PNG, JPG, WEBP (Max 10MB)"
+                    folder="travelos/agencies/logo"
+                    value={formData.logoUrl}
+                    onChange={(url) => setFormData((prev) => ({ ...prev, logoUrl: url }))}
+                    aspectRatio="square"
                   />
-
-                  {isUploadingLogo ? (
-                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-purple-300 bg-purple-50/50 flex flex-col items-center justify-center p-3 animate-pulse">
-                      <Loader2 className="w-6 h-6 text-[#583BE8] animate-spin mb-1" />
-                      <span className="text-[11px] font-bold text-[#583BE8]">Uploading...</span>
-                    </div>
-                  ) : formData.logoUrl ? (
-                    <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-[#583BE8] p-1 bg-white shadow-md group overflow-hidden flex items-center justify-center">
-                      <img
-                        src={formData.logoUrl}
-                        alt="Agency Logo Preview"
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-full">
-                        <button
-                          type="button"
-                          onClick={() => logoInputRef.current?.click()}
-                          className="p-1.5 rounded-full bg-white text-[#583BE8] hover:bg-purple-50 cursor-pointer"
-                          title="Replace Logo"
-                        >
-                          <Camera className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormData((prev) => ({ ...prev, logoUrl: '' }))}
-                          className="p-1.5 rounded-full bg-white text-rose-600 hover:bg-rose-50 cursor-pointer"
-                          title="Remove Logo"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => logoInputRef.current?.click()}
-                      className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-dashed border-purple-200 bg-purple-50/30 hover:bg-purple-50/60 hover:border-[#583BE8] transition-all flex flex-col items-center justify-center text-center p-3 cursor-pointer group"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-purple-100 text-[#583BE8] flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-                        <UploadCloud className="w-4 h-4" />
-                      </div>
-                      <span className="text-xs font-bold text-[#583BE8]">Upload Logo</span>
-                      <span className="text-[10px] font-medium text-slate-400 mt-0.5">PNG, JPG (Max 2MB)</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Cover Photo Upload */}
-                <div className="sm:col-span-2 space-y-2">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    Cover Photo <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="file"
-                    ref={coverInputRef}
-                    onChange={handleCoverUpload}
-                    accept="image/png, image/jpeg, image/jpg"
-                    className="hidden"
+                <div className="sm:col-span-2">
+                  <UniversalImageUploader
+                    label="Cover Photo *"
+                    helpText="Wide banner for agency storefront (Max 10MB)"
+                    folder="travelos/agencies/banner"
+                    value={formData.coverUrl}
+                    onChange={(url) => setFormData((prev) => ({ ...prev, coverUrl: url }))}
+                    aspectRatio="wide"
                   />
-
-                  {isUploadingCover ? (
-                    <div className="w-full h-36 sm:h-40 rounded-2xl border-2 border-purple-300 bg-purple-50/50 flex flex-col items-center justify-center p-4 animate-pulse">
-                      <Loader2 className="w-7 h-7 text-[#583BE8] animate-spin mb-1.5" />
-                      <span className="text-xs font-bold text-[#583BE8]">Uploading Cover Photo...</span>
-                    </div>
-                  ) : formData.coverUrl ? (
-                    <div className="relative w-full h-36 sm:h-40 rounded-2xl overflow-hidden border border-slate-200 shadow-sm group">
-                      <img
-                        src={formData.coverUrl}
-                        alt="Agency Cover Preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end justify-between p-3">
-                        <button
-                          type="button"
-                          onClick={() => coverInputRef.current?.click()}
-                          className="px-3 py-1.5 rounded-xl bg-white/90 hover:bg-white text-[#0F172A] font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                        >
-                          <Camera className="w-3.5 h-3.5 text-[#583BE8]" />
-                          <span>Change Cover</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormData((prev) => ({ ...prev, coverUrl: '' }))}
-                          className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all cursor-pointer"
-                          title="Remove Cover"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => coverInputRef.current?.click()}
-                      className="w-full h-36 sm:h-40 rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/30 hover:bg-purple-50/60 hover:border-[#583BE8] transition-all flex flex-col items-center justify-center text-center p-4 cursor-pointer group"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-purple-100 text-[#583BE8] flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-                        <UploadCloud className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-bold text-[#583BE8]">Upload Cover Photo</span>
-                      <span className="text-[11px] font-medium text-slate-400 mt-0.5">PNG, JPG (Max 5MB)</span>
-                    </div>
-                  )}
                 </div>
               </div>
 

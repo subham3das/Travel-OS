@@ -3,6 +3,7 @@ import { AgencyModel, IAgency } from '../models/agency.model.js';
 import { PackageModel } from '../models/package.model.js';
 import { ReviewModel } from '../models/review.model.js';
 import { NotFoundError } from '../utils/errors.util.js';
+import { packageReadinessService } from './packageReadiness.service.js';
 
 export interface PublicAgencyFilters {
   search?: string;
@@ -25,14 +26,19 @@ export class PublicAgencyService {
 
     const formattedPackages = packagesList.map((p: any) => ({
       id: p.packageId || String(p._id),
+      packageId: p.packageId || String(p._id),
       title: p.title,
       duration: `${p.durationDays || 4} Days / ${p.durationNights || 3} Nights`,
+      durationDays: p.durationDays || 4,
+      durationNights: p.durationNights || 3,
       price: `₹${(p.price || 0).toLocaleString('en-IN')}`,
+      numericPrice: p.price || 0,
       originalPrice: p.originalPrice ? `₹${p.originalPrice.toLocaleString('en-IN')}` : undefined,
       rating: p.rating || 4.8,
       badge: p.discountPercent ? `${p.discountPercent}% Off` : (p.isFeatured ? 'Featured' : 'Popular'),
       badgeType: (p.isFeatured ? 'bestseller' : 'popular') as 'bestseller' | 'popular' | 'new',
-      imageUrl: p.coverImage || p.featuredImage || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800',
+      imageUrl: p.coverImage || p.featuredImage || (Array.isArray(p.images) && p.images[0]) || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800',
+      coverImage: p.coverImage || p.featuredImage || (Array.isArray(p.images) && p.images[0]) || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800',
     }));
 
     const formattedReviews = reviewsList.map((r: any) => ({
@@ -51,6 +57,13 @@ export class PublicAgencyService {
       ? agency.specializationTags
       : ['Adventure Tours', 'Custom Itineraries', 'Family Expeditions', 'Mountain Treks'];
 
+    const packagePrices = packagesList.map((p: any) => p.price).filter((pr: any) => typeof pr === 'number' && pr > 0);
+    const minPrice = packagePrices.length > 0 ? Math.min(...packagePrices) : 4999;
+    const startingPrice = `₹${minPrice.toLocaleString('en-IN')}`;
+
+    const uniqueDests = new Set(packagesList.map((p: any) => p.destination).filter(Boolean));
+    const destinationsCount = uniqueDests.size > 0 ? uniqueDests.size : (agency.destinationsCount || 12);
+
     return {
       id: rawId,
       _id: String(agency._id),
@@ -65,12 +78,12 @@ export class PublicAgencyService {
       reviewCount: agency.reviewCount || reviewsList.length || 140,
       yearsExperience: agency.yearsExperience || 6,
       tripsCompleted: `${agency.tripsCompleted || '1,200+'}+ Trips`,
-      destinationsCount: agency.destinationsCount || 12,
+      destinationsCount,
       guidesCount: agency.guidesCount || 8,
       languagesCount: 3,
       languages: 'English, Hindi, Assamese',
       location,
-      startingPrice: '₹4,999',
+      startingPrice,
       responseTime: 'Within 2 hours',
       specializationTags: tags,
       travelStyles: ['Adventure', 'Nature', 'Heritage', 'Custom Group'],
@@ -213,8 +226,10 @@ export class PublicAgencyService {
       throw new NotFoundError(`Agency "${agencyIdentifier}" not found`);
     }
 
-    // Fetch this agency's packages
+    // Fetch this agency's packages (only bookable ones)
+    const bookableIds = await packageReadinessService.getBookablePackageIds();
     const packages = await PackageModel.find({
+      _id: { $in: bookableIds },
       agencyId: agency._id,
       isDeleted: false,
     }).lean();

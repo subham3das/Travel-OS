@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, Mail, ArrowRight, ArrowLeft, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { BrandLogo } from '../../../common/brand';
 import { agencyApiClient } from '../../services/agencyApiClient';
 
 export const AgencyForgotPasswordPage: React.FC = () => {
@@ -46,15 +47,15 @@ export const AgencyForgotPasswordPage: React.FC = () => {
     <div className="min-h-screen bg-[#F8F9FC] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans select-none">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         {/* Brand / Logo */}
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#583BE8] text-white shadow-lg shadow-[#583BE8]/30 mb-4">
-          <Building2 className="w-6 h-6" />
+        <div className="flex flex-col items-center mb-6">
+          <BrandLogo theme="light" className="h-10 w-auto mb-3" alt="ApnaTrip" />
+          <h2 className="text-2xl font-black tracking-tight text-[#0F172A]">
+            Forgot your password?
+          </h2>
+          <p className="mt-1.5 text-xs font-semibold text-slate-500 max-w-sm mx-auto leading-relaxed">
+            Enter your registered email address and we'll send you a secure password reset link.
+          </p>
         </div>
-        <h2 className="text-2xl font-black tracking-tight text-[#0F172A]">
-          Forgot your password?
-        </h2>
-        <p className="mt-1.5 text-xs font-semibold text-slate-500 max-w-sm mx-auto leading-relaxed">
-          Enter your registered email address and we'll send you a secure password reset link.
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">

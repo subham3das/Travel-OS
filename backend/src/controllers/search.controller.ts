@@ -6,6 +6,7 @@ export class SearchController {
     const filters = {
       query: (req.query.q as string) || (req.query.search as string) || '',
       category: req.query.category as string,
+      adventureType: req.query.adventureType as string,
       minPrice: req.query.minPrice ? Number(req.query.minPrice) : undefined,
       maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
       minRating: req.query.minRating ? Number(req.query.minRating) : undefined,

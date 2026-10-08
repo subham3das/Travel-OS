@@ -164,9 +164,16 @@ export const ReportLibrary: React.FC<ReportLibraryProps> = ({
 
         {/* Right Report Cards */}
         <div className="col-span-9 space-y-2 max-h-[580px] overflow-y-auto pr-1 scrollbar-thin">
-          {reports.map((report) => {
-            const isSelected = report.id === selectedReportId;
-            const { icon, bg } = getReportIcon(report.category);
+          {reports.length === 0 ? (
+            <div className="py-16 text-center text-slate-400">
+              <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm font-bold text-slate-600">No reports generated yet</p>
+              <p className="text-xs text-slate-400 mt-1">Generate a custom report or schedule automated exports</p>
+            </div>
+          ) : (
+            reports.map((report) => {
+              const isSelected = report.id === selectedReportId;
+            const { icon, bg } = getReportIcon((report.category as ReportCategory) || 'All');
 
             return (
               <div
@@ -236,7 +243,8 @@ export const ReportLibrary: React.FC<ReportLibraryProps> = ({
                 </div>
               </div>
             );
-          })}
+          })
+        )}
         </div>
       </div>
 

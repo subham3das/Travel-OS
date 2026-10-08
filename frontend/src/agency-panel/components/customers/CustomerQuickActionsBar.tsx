@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, MapPin, Phone, Mail, MessageSquare, ExternalLink } from 'lucide-react';
+import { ShoppingBag, Package, Phone, Mail, MessageSquare, ExternalLink } from 'lucide-react';
 import { Customer } from '../../data/customers';
 
 interface CustomerQuickActionsBarProps {
@@ -28,11 +28,11 @@ export const CustomerQuickActionsBar: React.FC<CustomerQuickActionsBarProps> = (
 
         <button
           type="button"
-          onClick={() => navigate('/agency/trips')}
+          onClick={() => navigate('/agency/packages')}
           className="p-3 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-extrabold text-xs flex items-center justify-center gap-2 border border-sky-100 transition-all cursor-pointer"
         >
-          <MapPin className="w-4 h-4" />
-          <span>View Trips</span>
+          <Package className="w-4 h-4" />
+          <span>View Packages</span>
         </button>
 
         <a

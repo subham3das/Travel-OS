@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { OnboardingStepper } from '../../components/OnboardingStepper';
 import { cloudinaryUploadService } from '../../../services/cloudinaryUpload.service';
+import { registrationDraftClient } from '../../services/registrationDraftClient.service';
+import { UniversalImageUploader } from '../../../components/common/UniversalImageUploader';
 
 const STORAGE_KEY = 'apnatrip_agency_onboarding_verification';
 
@@ -181,100 +183,134 @@ export const AgencyVerificationOnboardingPage: React.FC = () => {
   const isFormValid =
     isRegCertValid && isPanValid && isGovIdValid && isSelfieValid && isAddressProofValid;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isFormValid) {
+      try {
+        const docList = [];
+        if (formData.registrationCert?.dataUrl) {
+          docList.push({
+            id: 'doc-reg-cert',
+            type: 'Business Registration',
+            name: 'Business Registration Certificate',
+            fileUrl: formData.registrationCert.dataUrl,
+            url: formData.registrationCert.dataUrl,
+            title: formData.registrationCert.name,
+            size: formData.registrationCert.size,
+            uploadedAt: formData.registrationCert.uploadedAt,
+          });
+        }
+        if (formData.gstCert?.dataUrl) {
+          docList.push({
+            id: 'doc-gst-cert',
+            type: 'GST Certificate',
+            name: 'GST Certificate',
+            fileUrl: formData.gstCert.dataUrl,
+            url: formData.gstCert.dataUrl,
+            title: formData.gstCert.name,
+            size: formData.gstCert.size,
+            uploadedAt: formData.gstCert.uploadedAt,
+          });
+        }
+        if (formData.panCard?.dataUrl) {
+          docList.push({
+            id: 'doc-pan-card',
+            type: 'PAN Card',
+            name: 'Company PAN Card',
+            fileUrl: formData.panCard.dataUrl,
+            url: formData.panCard.dataUrl,
+            title: formData.panCard.name,
+            size: formData.panCard.size,
+            uploadedAt: formData.panCard.uploadedAt,
+          });
+        }
+        if (formData.governmentIdFile?.dataUrl) {
+          docList.push({
+            id: 'doc-gov-id',
+            type: 'Government ID',
+            name: `Owner Government ID (${formData.governmentIdType || 'Aadhaar'})`,
+            fileUrl: formData.governmentIdFile.dataUrl,
+            url: formData.governmentIdFile.dataUrl,
+            title: `${formData.governmentIdType}: ${formData.governmentIdFile.name}`,
+            size: formData.governmentIdFile.size,
+            uploadedAt: formData.governmentIdFile.uploadedAt,
+          });
+        }
+        if (formData.selfieFile?.dataUrl) {
+          docList.push({
+            id: 'doc-selfie',
+            type: 'Owner Photo',
+            name: 'Owner Photo / Selfie',
+            fileUrl: formData.selfieFile.dataUrl,
+            url: formData.selfieFile.dataUrl,
+            title: formData.selfieFile.name,
+            size: formData.selfieFile.size,
+            uploadedAt: formData.selfieFile.uploadedAt,
+          });
+        }
+        if (formData.addressProofFile?.dataUrl) {
+          docList.push({
+            id: 'doc-address-proof',
+            type: 'Address Proof',
+            name: 'Office Address Proof',
+            fileUrl: formData.addressProofFile.dataUrl,
+            url: formData.addressProofFile.dataUrl,
+            title: formData.addressProofFile.name,
+            size: formData.addressProofFile.size,
+            uploadedAt: formData.addressProofFile.uploadedAt,
+          });
+        }
+
+        await registrationDraftClient.saveDraft({
+          serviceType: 'agency',
+          businessDetails: { governmentIdType: formData.governmentIdType },
+          documents: docList,
+          currentStep: 3,
+        });
+      } catch (err) {
+        console.warn('Draft save error:', err);
+      }
       navigate('/agency/onboarding/bank');
     }
   };
 
-  // Helper render for Upload Slot
+  // Universal Upload Box Renderer
   const renderUploadBox = (
     fieldKey: keyof VerificationFormData,
-    inputRef: React.RefObject<HTMLInputElement | null>,
-    buttonLabel: string = 'Upload File',
-    allowedFormats: string[] = ['pdf', 'png', 'jpg', 'jpeg'],
+    _inputRef?: React.RefObject<HTMLInputElement | null>,
+    _buttonLabel: string = 'Upload File',
+    _allowedFormats: string[] = ['pdf', 'png', 'jpg', 'jpeg'],
     isImageOnly: boolean = false
   ) => {
     const fileItem = formData[fieldKey] as DocumentUploadItem | null;
-    const isUploading = uploadingField === fieldKey;
-
-    if (isUploading) {
-      return (
-        <div className="w-full sm:w-48 h-24 rounded-2xl border border-purple-200 bg-purple-50/50 p-4 flex flex-col items-center justify-center space-y-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#583BE8]">
-            <RefreshCw className="w-4 h-4 animate-spin" />
-            <span>Uploading... {uploadProgress}%</span>
-          </div>
-          <div className="w-full bg-purple-100 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-[#583BE8] h-full transition-all duration-200"
-              style={{ width: `${uploadProgress}%` }}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (fileItem) {
-      const isImg = fileItem.type.startsWith('image/') || fileItem.dataUrl?.startsWith('data:image');
-
-      return (
-        <div className="w-full sm:w-56 bg-purple-50/40 rounded-2xl border border-purple-200/80 p-3 flex flex-col justify-between space-y-2">
-          <div className="flex items-start gap-2.5">
-            {isImg && fileItem.dataUrl ? (
-              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-purple-200">
-                <img src={fileItem.dataUrl} alt="Preview" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-purple-100 text-[#583BE8] flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5" />
-              </div>
-            )}
-            <div className="space-y-0.5 min-w-0 flex-1">
-              <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 leading-tight">
-                <CheckCircle2 className="w-3 h-3" /> Uploaded
-              </span>
-              <p className="text-xs font-bold text-[#0F172A] truncate" title={fileItem.name}>
-                {fileItem.name}
-              </p>
-              <p className="text-[10px] font-semibold text-slate-400">{fileItem.sizeFormatted}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 pt-1 border-t border-purple-100/80 justify-end">
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="text-[11px] font-bold text-[#583BE8] hover:underline cursor-pointer"
-            >
-              Replace
-            </button>
-            <span className="text-slate-300">•</span>
-            <button
-              type="button"
-              onClick={() => removeFile(fieldKey)}
-              className="text-[11px] font-bold text-rose-500 hover:underline cursor-pointer"
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-      );
-    }
 
     return (
-      <div
-        onClick={() => inputRef.current?.click()}
-        className="w-full sm:w-48 h-24 sm:h-28 rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/30 hover:bg-purple-50/70 hover:border-[#583BE8] transition-all flex flex-col items-center justify-center text-center p-3 cursor-pointer group shrink-0"
-      >
-        <div className="w-8 h-8 rounded-full bg-purple-100 text-[#583BE8] flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-          <UploadCloud className="w-4 h-4" />
-        </div>
-        <span className="text-xs font-bold text-[#583BE8]">{buttonLabel}</span>
-        <span className="text-[10px] font-semibold text-slate-400 mt-0.5">
-          {isImageOnly ? 'JPG, PNG • Max 10MB' : 'PDF, JPG, PNG • Max 10MB'}
-        </span>
+      <div className="w-full sm:w-56 shrink-0">
+        <UniversalImageUploader
+          value={fileItem?.dataUrl}
+          allowPdf={!isImageOnly}
+          aspectRatio="square"
+          compact={true}
+          folder="travelos/agencies/documents"
+          placeholder={isImageOnly ? "Upload Photo" : "Upload Document"}
+          onChange={(img) => {
+            if (!img) {
+              setFormData((prev) => ({ ...prev, [fieldKey]: null }));
+              return;
+            }
+            const uploadedUrl = typeof img === 'string' ? img : img.url;
+            const item: DocumentUploadItem = {
+              id: `${fieldKey}-${Date.now()}`,
+              name: typeof img === 'object' && img.publicId ? img.publicId.split('/').pop() || 'document' : 'document',
+              size: typeof img === 'object' && img.bytes ? img.bytes : 1024 * 50,
+              sizeFormatted: typeof img === 'object' && img.bytes ? `${(img.bytes / 1024).toFixed(1)} KB` : 'Uploaded',
+              type: uploadedUrl.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+              dataUrl: uploadedUrl,
+              uploadedAt: new Date().toISOString(),
+            };
+            setFormData((prev) => ({ ...prev, [fieldKey]: item }));
+          }}
+        />
       </div>
     );
   };
@@ -355,50 +391,6 @@ export const AgencyVerificationOnboardingPage: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Hidden File Inputs */}
-          <input
-            type="file"
-            ref={registrationCertRef}
-            onChange={(e) => handleFileChange('registrationCert', e, ['pdf', 'png', 'jpg', 'jpeg'], 10)}
-            accept=".pdf, .png, .jpg, .jpeg"
-            className="hidden"
-          />
-          <input
-            type="file"
-            ref={gstCertRef}
-            onChange={(e) => handleFileChange('gstCert', e, ['pdf', 'png', 'jpg', 'jpeg'], 10)}
-            accept=".pdf, .png, .jpg, .jpeg"
-            className="hidden"
-          />
-          <input
-            type="file"
-            ref={panCardRef}
-            onChange={(e) => handleFileChange('panCard', e, ['pdf', 'png', 'jpg', 'jpeg'], 10)}
-            accept=".pdf, .png, .jpg, .jpeg"
-            className="hidden"
-          />
-          <input
-            type="file"
-            ref={governmentIdRef}
-            onChange={(e) => handleFileChange('governmentIdFile', e, ['pdf', 'png', 'jpg', 'jpeg'], 10)}
-            accept=".pdf, .png, .jpg, .jpeg"
-            className="hidden"
-          />
-          <input
-            type="file"
-            ref={selfieRef}
-            onChange={(e) => handleFileChange('selfieFile', e, ['png', 'jpg', 'jpeg'], 10)}
-            accept=".png, .jpg, .jpeg"
-            className="hidden"
-          />
-          <input
-            type="file"
-            ref={addressProofRef}
-            onChange={(e) => handleFileChange('addressProofFile', e, ['pdf', 'png', 'jpg', 'jpeg'], 10)}
-            accept=".pdf, .png, .jpg, .jpeg"
-            className="hidden"
-          />
-
           {/* ── SECTION 1: Business Documents ── */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}

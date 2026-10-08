@@ -7,6 +7,7 @@ import { PreferenceToggleCard } from '../../components/preferences/PreferenceTog
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { userAuthService } from '../../services/userAuth.service';
+import { BrandLogo } from '../../../common/brand';
 
 const travelStyles: StyleOption[] = [
   { id: 'backpacking', label: 'Backpacking', icon: '🎒' },
@@ -112,7 +113,7 @@ export const TravelPreferencesPage: React.FC = () => {
     deals: true,
     festivals: true,
     nearby: false,
-    community: true,
+    rentals: true,
     priceDrops: true,
     agencyOffers: false,
   });
@@ -183,7 +184,7 @@ export const TravelPreferencesPage: React.FC = () => {
         tripReminders: true,
         travelRecommendations: notifications.nearby,
         offersAndDiscounts: notifications.priceDrops,
-        communityActivity: notifications.community,
+        rentalActivity: notifications.rentals,
         marketingEmails: notifications.agencyOffers,
       });
 
@@ -215,12 +216,14 @@ export const TravelPreferencesPage: React.FC = () => {
       <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 sm:px-8 h-16 flex items-center justify-between">
         <button
           onClick={() => navigate('/home')}
-          className="flex items-center gap-2 text-[#0F172A] focus:outline-none"
+          className="flex items-center hover:opacity-90 transition-opacity focus:outline-none cursor-pointer"
+          aria-label="ApnaTrip Home"
         >
-          <svg className="w-6 h-6 text-[#FF4D6D] fill-current" viewBox="0 0 24 24">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-          </svg>
-          <span className="text-xl font-black tracking-tight">ApnaTrip</span>
+          <BrandLogo
+            theme="light"
+            className="h-8 sm:h-9 w-auto"
+            alt="ApnaTrip"
+          />
         </button>
 
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-[#FF4D6D] text-xs font-bold">
@@ -595,11 +598,11 @@ export const TravelPreferencesPage: React.FC = () => {
               onToggle={() => setNotifications((p) => ({ ...p, nearby: !p.nearby }))}
             />
             <PreferenceToggleCard
-              id="community"
-              title="Community Updates"
-              subtitle="New story posts & replies"
-              enabled={notifications.community}
-              onToggle={() => setNotifications((p) => ({ ...p, community: !p.community }))}
+              id="rentals"
+              title="Car Rental Alerts"
+              subtitle="Vehicle bookings & ride updates"
+              enabled={notifications.rentals}
+              onToggle={() => setNotifications((p) => ({ ...p, rentals: !p.rentals }))}
             />
           </div>
         </motion.section>
@@ -618,7 +621,7 @@ export const TravelPreferencesPage: React.FC = () => {
           <div className="space-y-3">
             <PreferenceToggleCard
               id="showProfile"
-              title="Show my profile in Community"
+              title="Make my travel profile public"
               enabled={privacy.showProfile}
               onToggle={() => setPrivacy((p) => ({ ...p, showProfile: !p.showProfile }))}
             />

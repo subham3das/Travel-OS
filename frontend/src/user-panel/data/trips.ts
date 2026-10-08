@@ -79,23 +79,44 @@ export interface TravelStats {
 
 export interface UserBooking {
   id: string; // e.g. BK-2025-0012
+  _id?: string;
+  bookingId?: string;
+  bookingType?: 'PACKAGE' | 'CAR_RENTAL' | string;
   packageId: string;
   packageName: string;
   coverImage: string;
   bookingDate: string;
   departureDate: string;
   travelerCount: number;
-  paymentStatus: 'PAID' | 'PARTIALLY_PAID' | 'REFUNDED';
-  bookingStatus: MasterTripStatus;
+  paymentStatus: 'PAID' | 'PARTIALLY_PAID' | 'REFUNDED' | 'ADVANCE_PAID' | 'COMPLETED' | 'PENDING' | string;
+  bookingStatus: MasterTripStatus | string;
   countdownDays: number;
   isConvertedToTrip: boolean;
   associatedTripId?: string;
   totalAmount: number;
   amountPaid: number;
+  remainingAmount?: number;
   platformFees: number;
   invoiceUrl: string;
   transactionId: string;
+  pickupLocation?: string;
+  dropLocation?: string;
+  pickupTime?: string;
+  tripType?: string;
+  vehicle?: string;
+  provider?: string;
+  driverName?: string;
+  driverPhone?: string;
+  driverPhoto?: string;
+  driverLicense?: string;
+  agencyName?: string;
+  agencyPhone?: string;
+  canCancel?: boolean;
+  timeline?: any[];
+  actualBookingStatus?: string;
+  hasReviewed?: boolean;
 }
+
 
 export interface Trip {
   id: string;
@@ -150,6 +171,16 @@ export interface Trip {
   };
   timeline: TimelineMilestone[];
   invoiceUrl?: string;
+  _id?: string;
+  tripId?: string;
+  tripType?: string;
+  destination?: string;
+  dates?: string;
+  badgeText?: string;
+  masterStatus?: string;
+  leadVehicle?: any;
+  leadHost?: any;
+  leadGuide?: any;
 }
 
 // ── Backend-Ready API Interface Contracts ──

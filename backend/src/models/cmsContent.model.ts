@@ -24,12 +24,11 @@ export interface ICMSContent extends Document {
 
 const CMSContentSchema = new Schema<ICMSContent>(
   {
-    contentId: { type: String, required: true, unique: true, index: true },
+    contentId: { type: String, required: true, unique: true },
     type: {
       type: String,
       enum: ['hero_banner', 'announcement', 'promo_popup', 'section', 'seo'],
       required: true,
-      index: true,
     },
     title: { type: String, required: true },
     subtitle: { type: String },
@@ -48,7 +47,7 @@ const CMSContentSchema = new Schema<ICMSContent>(
       index: true,
     },
     meta: { type: Schema.Types.Mixed, default: {} },
-    isDeleted: { type: Boolean, default: false, index: true },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

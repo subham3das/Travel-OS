@@ -17,7 +17,7 @@ export interface DepartureItem {
   seatsFilled: number;
   totalCapacity: number;
   bookingDeadline: string;
-  status: 'OPEN' | 'READY_FOR_TRIP' | 'MOVED_TO_TRIP' | 'MINIMUM_NOT_REACHED';
+  status: 'OPEN' | 'READY_FOR_TRIP' | 'MOVED_TO_TRIP' | 'MINIMUM_NOT_REACHED' | 'SOLDOUT' | 'BOOKING_CLOSED' | 'COMPLETED' | string;
 }
 
 export interface ItineraryDayDetail {
@@ -36,6 +36,12 @@ export interface DetailedPackage {
   packageId: string; // e.g. "PKG-1024"
   packageName: string;
   status: 'Active' | 'Draft' | 'Hidden' | 'Archived';
+  readiness?: {
+    isBookable: boolean;
+    status: 'READY' | 'NEEDS_SETUP';
+    label: 'Ready to Sell' | 'Needs Setup';
+    missingRequirements: string[];
+  };
   destination: string;
   duration: string;
   packageType: 'Domestic' | 'International';
@@ -52,20 +58,19 @@ export interface DetailedPackage {
   description: string;
   highlights: string[];
   bestSeason: string;
-  minTravelers: number;
   maxTravelers: number;
   included: string[];
   excluded: string[];
   pricingModel: string;
   itinerary: ItineraryDayDetail[];
-  accommodation: {
+  accommodation?: {
     hotelName: string;
     roomType: string;
     mealsIncluded: string;
     vehicleType: string;
     pickupLocation: string;
     dropLocation: string;
-  };
+  } | null;
   upcomingDepartures: DepartureItem[];
   reviews: {
     averageRating: number;
@@ -122,7 +127,6 @@ export const MOCK_DETAILED_PACKAGES: Record<string, DetailedPackage> = {
       'Magnetic Hill & Confluence of Indus and Zanskar Rivers',
     ],
     bestSeason: 'May to September',
-    minTravelers: 8,
     maxTravelers: 20,
     included: [
       'Accommodation in 3-star hotels and luxury tents',

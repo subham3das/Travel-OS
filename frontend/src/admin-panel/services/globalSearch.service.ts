@@ -70,11 +70,7 @@ export const initialQuickCommands: QuickCommandItem[] = [
   },
 ];
 
-export const initialRecentSearches: RecentSearchItem[] = [
-  { id: 'rec-1', query: 'Wanderlust Holidays', timestamp: '10 mins ago', targetRoute: '/admin/agencies' },
-  { id: 'rec-2', query: 'Booking BK-78452', timestamp: '25 mins ago', targetRoute: '/admin/bookings' },
-  { id: 'rec-3', query: 'Refund Requests', timestamp: '1 hour ago', targetRoute: '/admin/finance' },
-];
+export const initialRecentSearches: RecentSearchItem[] = [];
 
 export const indexedGlobalSearchResults: GlobalSearchResultItem[] = [];
 

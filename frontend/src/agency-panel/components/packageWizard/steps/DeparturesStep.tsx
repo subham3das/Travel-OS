@@ -36,7 +36,6 @@ export const DeparturesStep: React.FC = () => {
         {departures.map((dep, index) => {
           const isDateInPast = dep.departureDate < todayStr;
           const isClosingInvalid = dep.bookingClosingDate >= dep.departureDate;
-          const isCapacityInvalid = dep.minimumTravelers > dep.maximumTravelers;
 
           return (
             <div
@@ -184,37 +183,18 @@ export const DeparturesStep: React.FC = () => {
                   />
                 </div>
 
-                {/* Minimum Travelers */}
+                {/* Maximum Travelers (Capacity) */}
                 <div>
-                  <label className="text-slate-700 block mb-1">Minimum Travelers *</label>
+                  <label className="text-slate-700 block mb-1">Package Capacity (Max Travelers) *</label>
                   <input
                     type="number"
                     min={1}
-                    value={dep.minimumTravelers}
-                    onChange={(e) =>
-                      updateDepartureItem(dep.id, { minimumTravelers: parseInt(e.target.value) || 1 })
-                    }
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-extrabold"
-                  />
-                </div>
-
-                {/* Maximum Travelers */}
-                <div>
-                  <label className="text-slate-700 block mb-1">Maximum Travelers (Capacity) *</label>
-                  <input
-                    type="number"
-                    min={dep.minimumTravelers}
                     value={dep.maximumTravelers}
                     onChange={(e) =>
                       updateDepartureItem(dep.id, { maximumTravelers: parseInt(e.target.value) || 1 })
                     }
-                    className={`w-full bg-slate-50 border rounded-2xl px-3.5 py-2.5 text-slate-800 font-extrabold ${
-                      isCapacityInvalid ? 'border-rose-400 bg-rose-50/50' : 'border-slate-200'
-                    }`}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-extrabold"
                   />
-                  {isCapacityInvalid && (
-                    <p className="text-[10px] text-rose-600 font-bold mt-1">Min travelers cannot exceed max travelers.</p>
-                  )}
                 </div>
               </div>
 
@@ -249,7 +229,7 @@ export const DeparturesStep: React.FC = () => {
                   <div>
                     <span className="text-[10px] text-slate-400 block font-semibold">Capacity & Seats</span>
                     <span className="font-extrabold text-slate-800">
-                      {dep.minimumTravelers} - {dep.maximumTravelers} Max ({dep.availableSeats} Available)
+                      {dep.maximumTravelers} Total Seats ({dep.availableSeats} Available)
                     </span>
                   </div>
                 </div>

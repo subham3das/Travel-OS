@@ -38,9 +38,6 @@ export interface FullUserProfileResponse extends UserAuthResponse {
     countriesVisited: number;
     lifetimeSpend: string;
     avgRatingGiven: number;
-    postsCount: number;
-    followersCount: number;
-    followingCount: number;
     reputationScore: number;
     levelTitle: string;
   };
@@ -61,12 +58,6 @@ export interface FullUserProfileResponse extends UserAuthResponse {
     bgColor: string;
     borderColor: string;
     iconColor: string;
-  }>;
-  mediaPosts?: Array<{
-    id: string;
-    title: string;
-    location: string;
-    imageUrl: string;
   }>;
 }
 
@@ -241,6 +232,7 @@ class UserAuthService {
     accessibilityRequirements?: string;
     country?: string;
     avatar?: string;
+    theme?: 'Light' | 'Dark' | 'System';
   }) {
     const res = await this.request<{ profile: UserAuthResponse }>(
       '/profile',
@@ -323,11 +315,22 @@ class UserAuthService {
     return res.data;
   }
 
-  // 9. Reset Password
-  public async resetPassword(token: string, password: string) {
+  // 9. Verify Reset Token
+  public async verifyResetToken(token: string) {
+    const res = await this.request<{ valid: boolean; email: string }>(
+      `/auth/verify-reset-token?token=${encodeURIComponent(token)}`,
+      {
+        method: 'GET',
+      }
+    );
+    return res.data;
+  }
+
+  // 10. Reset Password
+  public async resetPassword(token: string, password: string, confirmPassword?: string) {
     const res = await this.request<{ message: string }>('/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ token, password }),
+      body: JSON.stringify({ token, password, confirmPassword: confirmPassword || password }),
     });
     return res.data;
   }

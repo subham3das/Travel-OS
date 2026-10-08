@@ -2,30 +2,38 @@ import React from 'react';
 import { Calendar, MapPin, Navigation, Car, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export const ItineraryMap: React.FC = () => {
+interface ItineraryMapProps {
+  packageName?: string;
+  packageId?: string;
+  days?: Array<{ day: number; title: string; isDone?: boolean }>;
+}
+
+export const ItineraryMap: React.FC<ItineraryMapProps> = ({
+  packageName,
+  packageId,
+  days = [],
+}) => {
   const navigate = useNavigate();
 
-  const days = [
-    { day: 1, title: 'Guwahati Arrival', isDone: true },
-    { day: 2, title: 'Shillong Sightseeing', isDone: false },
-    { day: 3, title: 'Cherrapunji Exploration', isDone: false },
-    { day: 4, title: 'Mawlynnong & Dawki', isDone: false },
-    { day: 5, title: 'Guwahati Departure', isDone: false },
-  ];
+  if (!days || days.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-3.5">
       <div className="flex items-center justify-between">
         <h3 className="text-lg sm:text-xl font-extrabold text-[#0F172A] tracking-tight">
-          Itinerary & Route (Meghalaya Adventure)
+          {packageName ? `Itinerary & Route (${packageName})` : 'Tour Itinerary'}
         </h3>
-        <button
-          onClick={() => navigate('/package/pkg-meghalaya-7d')}
-          className="text-xs sm:text-sm font-bold text-[#6356E5] hover:underline focus:outline-none flex items-center gap-1 cursor-pointer shrink-0"
-        >
-          <span>View Full Itinerary</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        {packageId && (
+          <button
+            onClick={() => navigate(`/package/${packageId}`)}
+            className="text-xs sm:text-sm font-bold text-[#6356E5] hover:underline focus:outline-none flex items-center gap-1 cursor-pointer shrink-0"
+          >
+            <span>View Full Itinerary</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="rounded-3xl bg-white border border-slate-100/90 shadow-2xs overflow-hidden flex flex-col md:flex-row">

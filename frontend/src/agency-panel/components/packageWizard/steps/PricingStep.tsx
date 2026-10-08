@@ -17,7 +17,6 @@ export const PricingStep: React.FC = () => {
     pricingModel: 'Price Per Person',
     originalPrice: 18999,
     discountedPrice: 16999,
-    minTravelers: 4,
     maxTravelers: 20,
     recommendedGroupSize: 12,
     paymentType: 'Partial Payment',

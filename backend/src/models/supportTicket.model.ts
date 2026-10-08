@@ -45,10 +45,10 @@ export interface ISupportTicket extends Document {
 
 const SupportTicketSchema = new Schema<ISupportTicket>(
   {
-    ticketId: { type: String, required: true, unique: true, index: true },
+    ticketId: { type: String, required: true, unique: true },
     subject: { type: String, required: true },
     description: { type: String, required: true },
-    userId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User' },
     userName: { type: String, required: true },
     userEmail: { type: String, required: true, lowercase: true },
     userPhone: { type: String, default: '+91 98765 43210' },
@@ -63,7 +63,6 @@ const SupportTicketSchema = new Schema<ISupportTicket>(
       type: String,
       enum: ['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED', 'ASSIGNED', 'ESCALATED'],
       default: 'OPEN',
-      index: true,
     },
     category: { type: String, default: 'General Support', index: true },
     assignedTo: { type: String },

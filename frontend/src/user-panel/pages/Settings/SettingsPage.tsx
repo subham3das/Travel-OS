@@ -14,6 +14,7 @@ import {
   Ruler,
   Clock,
   Bell,
+  Car,
   MessageSquare,
   Tag,
   Mail,
@@ -40,13 +41,14 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useWebsiteTheme as useTheme, WebsiteThemeMode as ThemeMode } from '../../context/WebsiteThemeContext';
+import { useTheme, ThemeMode } from '../../../theme/ThemeContext';
+import { userAuthService } from '../../services/userAuth.service';
 import { useToast } from '../../context/ToastContext';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 
 export const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { showToast } = useToast();
 
@@ -62,7 +64,7 @@ export const SettingsPage: React.FC = () => {
       ? JSON.parse(saved)
       : {
           bookingUpdates: true,
-          communityActivity: true,
+          rentalUpdates: true,
           promotions: false,
           emailNotifications: true,
           pushNotifications: true,
@@ -116,11 +118,25 @@ export const SettingsPage: React.FC = () => {
     navigate('/login');
   };
 
-  const getThemeLabel = (t: ThemeMode) => {
-    const lower = t.toLowerCase();
-    if (lower === 'light') return 'Light';
-    if (lower === 'dark') return 'Dark';
-    return 'System Default';
+  const getThemeLabel = (t: string) => {
+    const lower = (t || '').toLowerCase();
+    if (lower === 'light') return '☀️ Light';
+    if (lower === 'dark') return '🌙 Dark';
+    return '💻 System';
+  };
+
+  const handleThemeChange = async (newTheme: ThemeMode) => {
+    setTheme(newTheme);
+    showToast(`Theme updated to ${getThemeLabel(newTheme)}`, 'success');
+    setTimeout(() => setIsThemeSheetOpen(false), 200);
+
+    if (user) {
+      try {
+        await userAuthService.updateProfile({ theme: newTheme });
+      } catch {
+        // Theme is already saved in localStorage for immediate consistency
+      }
+    }
   };
 
   return (
@@ -224,7 +240,7 @@ export const SettingsPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-[#6356E5] bg-purple-50 px-2.5 py-1 rounded-xl">
+                <span className="text-xs font-bold text-[#2563EB] bg-blue-50 dark:bg-blue-900/30 dark:text-[#60A5FA] px-2.5 py-1 rounded-xl">
                   {getThemeLabel(theme)}
                 </span>
                 <ChevronRight className="w-5 h-5 text-slate-400" />
@@ -341,7 +357,7 @@ export const SettingsPage: React.FC = () => {
           <div className="bg-white rounded-3xl border border-slate-100 shadow-2xs divide-y divide-slate-100 overflow-hidden">
             {[
               { key: 'bookingUpdates', label: 'Booking Updates', subtitle: 'Flight, hotel & itinerary status', icon: <Bell className="w-5 h-5 text-purple-600" /> },
-              { key: 'communityActivity', label: 'Community Activity', subtitle: 'Comments, likes & mentions', icon: <MessageSquare className="w-5 h-5 text-sky-600" /> },
+              { key: 'rentalUpdates', label: 'Car Rental Updates', subtitle: 'Driver details & ride status', icon: <Car className="w-5 h-5 text-rose-600" /> },
               { key: 'promotions', label: 'Promotions & Offers', subtitle: 'Exclusive deals & discounts', icon: <Tag className="w-5 h-5 text-emerald-600" /> },
               { key: 'emailNotifications', label: 'Email Notifications', subtitle: 'Weekly summaries & receipts', icon: <Mail className="w-5 h-5 text-amber-600" /> },
               { key: 'pushNotifications', label: 'Push Notifications', subtitle: 'Instant alerts on mobile', icon: <Smartphone className="w-5 h-5 text-rose-600" /> },
@@ -499,7 +515,7 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div
-              onClick={() => setActiveModalContent({ title: "What's New in v1.0.4", body: '• Single Checkout Flow (/booking/checkout/:packageId)\n• Unified Live Agency & Host Verification\n• Interactive Community & Traveler Profiles\n• Complete End-to-End Navigation Integration' })}
+              onClick={() => setActiveModalContent({ title: "What's New in v1.0.4", body: '• Single Checkout Flow (/booking/checkout/:packageId)\n• Unified Live Agency & Host Verification\n• Scheduled Car Rental Marketplace (/car-rental)\n• Complete End-to-End Navigation Integration' })}
               className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
             >
               <div className="flex items-center gap-3.5">
@@ -610,22 +626,22 @@ export const SettingsPage: React.FC = () => {
               <div className="space-y-3">
                 {[
                   {
-                    id: 'light' as ThemeMode,
+                    id: 'Light' as ThemeMode,
                     title: '☀️ Light',
-                    subtitle: 'Always use the light theme.',
+                    subtitle: 'Crisp white backgrounds with neutral contrast.',
                     icon: <Sun className="w-5 h-5 text-amber-500" />,
                   },
                   {
-                    id: 'dark' as ThemeMode,
+                    id: 'Dark' as ThemeMode,
                     title: '🌙 Dark',
-                    subtitle: 'Always use the dark theme.',
-                    icon: <Moon className="w-5 h-5 text-purple-500" />,
+                    subtitle: 'Deep navy and slate for eye comfort in low light.',
+                    icon: <Moon className="w-5 h-5 text-blue-500" />,
                   },
                   {
-                    id: 'system' as ThemeMode,
-                    title: '📱 System Default',
-                    subtitle: 'Automatically match your device theme.',
-                    icon: <Laptop className="w-5 h-5 text-sky-500" />,
+                    id: 'System' as ThemeMode,
+                    title: '💻 System',
+                    subtitle: 'Automatically follow your device system preference.',
+                    icon: <Laptop className="w-5 h-5 text-cyan-500" />,
                   },
                 ].map((opt) => {
                   const isSelected = theme === opt.id;
@@ -633,28 +649,25 @@ export const SettingsPage: React.FC = () => {
                     <motion.div
                       key={opt.id}
                       whileTap={{ scale: 0.99 }}
-                      onClick={() => {
-                        setTheme(opt.id);
-                        setTimeout(() => setIsThemeSheetOpen(false), 200);
-                      }}
+                      onClick={() => handleThemeChange(opt.id)}
                       className={`p-4 rounded-2xl border flex items-center justify-between gap-4 cursor-pointer transition-all ${
                         isSelected
-                          ? 'bg-purple-50/60 border-[#6356E5] shadow-xs'
-                          : 'bg-white border-slate-100 hover:bg-slate-50'
+                          ? 'bg-blue-50/80 border-[#2563EB] shadow-xs dark:bg-blue-950/40 dark:border-[#2563EB]'
+                          : 'bg-white border-slate-100 hover:bg-slate-50 dark:bg-slate-800/80 dark:border-white/10 dark:hover:bg-slate-800'
                       }`}
                     >
                       <div className="flex items-center gap-3.5">
-                        <div className="w-10 h-10 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shrink-0 shadow-2xs">
+                        <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-2xs">
                           {opt.icon}
                         </div>
                         <div>
-                          <h4 className="text-sm font-black text-[#0F172A]">{opt.title}</h4>
-                          <p className="text-xs font-medium text-slate-400">{opt.subtitle}</p>
+                          <h4 className="text-sm font-black text-[#0F172A] dark:text-white">{opt.title}</h4>
+                          <p className="text-xs font-medium text-slate-400 dark:text-slate-400">{opt.subtitle}</p>
                         </div>
                       </div>
 
                       {isSelected && (
-                        <CheckCircle2 className="w-5 h-5 text-[#6356E5] fill-[#6356E5]/10 shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-[#2563EB] fill-[#2563EB]/10 shrink-0" />
                       )}
                     </motion.div>
                   );

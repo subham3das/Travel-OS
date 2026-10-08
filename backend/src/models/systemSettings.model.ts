@@ -19,6 +19,17 @@ export interface ISystemSettings extends Document {
     serverLocation: string;
     uptime: string;
   };
+  commission: {
+    type: 'PERCENTAGE' | 'FIXED';
+    rate: number;
+    minFee: number;
+    maxFee: number;
+    taxRate: number;
+    isAutoTransferEnabled: boolean;
+    settlementCycle: string;
+    updatedBy?: string;
+    updatedAt?: Date;
+  };
   featureFlags: Array<{
     id: string;
     name: string;
@@ -51,6 +62,17 @@ const SystemSettingsSchema = new Schema<ISystemSettings>(
       environment: { type: String, default: 'Production' },
       serverLocation: { type: String, default: 'Mumbai, India' },
       uptime: { type: String, default: '18 days, 6 hours' },
+    },
+    commission: {
+      type: { type: String, enum: ['PERCENTAGE', 'FIXED'], default: 'PERCENTAGE' },
+      rate: { type: Number, default: 10 },
+      minFee: { type: Number, default: 0 },
+      maxFee: { type: Number, default: 100000 },
+      taxRate: { type: Number, default: 18 },
+      isAutoTransferEnabled: { type: Boolean, default: true },
+      settlementCycle: { type: String, default: 'T+2' },
+      updatedBy: { type: String, default: 'System' },
+      updatedAt: { type: Date, default: Date.now },
     },
     featureFlags: [
       {

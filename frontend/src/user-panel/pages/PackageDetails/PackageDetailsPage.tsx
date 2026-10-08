@@ -15,6 +15,8 @@ import { ReviewSection } from './components/ReviewSection';
 import { FAQSection } from './components/FAQSection';
 import { SimilarPackages } from './components/SimilarPackages';
 import { StickyBookingBar } from './components/StickyBookingBar';
+import { AvailableDeparturesSelector } from './components/AvailableDeparturesSelector';
+import { PackageDepartureInfo } from '../../types/package';
 
 export const PackageDetailsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +26,22 @@ export const PackageDetailsPage: React.FC = () => {
   const { pkg, loading, error } = usePackage(targetId);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
+  const [selectedDeparture, setSelectedDeparture] = useState<PackageDepartureInfo | null>(null);
+
+  React.useEffect(() => {
+    if (pkg) {
+      const allDeps = pkg.departures && pkg.departures.length > 0
+        ? pkg.departures
+        : (pkg.departure ? [pkg.departure] : []);
+
+      const firstSelectable = allDeps.find((d) => {
+        const available = d.availableSeats !== undefined ? d.availableSeats : Math.max(0, d.capacity - (d.bookedSeats || 0));
+        return (d.status === 'OPEN' || !d.status) && available > 0 && d.isSelectable !== false;
+      }) || allDeps[0] || null;
+
+      setSelectedDeparture(firstSelectable);
+    }
+  }, [pkg]);
 
   // Loading state
   if (loading) {
@@ -35,16 +53,16 @@ export const PackageDetailsPage: React.FC = () => {
     );
   }
 
-  // Error / Not Found state
-  if (error || !pkg) {
+  // Unavailable / Not Found state: Do NOT show package details if package is not bookable or not found
+  if (error || !pkg || pkg.isBookable === false) {
     return (
       <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center p-6 text-center space-y-4">
-        <div className="w-16 h-16 rounded-3xl bg-rose-50 text-rose-500 flex items-center justify-center font-black text-xl">
+        <div className="w-16 h-16 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center font-black text-2xl shadow-xs">
           !
         </div>
-        <h2 className="text-2xl font-black text-[#0F172A]">Package Not Found</h2>
+        <h2 className="text-2xl font-black text-[#0F172A]">This package is currently unavailable.</h2>
         <p className="text-sm font-semibold text-slate-500 max-w-sm">
-          {error || `We couldn't find a tour package matching "${targetId}".`}
+          The tour package you are trying to view is currently not available. Please explore other available packages.
         </p>
         <div className="flex items-center gap-3 pt-2">
           <button
@@ -73,8 +91,25 @@ export const PackageDetailsPage: React.FC = () => {
 
       {/* Main Body */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 space-y-8">
+
         {/* 2. Overview Card */}
-        <PackageOverview pkg={pkg} />
+        <PackageOverview pkg={pkg} selectedDeparture={selectedDeparture} />
+
+        {/* 2b. Available Departures Selector */}
+        {((pkg.departures && pkg.departures.length > 0) || pkg.departure) && (
+          <AvailableDeparturesSelector
+            departures={
+              pkg.departures && pkg.departures.length > 0
+                ? pkg.departures
+                : pkg.departure
+                ? [pkg.departure]
+                : []
+            }
+            selectedDepartureId={selectedDeparture?.departureId}
+            onSelectDeparture={(dep) => setSelectedDeparture(dep)}
+            packagePrice={pkg.price}
+          />
+        )}
 
         {/* 3. Included & Excluded Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -105,7 +140,7 @@ export const PackageDetailsPage: React.FC = () => {
       </main>
 
       {/* 11. Sticky Booking Bar */}
-      <StickyBookingBar pkg={pkg} />
+      <StickyBookingBar pkg={pkg} selectedDeparture={selectedDeparture} />
 
       {/* Fullscreen Gallery Modal */}
       {galleryOpen && (

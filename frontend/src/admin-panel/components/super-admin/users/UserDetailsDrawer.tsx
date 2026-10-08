@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -24,8 +24,33 @@ import {
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
+  FileText,
+  RefreshCw,
+  FolderOpen,
+  Search,
+  ArrowUpDown,
 } from 'lucide-react';
 import { TravelerUser } from '../../../types/userManagement';
+import {
+  AdminKycData,
+  UserMembershipData,
+  KycDocumentItem,
+  KycStatusType,
+} from '../../../types/userKyc';
+import { adminKycService } from '../../../services/adminKyc.service';
+import {
+  AdminKycCard,
+  KycDocumentCard,
+  KycTimeline,
+  KycActionBar,
+  MembershipCard,
+  RejectModal,
+  ApproveModal,
+  DocumentPreviewModal,
+  KycActionConfirmModal,
+  KycConfirmActionType,
+  DocumentSummary,
+} from './kyc';
 
 interface UserDetailsDrawerProps {
   user: TravelerUser | null;
@@ -50,6 +75,252 @@ export const UserDetailsDrawer: React.FC<UserDetailsDrawerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'Overview' | 'Bookings' | 'Trips' | 'Payments' | 'Activity'>('Overview');
 
+  // ── KYC & Membership State ──
+  const [kycData, setKycData] = useState<AdminKycData | null>(null);
+  const [membershipData, setMembershipData] = useState<UserMembershipData | null>(null);
+  const [isLoadingKyc, setIsLoadingKyc] = useState(false);
+  const [kycError, setKycError] = useState<string | null>(null);
+
+  // ── Modals State ──
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [confirmActionType, setConfirmActionType] = useState<KycConfirmActionType | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<KycDocumentItem | null>(null);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // ── Fetch KYC & Membership from Backend ──
+  const fetchKycAndMembership = useCallback(async (userId: string) => {
+    setIsLoadingKyc(true);
+    setKycError(null);
+    try {
+      const res = await adminKycService.getKycAndMembership(userId);
+      setKycData(res.kyc);
+      setMembershipData(res.membership);
+    } catch (err: any) {
+      console.error('Failed to load user KYC data:', err);
+      setKycError(err?.message || 'Failed to load KYC verification data');
+    } finally {
+      setIsLoadingKyc(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      fetchKycAndMembership(user.id);
+    } else {
+      setKycData(null);
+      setMembershipData(null);
+      setKycError(null);
+    }
+  }, [isOpen, user?.id, fetchKycAndMembership]);
+
+  // ── KYC Action Handlers ──
+  const handleApproveConfirm = async (notes: string) => {
+    if (!user) return;
+    setIsProcessingAction(true);
+    try {
+      const res = await adminKycService.approveKyc(user.id, notes);
+      setKycData(res.kyc);
+      setMembershipData(res.membership);
+      showToast('KYC successfully approved & verified!');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to approve KYC');
+    } finally {
+      setIsProcessingAction(false);
+      setIsApproveModalOpen(false);
+    }
+  };
+
+  const handleRejectConfirm = async (data: {
+    reason: string;
+    internalNote: string;
+    sendNotification: boolean;
+  }) => {
+    if (!user) return;
+    setIsProcessingAction(true);
+    try {
+      const res = await adminKycService.rejectKyc(
+        user.id,
+        data.reason,
+        data.internalNote,
+        data.sendNotification
+      );
+      setKycData(res.kyc);
+      setMembershipData(res.membership);
+      showToast('KYC rejected and feedback recorded.');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to reject KYC');
+    } finally {
+      setIsProcessingAction(false);
+      setIsRejectModalOpen(false);
+    }
+  };
+
+  const handleConfirmActionExecute = async (reason?: string) => {
+    if (!user || !confirmActionType) return;
+    setIsProcessingAction(true);
+    try {
+      let res;
+      switch (confirmActionType) {
+        case 'revoke':
+          res = await adminKycService.revokeKyc(user.id, reason || 'Revoked by admin');
+          showToast('KYC verification revoked.');
+          break;
+        case 'reupload':
+          res = await adminKycService.requestReupload(user.id, reason || 'Re-upload requested');
+          showToast('Re-upload request dispatched to user.');
+          break;
+        case 'renew':
+          res = await adminKycService.renewKyc(user.id);
+          showToast('KYC verification renewed.');
+          break;
+        case 'unsuspend':
+          res = await adminKycService.unsuspendKyc(user.id);
+          showToast('KYC status unsuspended.');
+          break;
+      }
+      if (res) {
+        setKycData(res.kyc);
+        setMembershipData(res.membership);
+      }
+    } catch (err: any) {
+      showToast(err?.message || `Failed to perform ${confirmActionType}`);
+    } finally {
+      setIsProcessingAction(false);
+      setConfirmActionType(null);
+    }
+  };
+
+  // ── Document Review Search, Filter & Sort State ──
+  const [docSearchQuery, setDocSearchQuery] = useState('');
+  const [docStatusFilter, setDocStatusFilter] = useState('All');
+  const [docSortOrder, setDocSortOrder] = useState<'newest' | 'oldest'>('newest');
+
+  const filteredDocuments = useMemo(() => {
+    if (!kycData?.documents) return [];
+    let list = [...kycData.documents];
+
+    // Status filter
+    if (docStatusFilter !== 'All') {
+      list = list.filter((d) => d.status.toLowerCase() === docStatusFilter.toLowerCase());
+    }
+
+    // Search query
+    if (docSearchQuery.trim()) {
+      const q = docSearchQuery.toLowerCase().trim();
+      list = list.filter(
+        (d) =>
+          d.type.toLowerCase().includes(q) ||
+          (d.documentNumberMasked && d.documentNumberMasked.toLowerCase().includes(q)) ||
+          d.docCategory.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort order
+    list.sort((a, b) => {
+      const timeA = new Date(a.uploadedAt).getTime();
+      const timeB = new Date(b.uploadedAt).getTime();
+      return docSortOrder === 'newest' ? timeB - timeA : timeA - timeB;
+    });
+
+    return list;
+  }, [kycData?.documents, docStatusFilter, docSearchQuery, docSortOrder]);
+
+  const handleApproveDocument = async (doc: KycDocumentItem) => {
+    if (!user) return;
+    setIsProcessingAction(true);
+    try {
+      const res = await adminKycService.approveDocument(user.id, doc.id);
+      setKycData(res.kyc);
+      setMembershipData(res.membership);
+      showToast(`Document "${doc.type}" verified successfully!`);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to approve document');
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleRejectDocument = async (doc: KycDocumentItem) => {
+    if (!user) return;
+    const reason = window.prompt(`Please enter rejection reason for ${doc.type}:`);
+    if (!reason || !reason.trim()) return;
+    setIsProcessingAction(true);
+    try {
+      const res = await adminKycService.rejectDocument(user.id, doc.id, reason.trim());
+      setKycData(res.kyc);
+      setMembershipData(res.membership);
+      showToast(`Document "${doc.type}" rejected.`);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to reject document');
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleRequestReuploadDocument = async (doc: KycDocumentItem) => {
+    if (!user) return;
+    const reason = window.prompt(`Please specify what needs to be re-uploaded for ${doc.type}:`);
+    if (!reason || !reason.trim()) return;
+    setIsProcessingAction(true);
+    try {
+      const res = await adminKycService.requestDocumentReupload(user.id, doc.id, reason.trim());
+      setKycData(res.kyc);
+      setMembershipData(res.membership);
+      showToast(`Re-upload request sent for ${doc.type}.`);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to request re-upload');
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleDownloadVerificationReport = () => {
+    if (!kycData || !user) return;
+    const reportData = {
+      reportTitle: 'Compliance Verification Audit Report',
+      verificationId: kycData.verificationId,
+      status: kycData.status,
+      generatedAt: new Date().toISOString(),
+      traveler: {
+        userId: user.userId,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        membership: membershipData?.currentPlan || user.membership || 'Free',
+      },
+      auditDetails: {
+        riskScore: kycData.riskScore,
+        riskLevel: kycData.riskLevel,
+        verificationSource: kycData.verificationSource,
+        fraudDetection: kycData.fraudDetection,
+        faceMatchPercent: kycData.faceMatchPercent,
+        documentMatchPercent: kycData.documentMatchPercent,
+        governmentValidation: kycData.governmentValidation,
+        reviewedBy: kycData.reviewedBy,
+        verifiedAt: kycData.verifiedAt,
+      },
+      documents: kycData.documents,
+      timeline: kycData.timeline,
+    };
+    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `KYC_Audit_Report_${kycData.verificationId}_${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast('Verification audit report downloaded.');
+  };
+
   if (!isOpen || !user) return null;
 
   return (
@@ -72,8 +343,25 @@ export const UserDetailsDrawer: React.FC<UserDetailsDrawerProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="relative w-full sm:w-[480px] md:w-[500px] h-full bg-[#F8F9FC] shadow-2xl flex flex-col z-50 overflow-hidden"
+            className="relative w-full sm:w-[520px] md:w-[560px] lg:w-[600px] h-full bg-[#F8F9FC] shadow-2xl flex flex-col z-50 overflow-hidden"
           >
+            {/* ── TOAST ALERT ── */}
+            <AnimatePresence>
+              {toastMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  className="absolute top-4 left-4 right-4 z-50 shadow-xl"
+                >
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl text-xs font-black shadow-lg bg-[#6356E5] text-white shadow-[#6356E5]/20">
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                    <span>{toastMessage}</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* ── 1. DRAWER HEADER ── */}
             <div className="p-6 bg-white border-b border-slate-100/90 relative shrink-0 shadow-2xs">
               {/* Action Buttons Top Row */}
@@ -124,7 +412,7 @@ export const UserDetailsDrawer: React.FC<UserDetailsDrawerProps> = ({
 
                 <div className="flex items-center gap-1.5 text-xs font-black text-amber-600 mt-1">
                   <Crown className="w-3.5 h-3.5" />
-                  <span>{user.membership} Member</span>
+                  <span>{membershipData?.currentPlan || user.membership} Member</span>
                 </div>
 
                 <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 mt-1">
@@ -160,9 +448,9 @@ export const UserDetailsDrawer: React.FC<UserDetailsDrawerProps> = ({
               {/* TAB 1: OVERVIEW */}
               {activeTab === 'Overview' && (
                 <>
-                  {/* Two Column Grid: Personal Info & Verification */}
+                  {/* Two Independent Cards: Personal Information & Membership */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {/* Personal Information */}
+                    {/* 1. Personal Information Card */}
                     <div className="bg-white rounded-2xl p-4 border border-slate-100/90 shadow-2xs space-y-2.5">
                       <h4 className="text-[11px] font-black text-[#0F172A] uppercase tracking-wider">
                         Personal Information
@@ -203,41 +491,195 @@ export const UserDetailsDrawer: React.FC<UserDetailsDrawerProps> = ({
                       </div>
                     </div>
 
-                    {/* Verification & Membership */}
-                    <div className="bg-white rounded-2xl p-4 border border-slate-100/90 shadow-2xs space-y-2.5">
-                      <h4 className="text-[11px] font-black text-[#0F172A] uppercase tracking-wider">
-                        Verification & Membership
+                    {/* 2. Independent Membership Card */}
+                    {membershipData ? (
+                      <MembershipCard membership={membershipData} isLoading={isLoadingKyc} />
+                    ) : (
+                      <MembershipCard
+                        membership={{
+                          currentPlan: (user.membership as any) || 'Free',
+                          memberSince: user.membershipSince || user.joinDate,
+                          validTill: user.membershipValidTill || 'Lifetime',
+                          renewal: 'Renews annually',
+                          benefits: ['Standard platform access', 'Travel community membership'],
+                          upgradeEligibility: 'Complete verified KYC to unlock higher tier.',
+                        }}
+                        isLoading={isLoadingKyc}
+                      />
+                    )}
+                  </div>
+
+                  {/* ── 3. KYC VERIFICATION COMPLETE WORKSPACE ── */}
+                  <div className="space-y-3.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-[#6356E5]" />
+                        <span>KYC Verification Workspace</span>
                       </h4>
-                      <div className="space-y-2 text-xs">
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 block">KYC Verification</span>
-                          <span className="inline-flex items-center gap-1 font-extrabold text-emerald-600">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                            <span>{user.kycVerification}</span>
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 block">Email Verification</span>
-                          <span className="font-extrabold text-emerald-600">{user.emailVerification}</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 block">Phone Verification</span>
-                          <span className="font-extrabold text-emerald-600">{user.phoneVerification}</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 block">Membership</span>
-                          <span className="font-black text-amber-600">{user.membership} Member</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 block">Membership Since</span>
-                          <span className="font-bold text-slate-700">{user.membershipSince}</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 block">Membership Valid Till</span>
-                          <span className="font-bold text-slate-700">{user.membershipValidTill}</span>
-                        </div>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fetchKycAndMembership(user.id)}
+                        disabled={isLoadingKyc}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-[#6356E5] transition-colors cursor-pointer"
+                        title="Refresh verification telemetry"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isLoadingKyc ? 'animate-spin' : ''}`} />
+                        <span>Sync</span>
+                      </button>
                     </div>
+
+                    {kycError && (
+                      <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{kycError}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => fetchKycAndMembership(user.id)}
+                          className="px-2 py-1 rounded-lg bg-rose-100 text-rose-800 font-bold text-[10px]"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    )}
+
+                    {/* KYC Verification Card */}
+                    {kycData ? (
+                      <AdminKycCard kyc={kycData} isLoading={isLoadingKyc} />
+                    ) : (
+                      <AdminKycCard
+                        kyc={{
+                          status: (user.kycVerification as any) || 'None',
+                          submittedAt: null,
+                          verifiedAt: user.kycVerification === 'Verified' ? new Date().toISOString() : null,
+                          lastUpdated: new Date().toISOString(),
+                          reviewedBy: null,
+                          verificationId: `KYC-USR-${user.userId.replace('USR-', '')}`,
+                          rejectionReason: '',
+                          internalNote: '',
+                          documents: [],
+                          timeline: [],
+                        }}
+                        isLoading={isLoadingKyc}
+                      />
+                    )}
+
+                    {/* Action Bar */}
+                    {kycData && (
+                      <KycActionBar
+                        status={kycData.status}
+                        onApprove={() => setIsApproveModalOpen(true)}
+                        onReject={() => setIsRejectModalOpen(true)}
+                        onRequestReupload={() => setConfirmActionType('reupload')}
+                        onRevoke={() => setConfirmActionType('revoke')}
+                        onRenew={() => setConfirmActionType('renew')}
+                        onUnsuspend={() => setConfirmActionType('unsuspend')}
+                        onViewAuditHistory={() => setActiveTab('Activity')}
+                        onDownloadReport={handleDownloadVerificationReport}
+                        disabled={isLoadingKyc || isProcessingAction}
+                      />
+                    )}
+
+                    {/* Documents Summary Component */}
+                    {kycData && (
+                      <DocumentSummary
+                        summary={
+                          kycData.summary || {
+                            uploaded: kycData.documents.length,
+                            verified: kycData.documents.filter((d) => d.status === 'Verified').length,
+                            pending: kycData.documents.filter((d) => d.status === 'Pending').length,
+                            rejected: kycData.documents.filter((d) => d.status === 'Rejected').length,
+                            expired: 0,
+                          }
+                        }
+                        activeFilter={docStatusFilter}
+                        onFilterChange={(f) => setDocStatusFilter(f)}
+                      />
+                    )}
+
+                    {/* Documents Section */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-slate-400" />
+                          <span>
+                            Identification Review Cards ({filteredDocuments.length}{' '}
+                            {docStatusFilter !== 'All' ? `• ${docStatusFilter}` : ''})
+                          </span>
+                        </span>
+                      </div>
+
+                      {/* Search & Sorting Toolbar */}
+                      {kycData && kycData.documents.length > 0 && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 p-2 rounded-2xl border border-slate-100">
+                          <div className="relative flex-1 min-w-[140px]">
+                            <Search className="w-3 h-3 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                              type="text"
+                              value={docSearchQuery}
+                              onChange={(e) => setDocSearchQuery(e.target.value)}
+                              placeholder="Search doc type, masked #..."
+                              className="w-full pl-7 pr-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#6356E5]"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setDocSortOrder(docSortOrder === 'newest' ? 'oldest' : 'newest')}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                            title="Toggle sort order"
+                          >
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                            <span className="capitalize">{docSortOrder}</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {isLoadingKyc ? (
+                        <div className="grid grid-cols-1 gap-2.5">
+                          {Array.from({ length: 2 }).map((_, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-white rounded-2xl p-4 border border-slate-100 animate-pulse h-24"
+                            />
+                          ))}
+                        </div>
+                      ) : !kycData?.documents || kycData.documents.length === 0 ? (
+                        <div className="bg-white rounded-2xl p-6 text-center border border-slate-100/90 shadow-2xs space-y-2">
+                          <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                            <FolderOpen className="w-5 h-5" />
+                          </div>
+                          <p className="text-xs font-bold text-slate-700">
+                            No documents uploaded yet
+                          </p>
+                          <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                            The traveler has not submitted identity documents (Aadhaar, Voter ID, Driving Licence, or Passport) yet.
+                          </p>
+                        </div>
+                      ) : filteredDocuments.length === 0 ? (
+                        <div className="bg-white rounded-2xl p-4 text-center border border-slate-100 shadow-2xs text-xs text-slate-400">
+                          No documents matching "{docSearchQuery || docStatusFilter}".
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {filteredDocuments.map((doc) => (
+                            <KycDocumentCard
+                              key={doc.id}
+                              document={doc}
+                              onPreview={(d) => setPreviewDoc(d)}
+                              onOpenFullscreen={(d) => setPreviewDoc(d)}
+                              onApproveDoc={handleApproveDocument}
+                              onRejectDoc={handleRejectDocument}
+                              onRequestReuploadDoc={handleRequestReuploadDocument}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Timeline */}
+                    {kycData && <KycTimeline timeline={kycData.timeline} />}
                   </div>
 
                   {/* Travel Statistics (6 Cards) */}
@@ -516,8 +958,51 @@ export const UserDetailsDrawer: React.FC<UserDetailsDrawerProps> = ({
               )}
             </div>
           </motion.div>
+
+          {/* ── 4. MODALS (RENDERED OVER THE DRAWER) ── */}
+          {/* Approve Modal */}
+          <ApproveModal
+            isOpen={isApproveModalOpen}
+            onClose={() => setIsApproveModalOpen(false)}
+            onConfirm={handleApproveConfirm}
+            userName={user.name}
+            isProcessing={isProcessingAction}
+          />
+
+          {/* Reject Modal */}
+          <RejectModal
+            isOpen={isRejectModalOpen}
+            onClose={() => setIsRejectModalOpen(false)}
+            onConfirm={handleRejectConfirm}
+            userName={user.name}
+            isProcessing={isProcessingAction}
+          />
+
+          {/* Re-upload / Revoke / Renew / Unsuspend Confirmation Modal */}
+          <KycActionConfirmModal
+            isOpen={Boolean(confirmActionType)}
+            actionType={confirmActionType}
+            onClose={() => setConfirmActionType(null)}
+            onConfirm={handleConfirmActionExecute}
+            userName={user.name}
+            isProcessing={isProcessingAction}
+          />
+
+          {/* Fullscreen Document Inspection & Review Modal */}
+          <DocumentPreviewModal
+            isOpen={Boolean(previewDoc)}
+            document={previewDoc}
+            documents={filteredDocuments}
+            onClose={() => setPreviewDoc(null)}
+            onSelectDocument={(doc) => setPreviewDoc(doc)}
+            onApproveDoc={handleApproveDocument}
+            onRejectDoc={handleRejectDocument}
+            onRequestReuploadDoc={handleRequestReuploadDocument}
+          />
         </div>
       )}
     </AnimatePresence>
   );
 };
+
+export default UserDetailsDrawer;

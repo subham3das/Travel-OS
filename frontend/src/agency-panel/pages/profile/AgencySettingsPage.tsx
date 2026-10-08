@@ -6,6 +6,7 @@ import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
 import { DesktopSidebar } from '../../components/dashboard/DesktopSidebar';
 import { BottomNavigation } from '../../components/dashboard/BottomNavigation';
 
+import { BusinessServicesCard } from '../../components/profile/settings/BusinessServicesCard';
 import { GeneralSettingsCard } from '../../components/profile/settings/GeneralSettingsCard';
 import { BookingSettingsCard } from '../../components/profile/settings/BookingSettingsCard';
 import { PaymentSettingsCard } from '../../components/profile/settings/PaymentSettingsCard';
@@ -151,6 +152,9 @@ export const AgencySettingsPage: React.FC = () => {
               transition={{ duration: 0.25 }}
               className="space-y-6"
             >
+              {/* 0. Multi-Business Services Card */}
+              <BusinessServicesCard />
+
               {/* 1. General Settings */}
               <GeneralSettingsCard
                 data={isEditing ? draftSettings.general : profile.settings.general}

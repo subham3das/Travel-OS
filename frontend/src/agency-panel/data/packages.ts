@@ -1,6 +1,6 @@
 // ─── Agency Panel Package Management Mock Data ─────────────────────────────
 
-export type PackageStatus = 'Active' | 'Draft' | 'Hidden' | 'Archived';
+export type PackageStatus = 'Active' | 'Draft' | 'Hidden' | 'Archived' | 'Inactive';
 export type PackageCategory = 'Domestic' | 'International';
 
 export interface AgencyPackage {
@@ -17,6 +17,12 @@ export interface AgencyPackage {
   lastUpdated: string; // e.g. "2 hours ago"
   packageType: PackageCategory;
   coverImage: string;
+  readiness?: {
+    isBookable: boolean;
+    status: 'READY' | 'NEEDS_SETUP';
+    label: 'Ready to Sell' | 'Needs Setup';
+    missingRequirements: string[];
+  };
 }
 
 export const MOCK_AGENCY_PACKAGES: AgencyPackage[] = [

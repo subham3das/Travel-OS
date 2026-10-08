@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Compass, Users, Map, Heart, ChevronRight, Plane, Loader2 } from 'lucide-react';
+import { Compass, Car, Map, Heart, ChevronRight, Plane, Loader2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { userAuthService } from '../../services/userAuth.service';
 
@@ -61,10 +61,8 @@ export const WelcomePage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
             Welcome to ApnaTrip, {displayName}! 👋
           </h1>
-          <p className="text-xs sm:text-sm font-semibold text-slate-500 max-w-sm mx-auto leading-relaxed">
-            Your travel passport and preferences are set up.
-            <br />
-            Let’s embark on your next unforgettable journey! ❤️
+          <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed max-w-md mx-auto">
+            Your account and travel preferences are set up. Explore handpicked destinations or book reliable rides for your journey.
           </p>
         </motion.div>
 
@@ -110,7 +108,7 @@ export const WelcomePage: React.FC = () => {
           </div>
           <div className="space-y-0.5">
             <h4 className="text-xs sm:text-sm font-bold text-[#0F172A]">
-              Thanks for being a part of our community.
+              Welcome to your ApnaTrip travel hub.
             </h4>
             <p className="text-xs font-medium text-slate-500">
               Personalized trips and exclusive deals are ready for you.
@@ -155,21 +153,21 @@ export const WelcomePage: React.FC = () => {
             <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors shrink-0" />
           </div>
 
-          {/* Tile 2: Connect */}
+          {/* Tile 2: Car Rental */}
           <div
-            onClick={() => handleContinue('/community')}
+            onClick={() => handleContinue('/car-rental')}
             className="w-full bg-white border border-slate-100 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-2xs hover:shadow-md transition-all cursor-pointer group text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
-                <Users className="w-5 h-5" />
+              <div className="w-11 h-11 rounded-2xl bg-rose-50 text-[#FF4D6D] flex items-center justify-center shrink-0">
+                <Car className="w-5 h-5" />
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] tracking-tight">
-                  Connect with Travelers
+                  Book Car Rental
                 </h4>
                 <p className="text-[11px] font-medium text-slate-400 leading-snug">
-                  Share experiences and get inspired by real travelers.
+                  Reliable rides for outstation, local, and airport journeys.
                 </p>
               </div>
             </div>

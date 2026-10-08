@@ -43,6 +43,7 @@ class AdminPackageManagementService {
       status: filters?.status && filters.status !== 'All Status' ? filters.status : undefined,
       approvalStatus: filters?.approvalStatus && filters.approvalStatus !== 'All Approvals' ? filters.approvalStatus : undefined,
       category: filters?.category && filters.category !== 'All Categories' ? filters.category : undefined,
+      adventureType: filters?.adventureType && filters.adventureType !== 'All Adventures' ? filters.adventureType : undefined,
       destinationCountry: filters?.destinationCountry && filters.destinationCountry !== 'All Countries' ? filters.destinationCountry : undefined,
       destinationRegion: filters?.destinationRegion && filters.destinationRegion !== 'All Regions' ? filters.destinationRegion : undefined,
       destination: filters?.destination && filters.destination !== 'All Destinations' ? filters.destination : undefined,
@@ -110,17 +111,42 @@ class AdminPackageManagementService {
   }
 
   /**
-   * 8. Hide Package
+   * 8. Update Package Status (ACTIVE, INACTIVE, HIDDEN, ARCHIVED)
    */
-  public async hidePackage(id: string): Promise<boolean> {
-    const res = await adminApiClient.patch(`/admin/packages/${id}`, {
-      isActive: false,
+  public async updatePackageStatus(id: string, status: string): Promise<boolean> {
+    const res = await adminApiClient.patch(`/admin/packages/${id}/status`, { status });
+    return res.success;
+  }
+
+  /**
+   * Update Package Discovery Flags (Featured, Popular, Trending, Most Popular, AutoRank)
+   */
+  public async updatePackageFlags(
+    id: string,
+    flags: {
+      isFeatured?: boolean;
+      isPopular?: boolean;
+      isTrending?: boolean;
+      isMostPopular?: boolean;
+      autoRankEnabled?: boolean;
+    }
+  ): Promise<boolean> {
+    const res = await adminApiClient.patch(`/admin/packages/${id}/flags`, flags);
+    return res.success;
+  }
+
+  /**
+   * 9. Hide / Unhide Package
+   */
+  public async hidePackage(id: string, hide = true): Promise<boolean> {
+    const res = await adminApiClient.patch(`/admin/packages/${id}/status`, {
+      status: hide ? 'HIDDEN' : 'ACTIVE',
     });
     return res.success;
   }
 
   /**
-   * 9. Delete Package
+   * 10. Delete Package
    */
   public async deletePackage(id: string): Promise<boolean> {
     const res = await adminApiClient.delete(`/admin/packages/${id}`);

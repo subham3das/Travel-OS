@@ -1,4 +1,4 @@
-export type NotificationCategory = 'all' | 'bookings' | 'community' | 'agency' | 'offers';
+export type NotificationCategory = 'all' | 'bookings' | 'rentals' | 'agency' | 'offers';
 
 export interface NotificationItem {
   id: string;
@@ -18,7 +18,7 @@ export interface NotificationItem {
     | 'message_received'
     | 'like'
     | 'comment';
-  category: 'bookings' | 'community' | 'agency' | 'offers';
+  category: 'bookings' | 'rentals' | 'agency' | 'offers';
   title: string;
   description: string;
   highlightText?: string;

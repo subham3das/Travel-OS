@@ -2,17 +2,20 @@
 
 export type GlobalSearchCategory =
   | 'all'
-  | 'users'
-  | 'agencies'
-  | 'bookings'
   | 'packages'
-  | 'payments'
-  | 'trips'
-  | 'support'
-  | 'reports'
+  | 'departures'
+  | 'bookings'
+  | 'agencies'
+  | 'car-rentals'
+  | 'users'
+  | 'coupons'
   | 'cms'
+  | 'support'
+  | 'payments'
+  | 'reports'
   | 'settings'
-  | 'reviews';
+  | 'reviews'
+  | 'trips';
 
 export interface GlobalSearchResultItem {
   id: string;

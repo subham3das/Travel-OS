@@ -16,7 +16,7 @@ const topCategoriesData: TopCategory[] = [
   {
     id: 'mountains',
     title: 'Mountains',
-    count: '120+ Trips',
+    count: 'Explore',
     icon: <Mountain className="w-6 h-6" />,
     bgColor: 'bg-emerald-50',
     iconColor: 'text-emerald-600',
@@ -24,7 +24,7 @@ const topCategoriesData: TopCategory[] = [
   {
     id: 'beaches',
     title: 'Beaches',
-    count: '85+ Trips',
+    count: 'Explore',
     icon: <Palmtree className="w-6 h-6" />,
     bgColor: 'bg-sky-50',
     iconColor: 'text-sky-600',
@@ -32,7 +32,7 @@ const topCategoriesData: TopCategory[] = [
   {
     id: 'heritage',
     title: 'Heritage',
-    count: '60+ Trips',
+    count: 'Explore',
     icon: <Landmark className="w-6 h-6" />,
     bgColor: 'bg-amber-50',
     iconColor: 'text-amber-600',
@@ -40,7 +40,7 @@ const topCategoriesData: TopCategory[] = [
   {
     id: 'adventure',
     title: 'Adventure',
-    count: '95+ Trips',
+    count: 'Explore',
     icon: <Compass className="w-6 h-6" />,
     bgColor: 'bg-purple-50',
     iconColor: 'text-purple-600',
@@ -48,7 +48,7 @@ const topCategoriesData: TopCategory[] = [
   {
     id: 'family',
     title: 'Family',
-    count: '70+ Trips',
+    count: 'Explore',
     icon: <Users2 className="w-6 h-6" />,
     bgColor: 'bg-orange-50',
     iconColor: 'text-orange-600',
@@ -65,12 +65,19 @@ const topCategoriesData: TopCategory[] = [
 
 interface TopTravelCategoriesProps {
   onCategoryClick?: (cat: TopCategory) => void;
+  onViewAll?: () => void;
 }
 
-export const TopTravelCategories: React.FC<TopTravelCategoriesProps> = ({ onCategoryClick }) => {
+export const TopTravelCategories: React.FC<TopTravelCategoriesProps> = ({
+  onCategoryClick,
+  onViewAll,
+}) => {
   return (
     <div className="w-full space-y-4">
-      <SectionHeader title="Top Travel Categories" onViewAll={() => {}} />
+      <SectionHeader
+        title="Top Travel Categories"
+        onViewAll={onViewAll ? onViewAll : () => window.location.assign('/explore')}
+      />
 
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4">
         {topCategoriesData.map((cat) => (

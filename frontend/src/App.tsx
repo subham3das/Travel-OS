@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './theme/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 
 // ── Agency Panel ────────────────────────────────────────────────────────────
@@ -16,16 +17,9 @@ import { AdminAuthProvider } from './admin-panel/context/AdminAuthContext';
 import { AdminRoutes } from './admin-panel/routes/AdminRoutes';
 
 export const App: React.FC = () => {
-  useEffect(() => {
-    // Purge any stale legacy global dark class or attributes on document elements
-    document.documentElement.classList.remove('dark');
-    document.documentElement.removeAttribute('data-theme');
-    document.body.classList.remove('dark');
-    document.body.removeAttribute('data-theme');
-  }, []);
-
   return (
-    <AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
       <UserToastProvider>
         <AgencyAuthProvider>
           <PermissionProvider>
@@ -33,14 +27,14 @@ export const App: React.FC = () => {
               <AdminAuthProvider>
                 <BrowserRouter>
                   <Routes>
-                    {/* ── Agency Panel Routes (/agency/...) ─────────────────────── */}
+                    {/* ── User Panel Routes (/, /home, /trips, /car-rental, etc.) ─ */}
+                    {UserRoutes()}
+
+                    {/* ── Agency Panel Routes (/agency/..., /partner/...) ────────── */}
                     {AgencyRoutes()}
 
-                    {/* ── Super Admin Panel Routes (/admin/...) ─────────────────── */}
+                    {/* ── Super Admin Panel Routes (/admin/..., /super-admin/...) ─ */}
                     {AdminRoutes()}
-
-                    {/* ── User Panel Routes (/, /home, /trips, etc.) ──────────────── */}
-                    {UserRoutes()}
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
@@ -52,6 +46,7 @@ export const App: React.FC = () => {
         </AgencyAuthProvider>
       </UserToastProvider>
     </AuthProvider>
+    </ThemeProvider>
   );
 };
 

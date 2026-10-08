@@ -247,7 +247,7 @@ export const agenciesData: Agency[] = [
     email: 'hey@nomadroutes.com',
     website: 'https://nomadroutes.com',
     gallery: ['https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=800&auto=format&fit=crop'],
-    team: [{ id: 't7', name: 'Simran Gill', role: 'Community Captain', experience: '5+ Years Exp.', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop' }],
+    team: [{ id: 't7', name: 'Simran Gill', role: 'Trip Captain', experience: '5+ Years Exp.', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop' }],
     packages: [{ id: 'pkg-nom-1', title: 'Goa Hostel & Beach Hopping Social', duration: '5D/4N', price: '₹4,999', rating: 4.7, badge: 'Popular', badgeType: 'popular', imageUrl: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=600&auto=format&fit=crop' }],
     reviews: [{ id: 'r6', travelerId: 'trv-6', travelerName: 'Aarav Patel', travelerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop', date: 'Feb 18, 2024', rating: 4.9, comment: 'Met amazing people! Best solo trip experience.', tags: ['Solo', 'Social'] }],
     certifications: [{ title: 'Hostel Association India', subtitle: 'Partner Operator', badge: 'Verified', variant: 'green' }],

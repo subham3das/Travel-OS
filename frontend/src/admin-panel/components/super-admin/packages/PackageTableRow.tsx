@@ -4,12 +4,16 @@ import { motion } from 'framer-motion';
 import {
   MoreVertical,
   Eye,
-  Edit,
   CheckCircle2,
   Star,
   EyeOff,
   Trash2,
   ExternalLink,
+  Play,
+  Pause,
+  Archive,
+  TrendingUp,
+  Flame,
 } from 'lucide-react';
 import { AdminPackageItem } from '../../../types/packageManagement';
 
@@ -174,9 +178,16 @@ export const PackageTableRow: React.FC<PackageTableRowProps> = ({
                 <span className="text-[10px] text-amber-500 font-black">★</span>
               )}
             </div>
-            <p className="text-[10px] font-semibold text-slate-400 truncate max-w-[170px]">
-              {pkg.subtitle}
-            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {pkg.adventureType && (
+                <span className="text-[9px] font-extrabold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-md shrink-0">
+                  {pkg.adventureType}
+                </span>
+              )}
+              <p className="text-[10px] font-semibold text-slate-400 truncate max-w-[120px]">
+                {pkg.subtitle}
+              </p>
+            </div>
           </div>
         </div>
       </td>
@@ -254,6 +265,28 @@ export const PackageTableRow: React.FC<PackageTableRowProps> = ({
         </span>
       </td>
 
+      {/* Visibility Status & Reason */}
+      <td className="py-3 px-3 whitespace-nowrap">
+        {pkg.visibilityStatus === 'Visible' ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Visible
+          </span>
+        ) : (
+          <div className="flex flex-col gap-0.5">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200/80 shadow-2xs w-fit">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              Hidden
+            </span>
+            {pkg.visibilityReason && pkg.visibilityReason !== 'Visible' && (
+              <span className="text-[9px] font-bold text-slate-400 pl-0.5 truncate max-w-[120px]" title={pkg.visibilityReason}>
+                {pkg.visibilityReason}
+              </span>
+            )}
+          </div>
+        )}
+      </td>
+
       {/* Approval Status */}
       <td className="py-3 px-3 whitespace-nowrap">
         {pkg.approvalStatus === '—' ? (
@@ -312,27 +345,53 @@ export const PackageTableRow: React.FC<PackageTableRowProps> = ({
                 <span>View Details</span>
               </button>
 
+              {pkg.status === 'Active' ? (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onRowAction('deactivate', pkg);
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-amber-50 text-amber-600 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <Pause className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Deactivate Package</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onRowAction('activate', pkg);
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 text-emerald-600 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Activate Package</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
-                  onRowAction('edit', pkg);
+                  onRowAction('hide', pkg);
                 }}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
               >
-                <Edit className="w-3.5 h-3.5 text-slate-400" />
-                <span>Edit Package</span>
+                <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                <span>{pkg.status === 'Hidden' ? 'Unhide Package' : 'Hide Package'}</span>
               </button>
 
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
-                  onRowAction('approve', pkg);
+                  onRowAction('archive', pkg);
                 }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 text-emerald-600 text-xs font-bold transition-colors cursor-pointer"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Approve Package</span>
+                <Archive className="w-3.5 h-3.5 text-slate-400" />
+                <span>Archive Package</span>
               </button>
+
+              <div className="my-1 border-t border-slate-100" />
 
               <button
                 onClick={() => {
@@ -342,18 +401,40 @@ export const PackageTableRow: React.FC<PackageTableRowProps> = ({
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-purple-50 text-[#6356E5] text-xs font-bold transition-colors cursor-pointer"
               >
                 <Star className="w-3.5 h-3.5 text-[#6356E5]" />
-                <span>{pkg.isFeatured ? 'Unfeature Package' : 'Feature Package'}</span>
+                <span>{pkg.isFeatured ? 'Unfeature' : 'Feature Package'}</span>
               </button>
 
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
-                  onRowAction('hide', pkg);
+                  onRowAction('popular', pkg);
                 }}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-amber-50 text-amber-600 text-xs font-bold transition-colors cursor-pointer"
               >
-                <EyeOff className="w-3.5 h-3.5 text-amber-500" />
-                <span>{pkg.status === 'Hidden' ? 'Unhide Package' : 'Hide Package'}</span>
+                <Flame className="w-3.5 h-3.5 text-amber-500" />
+                <span>{pkg.isPopular ? 'Unmark Popular' : 'Mark Popular'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onRowAction('trending', pkg);
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-rose-50 text-rose-600 text-xs font-bold transition-colors cursor-pointer"
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
+                <span>{pkg.isTrending ? 'Unmark Trending' : 'Mark Trending'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onRowAction('most_popular', pkg);
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-indigo-50 text-indigo-600 text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Star className="w-3.5 h-3.5 text-indigo-500" />
+                <span>{pkg.isMostPopular ? 'Unmark Most Popular' : 'Mark Most Popular'}</span>
               </button>
 
               <div className="my-1 border-t border-slate-100" />

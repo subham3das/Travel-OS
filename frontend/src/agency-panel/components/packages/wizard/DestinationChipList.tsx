@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { X, Plus } from 'lucide-react';
-import { MOCK_COVERED_DESTINATIONS_SUGGESTIONS } from '../../../data/destinations';
-
 interface DestinationChipListProps {
   destinations: string[];
   onChange: (dests: string[]) => void;
@@ -25,17 +23,6 @@ export const DestinationChipList: React.FC<DestinationChipListProps> = ({
     }
     setNewInput('');
     setShowInput(false);
-  };
-
-  const handleAddSuggested = () => {
-    const nextUnadded = MOCK_COVERED_DESTINATIONS_SUGGESTIONS.find(
-      (s) => !destinations.includes(s)
-    );
-    if (nextUnadded) {
-      onChange([...destinations, nextUnadded]);
-    } else {
-      setShowInput(true);
-    }
   };
 
   return (
@@ -99,7 +86,7 @@ export const DestinationChipList: React.FC<DestinationChipListProps> = ({
       ) : (
         <button
           type="button"
-          onClick={handleAddSuggested}
+          onClick={() => setShowInput(true)}
           className="w-full py-3 rounded-2xl border-2 border-dashed border-purple-200 hover:border-[#583BE8] bg-purple-50/30 hover:bg-purple-50/70 text-[#583BE8] text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />

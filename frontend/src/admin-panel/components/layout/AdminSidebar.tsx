@@ -24,9 +24,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  Car,
+  Ticket,
 } from 'lucide-react';
+import { BrandLogo, BrandIcon } from '../../../common/brand';
 
 import { adminAgencyRequestService } from '../../services/adminAgencyRequest.service';
+import { adminCarRentalApprovalService } from '../../services/adminCarRentalApproval.service';
+import { adminSupportManagementService } from '../../services/adminSupportManagement.service';
 
 interface SidebarItem {
   id: string;
@@ -48,17 +53,28 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [pendingRequestsCount, setPendingRequestsCount] = useState<number | undefined>(undefined);
+  const [carRentalPendingCount, setCarRentalPendingCount] = useState<number | undefined>(undefined);
+  const [supportOpenCount, setSupportOpenCount] = useState<number | undefined>(undefined);
 
   React.useEffect(() => {
     let isMounted = true;
-    adminAgencyRequestService
-      .getSummaryStats()
-      .then((stats) => {
-        if (isMounted && stats?.pendingRequests?.count !== undefined) {
-          setPendingRequestsCount(stats.pendingRequests.count);
-        }
-      })
-      .catch(() => {});
+    Promise.all([
+      adminAgencyRequestService.getSummaryStats().catch(() => null),
+      adminCarRentalApprovalService.getSummaryStats().catch(() => null),
+      adminSupportManagementService.getKPIStats().catch(() => null),
+    ]).then(([agencyStats, carStats, supportStats]) => {
+      if (!isMounted) return;
+      if (agencyStats?.pendingRequests?.count !== undefined) {
+        setPendingRequestsCount(agencyStats.pendingRequests.count);
+      }
+      if (carStats?.pendingRequests?.count !== undefined) {
+        setCarRentalPendingCount(carStats.pendingRequests.count);
+      }
+      if (supportStats?.openTickets?.value !== undefined) {
+        const count = parseInt(String(supportStats.openTickets.value).replace(/,/g, ''), 10) || 0;
+        setSupportOpenCount(count > 0 ? count : undefined);
+      }
+    });
     return () => {
       isMounted = false;
     };
@@ -69,20 +85,27 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { id: 'agencies', label: 'Agencies', path: '/admin/agencies', icon: <Building2 className="w-4.5 h-4.5" /> },
     {
       id: 'requests',
-      label: 'Agency Requests',
+      label: 'Agency Approvals',
       path: '/admin/verification-pending',
       icon: <UserCheck className="w-4.5 h-4.5" />,
       badge: pendingRequestsCount && pendingRequestsCount > 0 ? pendingRequestsCount : undefined,
     },
+    {
+      id: 'car-rental-approvals',
+      label: 'Car Rental Approvals',
+      path: '/admin/car-rental-approvals',
+      icon: <Car className="w-4.5 h-4.5" />,
+      badge: carRentalPendingCount && carRentalPendingCount > 0 ? carRentalPendingCount : undefined,
+    },
     { id: 'users', label: 'Users', path: '/admin/users', icon: <Users className="w-4.5 h-4.5" /> },
     { id: 'packages', label: 'Packages', path: '/admin/packages', icon: <Package className="w-4.5 h-4.5" /> },
     { id: 'bookings', label: 'Bookings', path: '/admin/bookings', icon: <CalendarCheck className="w-4.5 h-4.5" /> },
-    { id: 'trips', label: 'Trips', path: '/admin/trips', icon: <Compass className="w-4.5 h-4.5" /> },
+    { id: 'departures', label: 'Departures', path: '/admin/departures', icon: <Compass className="w-4.5 h-4.5" /> },
     { id: 'payments', label: 'Payments', path: '/admin/payments', icon: <CreditCard className="w-4.5 h-4.5" /> },
     { id: 'finance', label: 'Finance', path: '/admin/finance', icon: <Wallet className="w-4.5 h-4.5" /> },
+    { id: 'coupons', label: 'Coupons', path: '/admin/coupons', icon: <Ticket className="w-4.5 h-4.5" /> },
     { id: 'reviews', label: 'Reviews', path: '/admin/reviews', icon: <Star className="w-4.5 h-4.5" /> },
-    { id: 'community', label: 'Community', path: '/admin/community', icon: <MessageSquare className="w-4.5 h-4.5" /> },
-    { id: 'support', label: 'Support', path: '/admin/support', icon: <Headphones className="w-4.5 h-4.5" />, badge: 8 },
+    { id: 'support', label: 'Support', path: '/admin/support', icon: <Headphones className="w-4.5 h-4.5" />, badge: supportOpenCount && supportOpenCount > 0 ? supportOpenCount : undefined },
     { id: 'notifications', label: 'Notifications', path: '/admin/notifications', icon: <Bell className="w-4.5 h-4.5" /> },
     { id: 'reports', label: 'Reports', path: '/admin/reports', icon: <FileText className="w-4.5 h-4.5" /> },
     { id: 'cms', label: 'CMS', path: '/admin/cms', icon: <Layout className="w-4.5 h-4.5" /> },
@@ -103,24 +126,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <div
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => navigate('/admin')}
+            aria-label="ApnaTrip Super Admin"
           >
-            <div className="w-9 h-9 rounded-2xl bg-[#6356E5] text-white flex items-center justify-center shadow-md shadow-[#6356E5]/20 shrink-0">
-              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 21.5C12 21.5 19 15.5 19 10C19 6.13401 15.866 3 12 3C8.13401 3 5 6.13401 5 10C5 15.5 12 21.5 12 21.5Z"
-                  fill="white"
-                  fillOpacity="0.4"
-                />
-                <circle cx="12" cy="9.5" r="3.5" stroke="white" strokeWidth="1.8" />
-                <path d="M12 7.5L13.5 11L12 10L10.5 11L12 7.5Z" fill="white" />
-              </svg>
-            </div>
-            {!isCollapsed && (
-              <div>
-                <span className="text-base font-black text-[#0F172A] tracking-tight block leading-tight">
-                  Travel OS
-                </span>
-                <span className="text-[10px] font-bold text-slate-400 block leading-tight">
+            {isCollapsed ? (
+              <BrandIcon className="w-8 h-8 rounded-xl" alt="ApnaTrip" />
+            ) : (
+              <div className="flex flex-col gap-1">
+                <BrandLogo theme="light" className="h-7 w-auto max-w-[150px]" alt="ApnaTrip" />
+                <span className="text-[9px] font-black tracking-widest uppercase text-slate-400 block pl-0.5">
                   Super Admin
                 </span>
               </div>
@@ -165,7 +178,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                   {!isCollapsed && <span className="truncate">{item.label}</span>}
                 </div>
 
-                {!isCollapsed && item.badge !== undefined && (
+                {!isCollapsed && Boolean(item.badge && item.badge > 0) && (
                   <span
                     className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
                       isActive

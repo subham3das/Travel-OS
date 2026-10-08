@@ -2,24 +2,20 @@ import React from 'react';
 import { Users, Minus, Plus } from 'lucide-react';
 
 interface CapacitySectionProps {
-  minTravelers: number;
   maxTravelers: number;
   recommendedGroupSize: number;
-  onMinChange: (val: number) => void;
   onMaxChange: (val: number) => void;
   onRecommendedChange: (val: number) => void;
 }
 
 export const CapacitySection: React.FC<CapacitySectionProps> = ({
   maxTravelers,
-  onMinChange,
   onMaxChange,
   onRecommendedChange,
 }) => {
   const handleValueChange = (val: number) => {
     const safeVal = Math.max(1, val);
     onMaxChange(safeVal);
-    onMinChange(1);
     onRecommendedChange(Math.min(safeVal, Math.max(1, Math.round(safeVal * 0.75))));
   };
 

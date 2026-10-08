@@ -11,6 +11,8 @@ export const useSearch = (initialQuery: string = '', initialFilters: FilterState
     destinations: [],
     packages: [],
     agencies: [],
+    cars: [],
+    travelers: [],
     bookings: [],
     trips: [],
     messages: [],

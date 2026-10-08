@@ -67,6 +67,75 @@ export class AgencyFinanceService {
     if (!response.data) throw new Error(response.message || 'Failed to request payout');
     return response.data;
   }
+
+  /**
+   * Fetch Seller Payment Profile (Masked)
+   */
+  static async getPaymentProfile(sellerType: string = 'Agency'): Promise<any> {
+    const response = await agencyApiClient.get('/agency/payment-profile', { params: { sellerType } });
+    return response.data;
+  }
+
+  /**
+   * Submit Payout Account Details (IFSC & Bank Account)
+   */
+  static async submitPaymentProfile(data: any): Promise<any> {
+    const response = await agencyApiClient.post('/agency/payment-profile', data);
+    return response.data;
+  }
+
+  /**
+   * Skip Payment Setup For Now
+   */
+  static async skipPaymentProfile(sellerType: string = 'Agency'): Promise<any> {
+    const response = await agencyApiClient.post('/agency/payment-profile/skip', { sellerType });
+    return response.data;
+  }
+
+  /**
+   * Lookup Bank & Branch by IFSC
+   */
+  static async lookupIFSC(code: string): Promise<any> {
+    const response = await agencyApiClient.get(`/agency/payment-profile/ifsc/${code.toUpperCase().trim()}`);
+    return response.data;
+  }
+
+  /**
+   * Fetch Razorpay Route Marketplace Settlements (Phase 11 Dashboard)
+   */
+  static async getSettlementDashboard(params: {
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  } = {}): Promise<any> {
+    const response = await agencyApiClient.get('/agency/settlements', { params });
+    return response.data;
+  }
+
+  /**
+   * Save Step Draft for Multi-step Wizard
+   */
+  static async saveDraftStep(step: number, data: any): Promise<any> {
+    const response = await agencyApiClient.post('/agency/payment-profile/draft', { step, ...data });
+    return response.data;
+  }
+
+  /**
+   * Request Payout Account Replacement (Controlled workflow when bank is locked)
+   */
+  static async requestAccountReplacement(data: any): Promise<any> {
+    const response = await agencyApiClient.post('/agency/payment-profile/replace-request', data);
+    return response.data;
+  }
+
+  /**
+   * Retry Route Entity Provisioning
+   */
+  static async retryProvisioning(): Promise<any> {
+    const response = await agencyApiClient.post('/agency/payment-profile/retry', {});
+    return response.data;
+  }
 }
 
 export const agencyFinanceService = AgencyFinanceService;

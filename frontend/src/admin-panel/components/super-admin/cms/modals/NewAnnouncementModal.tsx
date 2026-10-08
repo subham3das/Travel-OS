@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Megaphone, Plus, Pin, CheckCircle2 } from 'lucide-react';
+import { X, Megaphone, Plus } from 'lucide-react';
 import {
   PlatformAnnouncementItem,
   AnnouncementType,
-  AnnouncementAudience,
-  AnnouncementLocation,
+  AnnouncementPlacement,
 } from '../../../../types/cmsManagement';
 
 interface NewAnnouncementModalProps {
@@ -22,13 +21,13 @@ export const NewAnnouncementModal: React.FC<NewAnnouncementModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<AnnouncementType>('info');
-  const [audience, setAudience] = useState<AnnouncementAudience>('all');
-  const [location, setLocation] = useState<AnnouncementLocation>('both');
+  const [placement, setPlacement] = useState<AnnouncementPlacement>('all');
+  const [bgColor, setBgColor] = useState('#3B82F6');
+  const [textColor, setTextColor] = useState('#FFFFFF');
+  const [ctaText, setCtaText] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
   const [isPinned, setIsPinned] = useState(false);
   const [isDismissible, setIsDismissible] = useState(true);
-  const [requireAck, setRequireAck] = useState(false);
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState('2025-12-31');
 
   if (!isOpen) return null;
 
@@ -40,13 +39,15 @@ export const NewAnnouncementModal: React.FC<NewAnnouncementModalProps> = ({
       title: title.trim(),
       description: description.trim(),
       type,
-      audience,
-      location,
+      placement,
+      bgColor,
+      textColor,
+      ctaText: ctaText.trim() || undefined,
+      linkUrl: linkUrl.trim() || undefined,
       isPinned,
       isDismissible,
-      requireAck,
-      startDate,
-      endDate,
+      priority: 1,
+      isEnabled: true,
       status: 'published',
     });
 
@@ -68,171 +69,160 @@ export const NewAnnouncementModal: React.FC<NewAnnouncementModalProps> = ({
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-10 space-y-4"
+          className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-10 space-y-4 max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+              <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
                 <Megaphone className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h3 className="text-base font-black text-[#0F172A]">New Platform Announcement</h3>
-                <p className="text-xs text-slate-400 font-semibold">
-                  Broadcast live alert across Customer and Agency dashboards
+                <h3 className="text-sm font-black text-[#0F172A]">Broadcast Announcement</h3>
+                <p className="text-[10px] text-slate-400 font-semibold">
+                  Publish a real-time notification alert or header ticker
                 </p>
               </div>
             </div>
             <button
-              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              className="p-1 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
             <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                Announcement Headline
-              </label>
+              <label className="font-bold text-slate-700 block mb-1">Headline</label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Scheduled System Maintenance on Sunday"
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-semibold text-[#0F172A] focus:outline-none focus:border-[#6356E5]"
+                placeholder="e.g. Scheduled System Maintenance on Sunday 02:00 AM"
+                className="w-full px-3 py-2 border rounded-xl"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                Message Body
-              </label>
+              <label className="font-bold text-slate-700 block mb-1">Message Content</label>
               <textarea
                 rows={2}
-                required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detailed message displayed on the alert banner"
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-semibold text-[#0F172A] focus:outline-none focus:border-[#6356E5]"
+                placeholder="Short explanation for travelers..."
+                className="w-full px-3 py-2 border rounded-xl"
               />
-            </div>
-
-            <div className="grid grid-cols-3 gap-2.5">
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                  Type / Severity
-                </label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value as AnnouncementType)}
-                  className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 font-bold"
-                >
-                  <option value="info">Information</option>
-                  <option value="warning">Warning</option>
-                  <option value="success">Success</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                  Audience
-                </label>
-                <select
-                  value={audience}
-                  onChange={(e) => setAudience(e.target.value as AnnouncementAudience)}
-                  className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 font-bold"
-                >
-                  <option value="all">Everyone</option>
-                  <option value="customers">Customers</option>
-                  <option value="agencies">Agencies</option>
-                  <option value="logged_in">Logged In</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                  Display Location
-                </label>
-                <select
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value as AnnouncementLocation)}
-                  className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 font-bold"
-                >
-                  <option value="homepage">Homepage</option>
-                  <option value="customer_dashboard">Customer App</option>
-                  <option value="agency_dashboard">Agency App</option>
-                  <option value="both">Both Dashboards</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isPinned}
-                  onChange={(e) => setIsPinned(e.target.checked)}
-                  className="rounded text-[#6356E5]"
-                />
-                <span className="font-bold text-slate-700">Pin to Top of App</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={requireAck}
-                  onChange={(e) => setRequireAck(e.target.checked)}
-                  className="rounded text-[#6356E5]"
-                />
-                <span className="font-bold text-slate-700">Require User Ack</span>
-              </label>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                  Start Date
-                </label>
+                <label className="font-bold text-slate-700 block mb-1">Type</label>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value as AnnouncementType)}
+                  className="w-full px-3 py-2 border rounded-xl bg-white font-semibold"
+                >
+                  <option value="info">Info</option>
+                  <option value="warning">Warning</option>
+                  <option value="alert">Critical Alert</option>
+                  <option value="success">Success</option>
+                </select>
+              </div>
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Placement</label>
+                <select
+                  value={placement}
+                  onChange={(e) => setPlacement(e.target.value as AnnouncementPlacement)}
+                  className="w-full px-3 py-2 border rounded-xl bg-white font-semibold"
+                >
+                  <option value="all">Everywhere</option>
+                  <option value="home_only">Homepage Only</option>
+                  <option value="mobile_only">Mobile App Only</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Background Color</label>
                 <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-semibold"
+                  type="color"
+                  value={bgColor}
+                  onChange={(e) => setBgColor(e.target.value)}
+                  className="w-full h-9 border rounded-xl p-1 cursor-pointer"
                 />
               </div>
-
               <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
-                  End Date
-                </label>
+                <label className="font-bold text-slate-700 block mb-1">Text Color</label>
                 <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-semibold"
+                  type="color"
+                  value={textColor}
+                  onChange={(e) => setTextColor(e.target.value)}
+                  className="w-full h-9 border rounded-xl p-1 cursor-pointer"
                 />
               </div>
             </div>
 
-            <div className="pt-2 flex items-center justify-end gap-2.5">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">CTA Text (Optional)</label>
+                <input
+                  type="text"
+                  value={ctaText}
+                  onChange={(e) => setCtaText(e.target.value)}
+                  placeholder="e.g. Learn More"
+                  className="w-full px-3 py-2 border rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Link URL</label>
+                <input
+                  type="text"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="/packages or https://..."
+                  className="w-full px-3 py-2 border rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 pt-1">
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={isPinned}
+                  onChange={(e) => setIsPinned(e.target.checked)}
+                  className="rounded text-amber-600"
+                />
+                <span>Pin to top</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={isDismissible}
+                  onChange={(e) => setIsDismissible(e.target.checked)}
+                  className="rounded text-amber-600"
+                />
+                <span>Allow dismissal</span>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl border text-slate-600 font-bold text-xs"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black shadow-md transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-amber-600 text-white font-black text-xs cursor-pointer"
               >
-                <Megaphone className="w-3.5 h-3.5" />
-                <span>Broadcast Live</span>
+                Publish Notice
               </button>
             </div>
           </form>

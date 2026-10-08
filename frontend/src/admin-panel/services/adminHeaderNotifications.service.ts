@@ -66,7 +66,7 @@ class AdminHeaderNotificationsService {
 
   public async fetchLive() {
     try {
-      const response = await adminApiClient.get<HeaderNotificationItem[]>('/notifications/header');
+      const response = await adminApiClient.get<HeaderNotificationItem[]>('/admin/notifications/header');
       if (response.success && response.data) {
         this.notifications = response.data;
         this.notifyListeners();
@@ -103,7 +103,7 @@ class AdminHeaderNotificationsService {
     this.notifyListeners();
 
     // Fire-and-forget backend call
-    adminApiClient.patch(`/notifications/${id}/read`).catch(() => {});
+    adminApiClient.patch(`/admin/notifications/${id}/read`).catch(() => {});
   }
 
   public markAllAsRead(): void {
@@ -111,7 +111,7 @@ class AdminHeaderNotificationsService {
     this.notifyListeners();
 
     // Fire-and-forget backend call
-    adminApiClient.post('/notifications/read-all').catch(() => {});
+    adminApiClient.post('/admin/notifications/read-all').catch(() => {});
   }
 
   public deleteNotification(id: string): void {

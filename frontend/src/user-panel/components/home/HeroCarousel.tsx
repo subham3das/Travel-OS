@@ -4,57 +4,17 @@ import { ArrowRight } from 'lucide-react';
 
 export interface HeroSlide {
   id: string;
-  tag: string;
-  titlePrefix: string;
+  tag?: string;
+  titlePrefix?: string;
   titleBold: string;
-  description: string;
-  ctaText: string;
+  description?: string;
+  ctaText?: string;
   imageUrl: string;
-  path: string;
+  path?: string;
+  targetType?: 'Package' | 'Agency' | 'Destination' | 'Car Rental' | 'External';
+  targetId?: string;
+  externalUrl?: string;
 }
-
-const defaultSlides: HeroSlide[] = [
-  {
-    id: 'meghalaya',
-    tag: 'EXPLORE NOW',
-    titlePrefix: 'Discover',
-    titleBold: 'Meghalaya',
-    description: 'Explore waterfalls, living root bridges, caves and hidden gems.',
-    ctaText: 'Explore Now',
-    imageUrl: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=1200&auto=format&fit=crop',
-    path: '/explore/meghalaya',
-  },
-  {
-    id: 'kashmir',
-    tag: 'DESTINATION OF THE MONTH',
-    titlePrefix: 'Unexplored',
-    titleBold: 'Kashmir',
-    description: 'Experience snow-capped peaks, pristine lakes and rich alpine beauty.',
-    ctaText: 'View Packages',
-    imageUrl: 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?q=80&w=1200&auto=format&fit=crop',
-    path: '/explore/kashmir',
-  },
-  {
-    id: 'kerala',
-    tag: 'TOP CHOICE',
-    titlePrefix: 'Serene',
-    titleBold: 'Kerala',
-    description: 'Cruise through tranquil backwaters and lush tropical greenery.',
-    ctaText: 'Book Trip',
-    imageUrl: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=1200&auto=format&fit=crop',
-    path: '/explore/kerala',
-  },
-  {
-    id: 'spiti',
-    tag: 'ADVENTURE AWAITS',
-    titlePrefix: 'Mystical',
-    titleBold: 'Spiti Valley',
-    description: 'Discover ancient monasteries and rugged high-altitude desert trails.',
-    ctaText: 'Explore Spiti',
-    imageUrl: 'https://images.unsplash.com/photo-1568849676085-51415703900f?q=80&w=1200&auto=format&fit=crop',
-    path: '/explore/spiti',
-  },
-];
 
 interface HeroCarouselProps {
   slides?: HeroSlide[];
@@ -63,14 +23,14 @@ interface HeroCarouselProps {
 }
 
 export const HeroCarousel: React.FC<HeroCarouselProps> = ({
-  slides = defaultSlides,
+  slides = [],
   autoPlayInterval = 5000,
   onExploreClick,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (!slides || slides.length <= 1) return;
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % slides.length);
     }, autoPlayInterval);
@@ -78,13 +38,19 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
     return () => clearInterval(timer);
   }, [slides.length, autoPlayInterval]);
 
-  const currentSlide = slides[currentIndex];
+  // If no slides configured in CMS, hide cleanly without rendering fake slides
+  if (!slides || slides.length === 0) {
+    return null;
+  }
+
+  const safeIndex = currentIndex < slides.length ? currentIndex : 0;
+  const currentSlide = slides[safeIndex];
 
   return (
-    <div className="relative w-full h-[260px] sm:h-[320px] md:h-[380px] rounded-3xl overflow-hidden shadow-md border border-slate-100/50 group">
+    <div className="relative w-full h-[260px] sm:h-[320px] md:h-[380px] rounded-3xl overflow-hidden shadow-md border border-slate-100/50 group select-none">
       <AnimatePresence mode="wait">
         <motion.div
-          key={currentSlide.id}
+          key={currentSlide.id || safeIndex}
           initial={{ opacity: 0, scale: 1.05 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.98 }}
@@ -107,20 +73,24 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
             <div className="flex items-center gap-2">
               <div className="w-5 h-0.5 bg-[#FF4D6D] rounded-full" />
               <span className="text-[11px] sm:text-xs font-extrabold tracking-widest text-white/90 uppercase">
-                {currentSlide.tag}
+                {currentSlide.tag || 'FEATURED'}
               </span>
             </div>
 
             {/* Middle Title & Description */}
             <div className="space-y-1.5 sm:space-y-2 max-w-lg">
               <h2 className="text-2xl sm:text-4xl md:text-5xl font-extrabold leading-tight tracking-tight drop-shadow-md">
-                <span className="font-normal block text-white/90">{currentSlide.titlePrefix}</span>
+                {currentSlide.titlePrefix && (
+                  <span className="font-normal block text-white/90">{currentSlide.titlePrefix}</span>
+                )}
                 <span className="font-black text-white">{currentSlide.titleBold}</span>
               </h2>
 
-              <p className="text-xs sm:text-sm text-white/80 line-clamp-2 max-w-md font-medium leading-relaxed">
-                {currentSlide.description}
-              </p>
+              {currentSlide.description && (
+                <p className="text-xs sm:text-sm text-white/80 line-clamp-2 max-w-md font-medium leading-relaxed">
+                  {currentSlide.description}
+                </p>
+              )}
             </div>
 
             {/* Bottom CTA Button */}
@@ -129,9 +99,9 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => onExploreClick && onExploreClick(currentSlide)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FF4D6D] hover:bg-[#e03d5c] text-white font-bold text-[11px] shadow-md shadow-[#FF4D6D]/30 transition-all focus:outline-none"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FF4D6D] hover:bg-[#e03d5c] text-white font-bold text-[11px] shadow-md shadow-[#FF4D6D]/30 transition-all focus:outline-none cursor-pointer"
               >
-                <span>{currentSlide.ctaText}</span>
+                <span>{currentSlide.ctaText || 'Explore Now'}</span>
                 <ArrowRight className="w-3 h-3" />
               </motion.button>
             </div>
@@ -140,25 +110,27 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({
       </AnimatePresence>
 
       {/* Carousel Dots Navigation */}
-      <div className="absolute bottom-3 right-4 z-20 flex items-center gap-1.5">
-        {slides.map((slide, idx) => (
-          <button
-            key={slide.id}
-            onClick={() => setCurrentIndex(idx)}
-            className="focus:outline-none"
-            aria-label={`Go to slide ${idx + 1}`}
-          >
-            <motion.div
-              animate={{
-                width: idx === currentIndex ? 20 : 6,
-                backgroundColor: idx === currentIndex ? '#FF4D6D' : 'rgba(255, 255, 255, 0.5)',
-              }}
-              transition={{ duration: 0.3 }}
-              className="h-1.5 rounded-full"
-            />
-          </button>
-        ))}
-      </div>
+      {slides.length > 1 && (
+        <div className="absolute bottom-3 right-4 z-20 flex items-center gap-1.5">
+          {slides.map((slide, idx) => (
+            <button
+              key={slide.id || idx}
+              onClick={() => setCurrentIndex(idx)}
+              className="focus:outline-none"
+              aria-label={`Go to slide ${idx + 1}`}
+            >
+              <motion.div
+                animate={{
+                  width: idx === safeIndex ? 20 : 6,
+                  backgroundColor: idx === safeIndex ? '#FF4D6D' : 'rgba(255, 255, 255, 0.5)',
+                }}
+                transition={{ duration: 0.3 }}
+                className="h-1.5 rounded-full"
+              />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

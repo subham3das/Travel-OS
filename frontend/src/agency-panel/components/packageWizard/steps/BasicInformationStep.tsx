@@ -2,6 +2,7 @@ import React from 'react';
 import { PackageNameField } from '../../packages/wizard/PackageNameField';
 import { DescriptionField } from '../../packages/wizard/DescriptionField';
 import { PackageTypeSelector } from '../../packages/wizard/PackageTypeSelector';
+import { AdventureTypeSelector } from '../../packages/wizard/AdventureTypeSelector';
 import { DifficultySelector } from '../../packages/wizard/DifficultySelector';
 import { VisibilitySelector } from '../../packages/wizard/VisibilitySelector';
 import { usePackageWizard } from '../../../hooks/usePackageWizard';
@@ -13,6 +14,7 @@ export const BasicInformationStep: React.FC = () => {
     packageName: '',
     shortDescription: '',
     packageType: 'Adventure',
+    adventureType: 'General Adventure',
     tripDifficulty: 'Moderate',
     visibility: 'Draft',
   };
@@ -35,6 +37,12 @@ export const BasicInformationStep: React.FC = () => {
       <PackageTypeSelector
         value={step1.packageType}
         onChange={(type) => updateStep1({ packageType: type })}
+      />
+
+      {/* Adventure Type (Classification) */}
+      <AdventureTypeSelector
+        value={step1.adventureType || 'General Adventure'}
+        onChange={(adv) => updateStep1({ adventureType: adv })}
       />
 
       {/* Trip Difficulty */}

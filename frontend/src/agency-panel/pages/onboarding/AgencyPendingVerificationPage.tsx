@@ -17,6 +17,7 @@ import {
   FileCheck,
   HelpCircle,
   X,
+  ArrowRight,
 } from 'lucide-react';
 import {
   checkAgencyVerificationStatus,
@@ -89,11 +90,13 @@ export const AgencyPendingVerificationPage: React.FC = () => {
       if (statusRes.status === AgencyVerificationStatus.APPROVED) {
         setIsApproved(true);
         setStatusMessage('Congratulations! Your application has been approved.');
+        console.log('[AgencyPending] Status is APPROVED. Transitioning to /agency/dashboard');
         setTimeout(() => {
-          navigate('/agency/onboarding/submitted');
-        }, 1800);
+          navigate('/agency/dashboard');
+        }, 1200);
         return;
       } else if (statusRes.status === AgencyVerificationStatus.REJECTED) {
+        console.warn('[AgencyPending] Status is REJECTED. Navigating to /agency/application-rejected');
         navigate('/agency/application-rejected');
         return;
       }
@@ -519,16 +522,29 @@ export const AgencyPendingVerificationPage: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="w-full space-y-3 pt-2">
-          {/* Refresh Status Button */}
-          <button
-            type="button"
-            disabled={isChecking || isApproved}
-            onClick={() => fetchStatusAndDocs(false)}
-            className="w-full py-3.5 px-6 rounded-2xl bg-[#583BE8] hover:bg-[#492de0] active:scale-[0.99] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-[#583BE8]/25 transition-all cursor-pointer disabled:opacity-60"
-          >
-            <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
-            <span>{isChecking ? 'Checking Status...' : 'Refresh Status'}</span>
-          </button>
+          {isApproved ? (
+            <button
+              type="button"
+              onClick={() => {
+                console.log('[AgencyPending] User clicked Go to Dashboard. Navigating to /agency/dashboard');
+                navigate('/agency/dashboard');
+              }}
+              className="w-full py-4 px-6 rounded-2xl bg-[#583BE8] hover:bg-[#492de0] active:scale-[0.99] text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-xl shadow-[#583BE8]/30 transition-all cursor-pointer"
+            >
+              <span>Go to Dashboard</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={isChecking}
+              onClick={() => fetchStatusAndDocs(false)}
+              className="w-full py-3.5 px-6 rounded-2xl bg-[#583BE8] hover:bg-[#492de0] active:scale-[0.99] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-[#583BE8]/25 transition-all cursor-pointer disabled:opacity-60"
+            >
+              <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
+              <span>{isChecking ? 'Checking Status...' : 'Refresh Status'}</span>
+            </button>
+          )}
 
           {/* Logout Button */}
           <button

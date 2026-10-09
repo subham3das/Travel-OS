@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, X } from 'lucide-react';
+import { ArrowLeft, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WIZARD_STEPS } from '../../types/packageWizard';
+import { usePackageWizard } from '../../context/PackageWizardContext';
 
 interface WizardHeaderProps {
   currentStep: number;
@@ -17,8 +18,11 @@ export const WizardHeader: React.FC<WizardHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const { draft, autosaveStatus } = usePackageWizard();
 
   const stepMeta = WIZARD_STEPS.find((s) => s.step === currentStep) || WIZARD_STEPS[0];
+  const isPublishedEdit = draft?.status === 'PUBLISHED';
+  const isDraftEdit = Boolean(draft?.packageId && !isPublishedEdit);
 
   const handleBackClick = () => {
     if (currentStep > 1 && onPrevStep) {
@@ -53,9 +57,28 @@ export const WizardHeader: React.FC<WizardHeaderProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-base sm:text-lg font-black text-[#0F172A]">Create Package</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black text-[#0F172A]">
+                {isPublishedEdit ? 'Edit Published Package' : isDraftEdit ? 'Edit Package Draft' : 'Create Package'}
+              </h2>
+              {autosaveStatus === 'saving' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
+                  <Loader2 className="w-2.5 h-2.5 animate-spin" /> Saving...
+                </span>
+              )}
+              {autosaveStatus === 'saved' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-2.5 h-2.5" /> Saved
+                </span>
+              )}
+              {autosaveStatus === 'error' && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full">
+                  <AlertCircle className="w-2.5 h-2.5" /> Save failed
+                </span>
+              )}
+            </div>
             <p className="text-[11px] font-semibold text-slate-400">
-              Step {currentStep} of 9 • {stepMeta.title}
+              Step {currentStep} of {WIZARD_STEPS.length} • {stepMeta.title}
             </p>
           </div>
         </div>

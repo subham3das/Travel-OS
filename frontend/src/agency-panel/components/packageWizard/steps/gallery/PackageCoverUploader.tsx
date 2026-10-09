@@ -14,7 +14,11 @@ export const PackageCoverUploader: React.FC = () => {
         helpText="Main thumbnail displayed on user search & listings (Max 10MB)"
         folder="travelos/packages/cover"
         value={coverImage}
-        onChange={(url: any) => setCoverImage(url)}
+        returnUrlOnly={true}
+        onChange={(url: any) => {
+          const cleanUrl = typeof url === 'string' ? url : url?.url || '';
+          setCoverImage(cleanUrl);
+        }}
         aspectRatio="wide"
       />
     </div>

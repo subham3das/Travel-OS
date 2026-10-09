@@ -27,14 +27,14 @@ export const App: React.FC = () => {
               <AdminAuthProvider>
                 <BrowserRouter>
                   <Routes>
-                    {/* ── User Panel Routes (/, /home, /trips, /car-rental, etc.) ─ */}
-                    {UserRoutes()}
-
                     {/* ── Agency Panel Routes (/agency/..., /partner/...) ────────── */}
                     {AgencyRoutes()}
 
                     {/* ── Super Admin Panel Routes (/admin/..., /super-admin/...) ─ */}
                     {AdminRoutes()}
+
+                    {/* ── User Panel Routes (/, /home, /trips, /car-rental, etc.) ─ */}
+                    {UserRoutes()}
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />

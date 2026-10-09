@@ -151,6 +151,7 @@ class UniversalUploadService {
               uploadedAt: img.uploadedAt || new Date().toISOString(),
               originalFilename: files[idx]?.name || '',
             }));
+            console.log('[1. Immediately after Cloudinary upload returns]', mapped);
             resolve(mapped);
           } catch {
             reject(new Error('Failed to parse multiple upload response'));

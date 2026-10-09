@@ -89,7 +89,11 @@ export class PackageReadinessService {
     const isPackageActive = Boolean(pkg.isActive) && !pkg.isDeleted;
     const hasValidPrice = typeof pkg.price === 'number' && pkg.price > 0;
     const hasItinerary = Array.isArray(pkg.itinerary) && pkg.itinerary.length > 0;
-    const hasMedia = (Array.isArray(pkg.images) && pkg.images.length > 0) || Boolean(pkg.coverImage) || Boolean(pkg.featuredImage);
+    const hasMedia =
+      (Array.isArray(pkg.images) && pkg.images.length > 0) ||
+      (Array.isArray(pkg.galleryImages) && pkg.galleryImages.length > 0) ||
+      Boolean(pkg.coverImage) ||
+      Boolean(pkg.featuredImage);
 
     // 2. Package Published status (Must NOT be DRAFT, PENDING, REJECTED, INACTIVE, HIDDEN, ARCHIVED)
     const rawStatus = (pkg.status || '').toUpperCase();
@@ -387,6 +391,7 @@ export class PackageReadinessService {
             { coverImage: { $exists: true, $ne: '' } },
             { featuredImage: { $exists: true, $ne: '' } },
             { images: { $exists: true, $ne: [] } },
+            { galleryImages: { $exists: true, $ne: [] } },
           ],
         },
       ],
@@ -462,9 +467,9 @@ export class PackageReadinessService {
           description,
           category: 'package',
           priority: 'HIGH',
-          targetRoute: `/agency/departures?packageId=${pkg.packageId || pkgIdStr}`,
+          targetRoute: `/agency/packages/${pkg.packageId || pkgIdStr}/edit?step=4`,
           ctaText: 'Schedule Departure',
-          ctaLink: `/agency/departures?packageId=${pkg.packageId || pkgIdStr}`,
+          ctaLink: `/agency/packages/${pkg.packageId || pkgIdStr}/edit?step=4`,
           relatedEntityType: 'PACKAGE',
           relatedEntityId: pkgIdStr,
           relatedEntityName: pkg.title,

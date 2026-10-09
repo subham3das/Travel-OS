@@ -625,6 +625,17 @@ export const BookingDetailsPage: React.FC = () => {
                     <span>WhatsApp Agency</span>
                   </a>
                 )}
+                {booking.whatsappGroupLink && (
+                  <a
+                    href={booking.whatsappGroupLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 min-w-[140px] py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Users className="w-3.5 h-3.5 text-white" />
+                    <span>Join WhatsApp Group</span>
+                  </a>
+                )}
               </div>
             </div>
 

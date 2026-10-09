@@ -2,7 +2,7 @@ import React from 'react';
 import { Image, Video } from 'lucide-react';
 
 interface PackageGalleryProps {
-  images: string[];
+  images: (string | any)[];
 }
 
 export const PackageGallery: React.FC<PackageGalleryProps> = ({ images }) => {
@@ -21,19 +21,22 @@ export const PackageGallery: React.FC<PackageGalleryProps> = ({ images }) => {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {images.map((imgUrl, index) => (
-          <div
-            key={index}
-            className="group relative h-28 sm:h-36 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 shadow-2xs cursor-pointer"
-          >
-            <img
-              src={imgUrl}
-              alt={`Gallery image ${index + 1}`}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
-          </div>
-        ))}
+        {images.map((item, index) => {
+          const imgUrl = typeof item === 'string' ? item : item?.url || '';
+          return (
+            <div
+              key={index}
+              className="group relative h-28 sm:h-36 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 shadow-2xs cursor-pointer"
+            >
+              <img
+                src={imgUrl}
+                alt={`Gallery image ${index + 1}`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

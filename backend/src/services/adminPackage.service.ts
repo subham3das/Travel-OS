@@ -3,6 +3,7 @@ import { PackageModel, IPackage } from '../models/package.model.js';
 import { BookingModel } from '../models/booking.model.js';
 import { AuditLoggerService } from './auditLogger.service.js';
 import { packageReadinessService } from './packageReadiness.service.js';
+import { normalizeGalleryImages, normalizeAndValidateItinerary } from './agencyPackage.service.js';
 
 export interface PackageKPIStatsResult {
   totalPackages: { count: number; growth: string; isPositive: boolean };
@@ -73,9 +74,9 @@ export class AdminPackageService {
     }
 
     if (query.status && query.status !== 'All Status' && query.status !== 'All') {
-      if (query.status.toLowerCase() === 'active') {
+      if (query.status.toLowerCase() === 'active' || query.status.toLowerCase() === 'published') {
         filter.isActive = true;
-        filter.status = 'APPROVED';
+        filter.status = { $in: ['APPROVED', 'PUBLISHED', 'ACTIVE'] };
       } else if (query.status.toLowerCase() === 'draft') {
         filter.status = 'DRAFT';
       } else if (query.status.toLowerCase() === 'pending') {
@@ -217,9 +218,12 @@ export class AdminPackageService {
     const count = await PackageModel.countDocuments();
     const packageId = `PKG-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
 
+    const isApprovedOrPublished = data.status === 'APPROVED' || data.status === 'PUBLISHED';
     const newPackage = await PackageModel.create({
       ...data,
       packageId,
+      galleryImages: data.galleryImages ? normalizeGalleryImages(data.galleryImages) : undefined,
+      itinerary: data.itinerary ? normalizeAndValidateItinerary(data.itinerary, isApprovedOrPublished) : undefined,
       agencyLogo: data.agencyLogo || 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
       coverImage: data.coverImage || data.featuredImage || 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=600&auto=format&fit=crop',
       featuredImage: data.featuredImage || data.coverImage || 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=600&auto=format&fit=crop',
@@ -264,7 +268,14 @@ export class AdminPackageService {
       isDeleted: false,
     });
 
-    if (!pkg) throw new Error('Package not found');
+    if (data.galleryImages && Array.isArray(data.galleryImages)) {
+      data.galleryImages = normalizeGalleryImages(data.galleryImages);
+    }
+
+    if (data.itinerary && Array.isArray(data.itinerary)) {
+      const isTargetPublish = (data.status || pkg?.status) === 'APPROVED' || (data.status || pkg?.status) === 'PUBLISHED';
+      data.itinerary = normalizeAndValidateItinerary(data.itinerary, isTargetPublish);
+    }
 
     Object.assign(pkg, data);
     pkg.activities = pkg.activities || [];
@@ -306,9 +317,19 @@ export class AdminPackageService {
 
     if (!pkg) throw new Error('Package not found');
 
-    pkg.status = approvalStatus;
+    pkg.status = approvalStatus === 'APPROVED' ? 'PUBLISHED' : approvalStatus;
     if (approvalStatus === 'APPROVED') {
       pkg.isActive = true;
+      pkg.isPublished = true;
+      pkg.visibility = 'PUBLIC';
+      pkg.approvalStatus = 'APPROVED';
+      pkg.publishedAt = pkg.publishedAt || new Date();
+      pkg.deletedAt = null as any;
+    } else if (approvalStatus === 'REJECTED') {
+      pkg.isPublished = false;
+      pkg.approvalStatus = 'REJECTED';
+    } else {
+      pkg.approvalStatus = 'PENDING';
     }
 
     pkg.activities = pkg.activities || [];
@@ -572,7 +593,7 @@ export class AdminPackageService {
     else status = 'Active';
 
     let approvalStatus: 'Approved' | 'Pending' | 'Rejected' | '—' = '—';
-    if (pkg.status === 'APPROVED' || pkg.status === 'ACTIVE') approvalStatus = 'Approved';
+    if (pkg.status === 'APPROVED' || pkg.status === 'ACTIVE' || pkg.status === 'PUBLISHED') approvalStatus = 'Approved';
     else if (pkg.status === 'PENDING') approvalStatus = 'Pending';
     else if (pkg.status === 'REJECTED') approvalStatus = 'Rejected';
 
@@ -580,15 +601,25 @@ export class AdminPackageService {
     const origPrice = pkg.originalPrice || Math.round(price * 1.25);
     const discount = pkg.discountPercent || (origPrice > price ? `${Math.round(((origPrice - price) / origPrice) * 100)}% OFF` : '');
 
+    const resolvedCover =
+      pkg.coverImage ||
+      pkg.featuredImage ||
+      (Array.isArray(pkg.galleryImages) && pkg.galleryImages[0]
+        ? typeof pkg.galleryImages[0] === 'string'
+          ? pkg.galleryImages[0]
+          : (pkg.galleryImages[0] as any)?.url
+        : '') ||
+      'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=600&auto=format&fit=crop';
+
     return {
       id: pkg._id ? pkg._id.toString() : pkg.packageId,
       packageId: pkg.packageId,
       title: pkg.title,
       subtitle: pkg.subtitle || `Experience the best of ${pkg.destination || 'India'}`,
-      coverImage: pkg.coverImage || pkg.featuredImage || 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=600&auto=format&fit=crop',
-      galleryImages: pkg.galleryImages && pkg.galleryImages.length > 0 ? pkg.galleryImages : [
-        pkg.coverImage || 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=600&auto=format&fit=crop',
-      ],
+      coverImage: resolvedCover,
+      galleryImages: Array.isArray(pkg.galleryImages) && pkg.galleryImages.length > 0
+        ? pkg.galleryImages
+        : [{ url: resolvedCover, publicId: '' }],
       agencyName: pkg.agencyName || 'ApnaTrip Partner Agency',
       agencyLogo: pkg.agencyLogo || 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
       destinationCountry: pkg.destinationCountry || (pkg.destination && pkg.destination.includes(',') ? pkg.destination.split(',').pop()?.trim() : 'India') || 'India',

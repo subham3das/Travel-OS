@@ -40,8 +40,33 @@ export const AdminCreatePackageSchema = z.object({
   totalSeats: z.number().min(1).default(20),
   featuredImage: z.string().optional(),
   coverImage: z.string().optional(),
-  galleryImages: z.array(z.string()).optional(),
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DRAFT']).default('APPROVED'),
+  galleryImages: z
+    .array(
+      z.union([
+        z.string(),
+        z.object({
+          url: z.string(),
+          publicId: z.string().optional(),
+          width: z.number().optional(),
+          height: z.number().optional(),
+          format: z.string().optional(),
+          size: z.number().optional(),
+          bytes: z.number().optional(),
+          uploadedAt: z.union([z.string(), z.date()]).optional(),
+          originalFilename: z.string().optional(),
+          category: z.string().optional(),
+        }).passthrough(),
+      ])
+    )
+    .optional(),
+  status: z
+    .enum(['PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PUBLISHED', 'ACTIVE', 'INACTIVE', 'HIDDEN', 'ARCHIVED'])
+    .default('APPROVED'),
+  isPublished: z.boolean().optional(),
+  visibility: z.enum(['PUBLIC', 'PRIVATE', 'DRAFT', 'HIDDEN']).optional(),
+  publishedAt: z.union([z.string(), z.date(), z.null()]).optional(),
+  approvalStatus: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+  deletedAt: z.union([z.string(), z.date(), z.null()]).optional(),
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   inclusions: z.array(z.string()).optional(),

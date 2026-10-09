@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, PhoneCall, Mail } from 'lucide-react';
+import { Phone, PhoneCall, Mail, MessageSquare, AlertCircle } from 'lucide-react';
 import { usePackageWizard } from '../../../../hooks/usePackageWizard';
 
 export const EmergencyContactCard: React.FC = () => {
@@ -90,6 +90,40 @@ export const EmergencyContactCard: React.FC = () => {
               <span className="w-5 h-5 rounded-full bg-white mx-0.5 shadow-md" />
             </button>
           </div>
+        </div>
+
+        {/* WhatsApp Group Link (Optional) */}
+        <div className="sm:col-span-2 space-y-1 pt-1 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold text-slate-500">
+              WhatsApp Group Link <span className="text-slate-400 font-medium">(Optional)</span>
+            </label>
+            <span className="text-[10px] text-slate-400 font-medium">
+              For confirmed traveler group chat & live updates
+            </span>
+          </div>
+          <div className="relative">
+            <MessageSquare className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+            <input
+              type="url"
+              value={draft?.step7?.whatsappGroupLink || ''}
+              onChange={(e) => updateStep7({ whatsappGroupLink: e.target.value })}
+              placeholder="https://chat.whatsapp.com/ExampleCode"
+              className={`w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-slate-50/70 border text-xs font-bold text-[#0F172A] focus:outline-none ${
+                draft?.step7?.whatsappGroupLink &&
+                !/^(https?:\/\/)?(chat\.whatsapp\.com\/[A-Za-z0-9_-]{10,40})$/i.test(draft.step7.whatsappGroupLink.trim())
+                  ? 'border-rose-300 focus:border-rose-500 bg-rose-50/30'
+                  : 'border-slate-200 focus:border-[#583BE8]'
+              }`}
+            />
+          </div>
+          {draft?.step7?.whatsappGroupLink &&
+            !/^(https?:\/\/)?(chat\.whatsapp\.com\/[A-Za-z0-9_-]{10,40})$/i.test(draft.step7.whatsappGroupLink.trim()) && (
+              <p className="text-[11px] font-bold text-rose-500 flex items-center gap-1 mt-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                Please enter a valid WhatsApp group invitation URL (e.g. https://chat.whatsapp.com/...)
+              </p>
+            )}
         </div>
       </div>
     </div>

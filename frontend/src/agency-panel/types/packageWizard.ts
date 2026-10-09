@@ -158,6 +158,7 @@ export interface Step7PoliciesInfo {
     email: string;
     is24x7: boolean;
   };
+  whatsappGroupLink?: string;
   legalConfirmed: boolean;
 }
 
@@ -200,6 +201,10 @@ export interface StepAccommodationInfo {
 }
 
 export interface PackageWizardDraft {
+  draftId?: string;
+  packageId?: string;
+  status?: string;
+  whatsappGroupLink?: string;
   currentStep: number;
   isComplete: boolean;
   step1: Step1BasicInfo;
@@ -231,130 +236,112 @@ export const INITIAL_DEPARTURE_ITEM: DepartureScheduleItem = {
   returnTime: '09:00',
 };
 
-export const INITIAL_WIZARD_DRAFT: PackageWizardDraft = {
+export const EMPTY_WIZARD_DRAFT: PackageWizardDraft = {
   currentStep: 1,
   isComplete: false,
   step1: {
-    packageName: 'Ladakh Adventure Expedition',
-    shortDescription: 'High-altitude motorable mountain pass trail & starlit lake camping.',
-    packageType: 'Adventure',
+    packageName: '',
+    shortDescription: '',
+    packageType: null,
     adventureType: 'General Adventure',
-    tripDifficulty: 'Difficult',
+    tripDifficulty: null,
     visibility: 'Draft',
   },
   step2: {
-    primaryDestination: 'Leh, Pangong Tso',
-    destinationsCovered: ['Leh', 'Nubra Valley', 'Pangong Tso'],
-    durationPreset: '7 Days / 6 Nights',
-    days: 7,
-    nights: 6,
-    seasons: ['Summer'],
-    bestMonths: ['Jun', 'Jul', 'Aug', 'Sep'],
-    pickupCity: 'Leh Airport',
-    dropOffCity: 'Leh Airport',
-    meetingPoint: 'Leh Airport Terminal 1',
-    travelModes: ['Flight', 'Private Vehicle'],
+    primaryDestination: '',
+    destinationsCovered: [],
+    durationPreset: '3 Days / 2 Nights',
+    days: 3,
+    nights: 2,
+    seasons: [],
+    bestMonths: [],
+    pickupCity: '',
+    dropOffCity: '',
+    meetingPoint: '',
+    travelModes: [],
   },
   step3: {
     pricingModel: 'Price Per Person',
-    originalPrice: 24999,
-    discountedPrice: 18999,
+    originalPrice: 0,
+    discountedPrice: 0,
     maxTravelers: 20,
-    recommendedGroupSize: 12,
+    recommendedGroupSize: 10,
     paymentType: 'Full Payment',
-    advanceAmount: 5000,
-    inclusions: ['GST Included', 'Permit Charges'],
+    advanceAmount: 0,
+    inclusions: [],
     extraCharges: {
-      singleOccupancy: true,
+      singleOccupancy: false,
       childPrice: false,
-      extraBed: true,
+      extraBed: false,
       peakSeasonSurcharge: false,
     },
     allowCouponCodes: true,
     cancellationPolicy: 'Moderate',
   },
   stepDepartures: {
-    departures: [INITIAL_DEPARTURE_ITEM],
+    departures: [],
   },
   step4: {
-    days: INITIAL_ITINERARY_DAYS,
-    activeDayId: INITIAL_ITINERARY_DAYS[0]?.id || 'day-1',
+    days: [],
+    activeDayId: '',
   },
   stepAccommodation: {
     accommodationConfirmed: false,
     hotels: [],
   },
   step5: {
-    coverImage: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
-    galleryImages: INITIAL_GALLERY_IMAGES,
-    videos: INITIAL_VIDEOS,
-    imageCategories: ['Scenic Views'],
+    coverImage: '',
+    galleryImages: [],
+    videos: [],
+    imageCategories: [],
     previewIndex: 0,
   },
   step6: {
-    includedItems: ['hotel_stay', 'breakfast_dinner', 'permits', 'first_aid', 'guide'],
-    customIncludedItems: ['Oxygen Cylinder Support'],
-    excludedItems: ['airfare', 'personal_expenses', 'travel_insurance'],
-    customExcludedItems: ['Camel Safari Fee'],
-    packingItems: ['warm_jacket', 'sunscreen', 'trekking_shoes'],
+    includedItems: [],
+    customIncludedItems: [],
+    excludedItems: [],
+    customExcludedItems: [],
+    packingItems: [],
     customPackingItems: [],
-    optionalAddOns: [
-      { id: 'room_upgrade', enabled: true, price: 2000 },
-      { id: 'airport_pickup_upgrade', enabled: false, price: 1200 },
-    ],
+    optionalAddOns: [],
     importantNotes: '',
   },
   step7: {
     cancellationPolicy: 'Moderate',
-    customCancellationRules: [
-      { id: 'rule-1', daysBeforeDeparture: '30+ Days', refundPercentage: 100 },
-      { id: 'rule-2', daysBeforeDeparture: '15-29 Days', refundPercentage: 50 },
-      { id: 'rule-3', daysBeforeDeparture: 'Less than 15 Days', refundPercentage: 0 },
-    ],
-    bookingTerms: [
-      'Valid Government ID Required',
-      'Booking is Non-transferable',
-      'Package Subject to Weather',
-      'Schedule may change due to local conditions',
-      'Travelers must follow guide instructions',
-      'No Illegal Activities',
-    ],
-    refundProcessing: 'Instant Refund',
-    requiredDocuments: ['passport', 'driving_license', 'passport_photos'],
+    customCancellationRules: [],
+    bookingTerms: [],
+    refundProcessing: '3-5 Business Days',
+    requiredDocuments: [],
     customDocuments: [],
-    healthSafety: [
-      'High Altitude Warning',
-      'Fitness Required',
-      'Oxygen Available',
-      'Emergency Support',
-      'Travel Insurance Recommended',
-      'Medical Disclosure Required',
-    ],
-    faqs: INITIAL_FAQS,
+    healthSafety: [],
+    faqs: [],
     emergencyContact: {
-      phone: '+91 98765 43210',
-      alternatePhone: '+91 91234 56789',
-      email: 'support@mountroam.com',
-      is24x7: true,
+      phone: '',
+      alternatePhone: '',
+      email: '',
+      is24x7: false,
     },
-    legalConfirmed: true,
+    whatsappGroupLink: '',
+    legalConfirmed: false,
   },
   step8: {
     seoSettings: {
-      slug: 'ladakh-adventure-expedition',
-      metaTitle: 'Ladakh Adventure Expedition – 7 Days Trip',
-      metaDescription: "Explore Ladakh's stunning landscapes, lakes, and mountains with MountRoam Adventures.",
-      keywords: 'ladakh, adventure, leh, nubra, pangong, travel',
+      slug: '',
+      metaTitle: '',
+      metaDescription: '',
+      keywords: '',
     },
     publishMode: 'Draft',
     scheduleEnabled: false,
     publishDate: '',
     publishTime: '09:00',
     timezone: 'Asia/Kolkata (IST)',
-    visibilityTargets: ['Website', 'Mobile App', 'Featured Packages', 'Homepage'],
-    finalAgreement: true,
+    visibilityTargets: ['Website'],
+    finalAgreement: false,
   },
 };
+
+export const INITIAL_WIZARD_DRAFT: PackageWizardDraft = EMPTY_WIZARD_DRAFT;
 
 export interface WizardStepMeta {
   step: number;

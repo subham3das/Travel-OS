@@ -31,18 +31,35 @@ export const GalleryPreviewCarousel: React.FC = () => {
         <div className="flex items-center gap-3 overflow-x-auto scrollbar-none pb-2">
           {galleryImages.map((image, idx) => {
             const isActive = idx === currentIndex;
+            const src =
+              typeof image === 'string'
+                ? image
+                : typeof image?.url === 'string'
+                ? image.url
+                : (image?.url as any)?.url || '';
 
             return (
               <div
-                key={image.id}
+                key={image?.id || idx}
                 onClick={() => setCurrentIndex(idx)}
-                className={`relative w-40 sm:w-56 aspect-4/3 rounded-3xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                className={`relative w-40 sm:w-56 aspect-4/3 rounded-3xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 bg-slate-100 ${
                   isActive
                     ? 'border-[#583BE8] shadow-lg shadow-[#583BE8]/20 scale-105 z-10'
                     : 'border-transparent opacity-70 hover:opacity-100'
                 }`}
               >
-                <img src={image.url} alt={image.name || 'Preview'} className="w-full h-full object-cover" />
+                {src ? (
+                  <img
+                    src={src}
+                    alt={`Photo preview ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-bold">
+                    Image {idx + 1}
+                  </div>
+                )}
               </div>
             );
           })}

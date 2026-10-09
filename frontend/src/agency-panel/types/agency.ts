@@ -42,6 +42,8 @@ export interface Agency {
   licenseNumber?: string;
   onboardingStatus?: PartnerOnboardingStatus;
   verificationStatus: AgencyVerificationStatus;
+  approvalStatus?: string;
+  role?: string;
   status?: string;
   passwordChanged?: boolean;
   applicationId?: string;

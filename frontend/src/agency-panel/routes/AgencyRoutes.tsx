@@ -3,7 +3,7 @@
 // Wrapped inside isolated AgencyThemeProvider
 
 import React from 'react';
-import { Route, Outlet, Navigate } from 'react-router-dom';
+import { Route, Outlet, Navigate, useSearchParams } from 'react-router-dom';
 import { AgencyProtectedRoute } from './AgencyProtectedRoute';
 import { PartnerAuthProtectedRoute } from './PartnerAuthProtectedRoute';
 import { AgencyThemeProvider } from '../context/AgencyThemeContext';
@@ -87,6 +87,19 @@ const VerifyPhoneRedirect: React.FC = () => {
 };
 
 /**
+ * Redirects /agency/departures to Agency Package Wizard schedule step (?step=4).
+ * Ensures agency navigation never leaks to the user panel.
+ */
+const AgencyDeparturesRedirect: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const packageId = searchParams.get('packageId');
+  if (packageId) {
+    return <Navigate to={`/agency/packages/${packageId}/edit?step=4`} replace />;
+  }
+  return <Navigate to="/agency/packages/create?step=4" replace />;
+};
+
+/**
  * Returns all Agency Panel route elements wrapped in isolated AgencyThemeProvider.
  */
 export const AgencyRoutes = () => (
@@ -136,6 +149,10 @@ export const AgencyRoutes = () => (
       <Route path="/agency/packages/:packageId" element={<AgencyPackageDetailsPage />} />
       <Route path="/agency/packages/:packageId/edit" element={<AgencyEditPackagePage />} />
 
+      {/* Direct /agency/departures to Agency Package Wizard Departure Schedule Step (step 4) */}
+      <Route path="/agency/departures" element={<AgencyDeparturesRedirect />} />
+      <Route path="/agency/departures/*" element={<AgencyDeparturesRedirect />} />
+
       {/* Redirect old Trips routes to Bookings operational center */}
       <Route path="/agency/trips/*" element={<Navigate to="/agency/bookings" replace />} />
       <Route path="/agency/trips" element={<Navigate to="/agency/bookings" replace />} />
@@ -176,6 +193,9 @@ export const AgencyRoutes = () => (
       <Route path="/agency/car-rental/settings" element={<AgencyCarRentalSettingsPage />} />
       <Route path="/agency/car-rental/messages" element={<AgencyCarRentalMessagesPage />} />
       <Route path="/agency/car-rental/notifications" element={<AgencyCarRentalNotificationsPage />} />
+
+      {/* Catch-all for unmatched /agency routes so they stay inside agency portal */}
+      <Route path="/agency/*" element={<Navigate to="/agency/dashboard" replace />} />
     </Route>
   </Route>
 );

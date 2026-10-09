@@ -16,8 +16,14 @@ export const POPULAR_DESTINATIONS: string[] = [
 ];
 
 export const MAJOR_CITIES: string[] = [
-  'Leh',
   'Delhi',
+  'Dibrugarh',
+  'Dimapur',
+  'Diu',
+  'Dehradun',
+  'Darjeeling',
+  'Dharamshala',
+  'Leh',
   'Mumbai',
   'Manali',
   'Srinagar',
@@ -27,6 +33,22 @@ export const MAJOR_CITIES: string[] = [
   'Kolkata',
   'Jaipur',
   'Guwahati',
+  'Agra',
+  'Shimla',
+  'Rishikesh',
+  'Varanasi',
+  'Amritsar',
+  'Pune',
+  'Hyderabad',
+  'Chennai',
+  'Ahmedabad',
+  'Goa',
+  'Port Blair',
+  'Gangtok',
+  'Shillong',
+  'Udaipur',
+  'Jodhpur',
+  'Jaisalmer',
 ];
 export const MOCK_CITIES = MAJOR_CITIES;
 

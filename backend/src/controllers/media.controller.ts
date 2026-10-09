@@ -50,11 +50,14 @@ export class MediaController {
 
       const results = await mediaService.uploadMultipleImages(files, folder);
 
+      const uploadedImages = results.map((r) => ({ ...r, url: r.secureUrl }));
+      console.log('[1. Immediately after Cloudinary upload returns (backend)]', uploadedImages);
+
       ResponseUtil.success(
         res,
         {
           count: results.length,
-          images: results.map((r) => ({ ...r, url: r.secureUrl })),
+          images: uploadedImages,
         },
         `${results.length} images uploaded successfully to Cloudinary`,
         HTTP_STATUS.CREATED

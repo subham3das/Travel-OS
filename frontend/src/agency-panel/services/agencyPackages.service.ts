@@ -108,6 +108,7 @@ class AgencyPackagesService {
    * 4. Create New Package from 9-Step Wizard
    */
   public async createPackage(data: any): Promise<any> {
+    console.log('[4. Before publish API request (agencyPackagesService.createPackage)]', data?.galleryImages);
     const res = await agencyApiClient.post<any>('/agency/packages', data, {
       requiresAuth: true,
     });
@@ -118,6 +119,7 @@ class AgencyPackagesService {
    * 5. Update Existing Package Details
    */
   public async updatePackage(packageId: string, data: any): Promise<any> {
+    console.log('[4. Before publish API request (agencyPackagesService.updatePackage)]', data?.galleryImages);
     const res = await agencyApiClient.patch<any>(`/agency/packages/${packageId}`, data, {
       requiresAuth: true,
     });
@@ -131,6 +133,19 @@ class AgencyPackagesService {
     const res = await agencyApiClient.patch<AgencyPackage>(
       `/agency/packages/${packageId}/status`,
       { status },
+      { requiresAuth: true }
+    );
+    return res.data!;
+  }
+
+  /**
+   * 6.5 Explicit Publish Package
+   */
+  public async publishPackage(packageId: string): Promise<any> {
+    console.log('[4. Before publish API request (agencyPackagesService.publishPackage)]', packageId);
+    const res = await agencyApiClient.post<any>(
+      `/agency/packages/${packageId}/publish`,
+      {},
       { requiresAuth: true }
     );
     return res.data!;
@@ -153,6 +168,26 @@ class AgencyPackagesService {
    */
   public async deletePackage(packageId: string): Promise<boolean> {
     await agencyApiClient.delete(`/agency/packages/${packageId}`, {
+      requiresAuth: true,
+    });
+    return true;
+  }
+
+  /**
+   * 9. Get Single Active Draft for Agency (Strict Single Draft Lifecycle)
+   */
+  public async getActiveDraft(): Promise<any> {
+    const res = await agencyApiClient.get<any>('/agency/packages/active-draft', {
+      requiresAuth: true,
+    });
+    return res.data;
+  }
+
+  /**
+   * 10. Discard Active Draft
+   */
+  public async discardActiveDraft(): Promise<boolean> {
+    await agencyApiClient.delete('/agency/packages/active-draft', {
       requiresAuth: true,
     });
     return true;

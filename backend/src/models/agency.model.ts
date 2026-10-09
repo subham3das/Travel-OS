@@ -615,7 +615,7 @@ const AgencySchema = new Schema<IAgency>(
     // Credentials & Login Security
     loginEmail: { type: String, lowercase: true, trim: true, index: true },
     passwordHash: { type: String },
-    passwordChanged: { type: Boolean, default: false },
+    passwordChanged: { type: Boolean, default: true },
     passwordChangedAt: { type: Date },
     resetPasswordToken: { type: String, sparse: true, index: true },
     resetPasswordExpires: { type: Date },

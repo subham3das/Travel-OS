@@ -816,7 +816,7 @@ export class AdminAgencyRequestService {
     agency.loginEmail = registeredEmail;
     agency.passwordHash = passwordHash;
     if (isNewAccount) {
-      agency.passwordChanged = false;
+      agency.passwordChanged = true;
     }
     agency.canLogin = true;
     agency.isActive = true;

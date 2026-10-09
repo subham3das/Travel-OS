@@ -111,6 +111,21 @@ export const AgencyPackagesPage: React.FC = () => {
     };
   }, []);
 
+  const [activeDraft, setActiveDraft] = useState<any>(null);
+
+  useEffect(() => {
+    agencyPackagesService
+      .getActiveDraft()
+      .then((draft) => {
+        if (draft && (draft.status === 'Draft' || draft.status === 'DRAFT')) {
+          setActiveDraft(draft);
+        } else {
+          setActiveDraft(null);
+        }
+      })
+      .catch(() => setActiveDraft(null));
+  }, []);
+
   // Action handlers
   const handleCreatePackage = () => {
     navigate('/agency/packages/create');
@@ -274,7 +289,11 @@ export const AgencyPackagesPage: React.FC = () => {
         <DashboardHeader />
 
         {/* Sticky Packages Actions Header */}
-        <PackagesHeader onCreatePackage={handleCreatePackage} />
+        <PackagesHeader
+          onCreatePackage={handleCreatePackage}
+          hasActiveDraft={Boolean(activeDraft)}
+          onResumeDraft={() => navigate('/agency/packages/create')}
+        />
 
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 space-y-6 max-w-7xl mx-auto w-full">
           {/* Summary Stats Grid */}

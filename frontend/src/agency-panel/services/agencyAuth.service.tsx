@@ -18,7 +18,9 @@ const AgencyAuthContext = createContext<AgencyAuthContextType | undefined>(undef
 const loadFromStorage = (): AgencyAuthState & { businesses?: any[] } => {
   try {
     const raw = localStorage.getItem(AGENCY_AUTH_STORAGE_KEYS.AUTH_STATE);
-    const token = localStorage.getItem(AGENCY_AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+    const token =
+      localStorage.getItem(AGENCY_AUTH_STORAGE_KEYS.ACCESS_TOKEN) ||
+      localStorage.getItem('agencyAccessToken');
 
     if (raw && token) {
       const parsed = JSON.parse(raw);
@@ -52,6 +54,21 @@ export const AgencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setState(next);
       localStorage.setItem(AGENCY_AUTH_STORAGE_KEYS.AUTH_STATE, JSON.stringify(next));
       agencyApiClient.setTokens({ accessToken: token, refreshToken });
+
+      // Explicit Phase 3 Session Keys
+      localStorage.setItem('agencyAccessToken', token);
+      localStorage.setItem('agencyRefreshToken', refreshToken || '');
+      localStorage.setItem('agencyProfile', JSON.stringify(agency || {}));
+      localStorage.setItem('agencyRole', user?.role || 'AGENCY');
+      localStorage.setItem('approvalStatus', String(agency?.verificationStatus || agency?.approvalStatus || 'APPROVED'));
+      localStorage.setItem('onboardingStatus', String(agency?.onboardingStatus || 'APPROVED'));
+
+      console.log('[AgencyAuth] Session Stored Successfully:', {
+        agencyRole: user?.role || 'AGENCY',
+        approvalStatus: agency?.verificationStatus || agency?.approvalStatus || 'APPROVED',
+        onboardingStatus: agency?.onboardingStatus || 'APPROVED',
+        hasAccessToken: !!token,
+      });
     },
     []
   );
@@ -60,20 +77,32 @@ export const AgencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setState((prev) => {
       const next = { ...prev, agency };
       localStorage.setItem(AGENCY_AUTH_STORAGE_KEYS.AUTH_STATE, JSON.stringify(next));
+      localStorage.setItem('agencyProfile', JSON.stringify(agency));
+      localStorage.setItem('approvalStatus', String(agency?.verificationStatus || agency?.approvalStatus || 'APPROVED'));
+      localStorage.setItem('onboardingStatus', String(agency?.onboardingStatus || 'APPROVED'));
       return next;
     });
   }, []);
 
   const logoutAgency = useCallback(() => {
+    console.log('[AgencyAuth] Logging out agency partner. Clearing session storage.');
     setState({ isAuthenticated: false, agencyUser: null, agency: null, businesses: [], token: null });
     agencyApiClient.clearTokens();
     localStorage.removeItem(AGENCY_AUTH_STORAGE_KEYS.AUTH_STATE);
     localStorage.removeItem(AGENCY_AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(AGENCY_AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+
+    // Clear Explicit Session Keys
+    localStorage.removeItem('agencyAccessToken');
+    localStorage.removeItem('agencyRefreshToken');
+    localStorage.removeItem('agencyProfile');
+    localStorage.removeItem('agencyRole');
+    localStorage.removeItem('approvalStatus');
+    localStorage.removeItem('onboardingStatus');
   }, []);
 
   const refreshAgencyProfile = useCallback(async () => {
-    const currentToken = agencyApiClient.getAccessToken();
+    const currentToken = agencyApiClient.getAccessToken() || localStorage.getItem('agencyAccessToken');
     if (!currentToken) return;
 
     try {
@@ -92,6 +121,11 @@ export const AgencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             isAuthenticated: true,
           };
           localStorage.setItem(AGENCY_AUTH_STORAGE_KEYS.AUTH_STATE, JSON.stringify(next));
+          if (data.agency) {
+            localStorage.setItem('agencyProfile', JSON.stringify(data.agency));
+            localStorage.setItem('approvalStatus', String(data.agency.verificationStatus || data.agency.approvalStatus || 'APPROVED'));
+            localStorage.setItem('onboardingStatus', String(data.agency.onboardingStatus || 'APPROVED'));
+          }
           return next;
         });
       }

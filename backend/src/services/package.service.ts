@@ -198,12 +198,42 @@ export class PackageService {
       badge: pkg.discountPercent ? `${pkg.discountPercent}% Off` : (pkg.isFeatured ? 'Featured' : ''),
       badgeType: (pkg.isFeatured ? 'bestseller' : 'popular') as 'bestseller' | 'popular' | 'new' | 'luxury',
       overview: pkg.description || pkg.subtitle || '',
-      coverImage: pkg.coverImage || pkg.featuredImage || (Array.isArray(pkg.images) && pkg.images[0]) || '',
-      primaryImage: pkg.coverImage || pkg.featuredImage || (Array.isArray(pkg.images) && pkg.images[0]) || '',
-      imageUrl: pkg.coverImage || pkg.featuredImage || (Array.isArray(pkg.images) && pkg.images[0]) || '',
+      coverImage:
+        pkg.coverImage ||
+        pkg.featuredImage ||
+        (Array.isArray(pkg.images) && pkg.images[0]) ||
+        (Array.isArray(pkg.galleryImages) && pkg.galleryImages[0]
+          ? typeof pkg.galleryImages[0] === 'string'
+            ? pkg.galleryImages[0]
+            : pkg.galleryImages[0].url
+          : '') ||
+        '',
+      primaryImage:
+        pkg.coverImage ||
+        pkg.featuredImage ||
+        (Array.isArray(pkg.images) && pkg.images[0]) ||
+        (Array.isArray(pkg.galleryImages) && pkg.galleryImages[0]
+          ? typeof pkg.galleryImages[0] === 'string'
+            ? pkg.galleryImages[0]
+            : pkg.galleryImages[0].url
+          : '') ||
+        '',
+      imageUrl:
+        pkg.coverImage ||
+        pkg.featuredImage ||
+        (Array.isArray(pkg.images) && pkg.images[0]) ||
+        (Array.isArray(pkg.galleryImages) && pkg.galleryImages[0]
+          ? typeof pkg.galleryImages[0] === 'string'
+            ? pkg.galleryImages[0]
+            : pkg.galleryImages[0].url
+          : '') ||
+        '',
       gallery: Array.isArray(pkg.galleryImages) && pkg.galleryImages.length > 0
-        ? pkg.galleryImages
+        ? pkg.galleryImages.map((g: any) => (typeof g === 'string' ? g : g?.url || '')).filter(Boolean)
         : (Array.isArray(pkg.images) && pkg.images.length > 0 ? pkg.images : (pkg.coverImage ? [pkg.coverImage] : [])),
+      galleryImages: Array.isArray(pkg.galleryImages) && pkg.galleryImages.length > 0
+        ? pkg.galleryImages.map((g: any) => (typeof g === 'string' ? { url: g, publicId: '' } : g))
+        : (pkg.coverImage ? [{ url: pkg.coverImage, publicId: '' }] : []),
       nextDeparture: departureInfo,
       availableSeats: departureInfo?.availableSeats ?? (pkg.totalSeats || 20),
       departureSummary: departureInfo ? `Next: ${new Date(departureInfo.departureDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })} • ${departureInfo.availableSeats} seats left` : 'Departures available',
@@ -213,8 +243,11 @@ export class PackageService {
       difficulty: 'Moderate' as const,
       bestTime: '',
       vehicle: '',
-      startLocation: `${destName} Arrival Hub`,
-      endLocation: `${destName} Departure Hub`,
+      pickupCity: pkg.pickupCity || pkg.pickupLocation || '',
+      dropOffCity: pkg.dropOffCity || pkg.dropOffLocation || '',
+      startLocation: pkg.pickupCity || pkg.pickupLocation || `${destName} Arrival Hub`,
+      endLocation: pkg.dropOffCity || pkg.dropOffLocation || `${destName} Departure Hub`,
+      whatsappGroupLink: pkg.whatsappGroupLink || '',
       routeDetails: {
         distance: '',
         travelTime: '',
@@ -303,7 +336,8 @@ export class PackageService {
 
     const searchText = search || q;
     if (searchText && searchText.trim()) {
-      const regex = new RegExp(searchText.trim(), 'i');
+      const escapedText = searchText.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedText, 'i');
       query.$or = [
         { title: regex },
         { destination: regex },

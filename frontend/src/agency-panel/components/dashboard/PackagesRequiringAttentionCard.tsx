@@ -121,7 +121,7 @@ export const PackagesRequiringAttentionCard: React.FC<PackagesRequiringAttention
 
                 <button
                   type="button"
-                  onClick={() => navigate(`/agency/departures?packageId=${item.packageId || item.id}`)}
+                  onClick={() => navigate(`/agency/packages/${item.packageId || item.id}/edit?step=4`)}
                   className="px-3 py-1.5 rounded-xl bg-white border border-purple-200 hover:bg-[#583BE8] hover:text-white text-[#583BE8] text-[10px] font-black transition-all cursor-pointer shrink-0 flex items-center gap-1 shadow-2xs"
                 >
                   <PlusCircle className="w-3 h-3" />

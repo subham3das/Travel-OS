@@ -1468,9 +1468,13 @@ export class AdminCMSService {
         coverImage:
           p.coverImage ||
           p.featuredImage ||
-          (Array.isArray(p.galleryImages) && p.galleryImages[0]) ||
+          (Array.isArray(p.galleryImages) && p.galleryImages[0]
+            ? typeof p.galleryImages[0] === 'string'
+              ? p.galleryImages[0]
+              : p.galleryImages[0]?.url
+            : '') ||
           'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600',
-        status: p.status === 'APPROVED' ? 'Published' : p.status || 'Published',
+        status: p.status === 'APPROVED' || p.status === 'PUBLISHED' ? 'Published' : p.status || 'Published',
         isFeatured,
         updatedAt: p.updatedAt || p.createdAt || new Date().toISOString(),
         createdAt: p.createdAt || new Date().toISOString(),

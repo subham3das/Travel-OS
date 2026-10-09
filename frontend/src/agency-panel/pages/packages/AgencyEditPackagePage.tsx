@@ -46,7 +46,7 @@ const WizardStepSwitcher: React.FC = () => {
 
 const EditPackageDataPreloader: React.FC = () => {
   const { packageId } = useParams<{ packageId: string }>();
-  const { updateStep1, updateStep2, updateStep3, updateStepDepartures, updateStep5 } = usePackageWizard();
+  const { loadActiveDraft } = usePackageWizard();
 
   useEffect(() => {
     if (!packageId) return;
@@ -55,62 +55,12 @@ const EditPackageDataPreloader: React.FC = () => {
       .getPackageById(packageId)
       .then((pkg) => {
         if (!pkg) return;
-        const mappedType: PackageType = pkg.packageType || 'Adventure';
-        const mappedDifficulty: TripDifficulty =
-          pkg.tripDifficulty === 'Challenging'
-            ? 'Difficult'
-            : (pkg.tripDifficulty as TripDifficulty) || 'Moderate';
-
-        updateStep1({
-          packageName: pkg.packageName || pkg.title || '',
-          shortDescription: (pkg.description || '').slice(0, 140),
-          packageType: mappedType,
-          tripDifficulty: mappedDifficulty,
-        });
-
-        updateStep2({
-          primaryDestination: pkg.destination ? pkg.destination.split(',')[0] : '',
-          pickupCity: pkg.pickupLocation || '',
-          dropOffCity: pkg.dropOffLocation || '',
-        });
-
-        updateStep3({
-          originalPrice: pkg.originalPrice || pkg.price || 0,
-          discountedPrice: pkg.price || 0,
-          maxTravelers: pkg.maxTravelers || 20,
-        });
-
-        if (pkg.upcomingDepartures && pkg.upcomingDepartures.length > 0) {
-          updateStepDepartures({
-            departures: pkg.upcomingDepartures.map((d: any, i: number) => ({
-              id: d.id || `dep-${i + 1}`,
-              departureDate: d.departureDate || '',
-              departureTime: d.departureTime || '09:00',
-              timezone: 'Asia/Kolkata (IST)',
-              pickupLocation: d.pickupLocation || 'Airport',
-              reportingTime: d.reportingTime || '07:30 AM',
-              bookingClosingDate: d.bookingClosingDate || '',
-              bookingClosingTime: '23:59',
-              maximumTravelers: d.maximumTravelers || pkg.maxTravelers || 20,
-              bookedTravelers: d.bookedTravelers || d.seatsFilled || 0,
-              availableSeats: d.availableSeats || 20,
-              status: d.status || 'Upcoming',
-              returnDate: d.returnDate || '',
-              returnTime: d.returnTime || '09:00',
-            })),
-          });
-        }
-
-        if (pkg.coverImage) {
-          updateStep5({
-            coverImage: pkg.coverImage,
-          });
-        }
+        loadActiveDraft(pkg);
       })
       .catch((err) => {
         console.error('Failed to load package for edit:', err);
       });
-  }, [packageId, updateStep1, updateStep2, updateStep3, updateStepDepartures, updateStep5]);
+  }, [packageId, loadActiveDraft]);
 
   return (
     <WizardLayout>

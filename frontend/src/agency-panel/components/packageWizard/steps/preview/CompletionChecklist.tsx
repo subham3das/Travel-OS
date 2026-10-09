@@ -8,7 +8,9 @@ export const CompletionChecklist: React.FC = () => {
     isStep1Valid,
     isStep2Valid,
     isStep3Valid,
+    isStepDeparturesValid,
     isStep4Valid,
+    isStepAccommodationValid,
     isStep5Valid,
     isStep6Valid,
     isStep7Valid,
@@ -17,12 +19,14 @@ export const CompletionChecklist: React.FC = () => {
 
   const steps = [
     { num: 1, label: 'Basic Information', isValid: isStep1Valid },
-    { num: 2, label: 'Destination', isValid: isStep2Valid },
-    { num: 3, label: 'Pricing', isValid: isStep3Valid },
-    { num: 4, label: 'Itinerary', isValid: isStep4Valid },
-    { num: 5, label: 'Gallery & Media', isValid: isStep5Valid },
-    { num: 6, label: 'Inclusions & Exclusions', isValid: isStep6Valid },
-    { num: 7, label: 'Policies, FAQs & Rules', isValid: isStep7Valid },
+    { num: 2, label: 'Destination & Duration', isValid: isStep2Valid },
+    { num: 3, label: 'Pricing & Capacity', isValid: isStep3Valid },
+    { num: 4, label: 'Departure Schedule', isValid: isStepDeparturesValid },
+    { num: 5, label: 'Itinerary', isValid: isStep4Valid },
+    { num: 6, label: 'Accommodation', isValid: isStepAccommodationValid },
+    { num: 7, label: 'Gallery & Media', isValid: isStep5Valid },
+    { num: 8, label: 'Inclusions & Exclusions', isValid: isStep6Valid },
+    { num: 9, label: 'Policies, FAQs & Rules', isValid: isStep7Valid },
   ];
 
   return (

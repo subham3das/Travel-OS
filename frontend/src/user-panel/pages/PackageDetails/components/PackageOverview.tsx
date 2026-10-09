@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Star, Calendar, Users, BarChart3, Clock } from 'lucide-react';
+import { CheckCircle2, Star, Calendar, Users, BarChart3, Clock, MapPin, MessageSquare } from 'lucide-react';
 import { TourPackage, PackageDepartureInfo } from '../../../types/package';
 import { getAdventureEmoji } from '../../../components/home/PackageCard';
 
@@ -210,6 +210,49 @@ export const PackageOverview: React.FC<PackageOverviewProps> = ({ pkg, selectedD
           </div>
         );
       })()}
+
+      {/* Pickup & Drop-off Route summary */}
+      {(pkg.pickupCity || pkg.dropOffCity) && (
+        <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 text-xs text-slate-600 dark:text-slate-300">
+          <MapPin className="w-4 h-4 text-[#2563EB] shrink-0" />
+          <div className="flex items-center gap-2 flex-wrap font-medium">
+            {pkg.pickupCity && (
+              <span><strong className="font-bold text-[#0F172A] dark:text-white">Pickup:</strong> {pkg.pickupCity}</span>
+            )}
+            {pkg.pickupCity && pkg.dropOffCity && <span className="text-slate-300 dark:text-slate-600">→</span>}
+            {pkg.dropOffCity && (
+              <span><strong className="font-bold text-[#0F172A] dark:text-white">Drop-off:</strong> {pkg.dropOffCity}</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Community Group Banner */}
+      {pkg.whatsappGroupLink && (
+        <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/30 gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <MessageSquare className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-emerald-950 dark:text-emerald-100 truncate">
+                Official Traveler Community
+              </p>
+              <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300/80 truncate">
+                Connect with co-travelers and your tour guide before departure
+              </p>
+            </div>
+          </div>
+          <a
+            href={pkg.whatsappGroupLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shrink-0 transition-colors shadow-2xs flex items-center gap-1.5"
+          >
+            <span>Join WhatsApp Group</span>
+          </a>
+        </div>
+      )}
     </div>
   );
 };

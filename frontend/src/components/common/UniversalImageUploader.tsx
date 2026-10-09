@@ -110,7 +110,10 @@ export const UniversalImageUploader: React.FC<UniversalImageUploaderProps> = ({
 
   // Determine if consumer expects raw string URL or rich object
   const shouldReturnUrlOnly =
-    returnUrlOnly !== undefined ? returnUrlOnly : typeof value === 'string' || (Array.isArray(value) && typeof value[0] === 'string');
+    returnUrlOnly !== undefined
+      ? returnUrlOnly
+      : typeof value === 'string' ||
+        (Array.isArray(value) && (value.length === 0 || typeof value[0] === 'string'));
 
   const { isUploading, progress, error, upload, uploadBatch, deleteAsset, setError } = useImageUpload({
     folder,
@@ -167,7 +170,7 @@ export const UniversalImageUploader: React.FC<UniversalImageUploaderProps> = ({
     return null;
   };
 
-  // Process files
+  // Process files with instant optimistic preview and Cloudinary replacement
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       if (disabled || isUploading) return;
@@ -191,23 +194,99 @@ export const UniversalImageUploader: React.FC<UniversalImageUploaderProps> = ({
           return;
         }
 
-        const uploadedList = await uploadBatch(fileList);
-        if (uploadedList.length > 0) {
-          const updated = [...galleryImages, ...uploadedList];
-          setGalleryImages(updated);
-          if (onChange) {
-            onChange(shouldReturnUrlOnly ? updated.map((i) => i.url) : updated);
+        // 1. Instant optimistic local preview via object URLs
+        const localPreviews: UploadedImage[] = fileList.map((f, idx) => ({
+          url: URL.createObjectURL(f),
+          publicId: `blob-preview-${Date.now()}-${idx}`,
+          originalFilename: f.name,
+          size: f.size,
+        }));
+
+        setGalleryImages((prev) => [...prev, ...localPreviews]);
+
+        try {
+          // 2. Upload to Cloudinary
+          const uploadedList = await uploadBatch(fileList);
+
+          // Clean up local blob object URLs
+          localPreviews.forEach((lp) => {
+            try {
+              URL.revokeObjectURL(lp.url);
+            } catch {
+              // ignore
+            }
+          });
+
+          if (uploadedList && uploadedList.length > 0) {
+            // Replace local preview items with uploaded Cloudinary assets
+            setGalleryImages((prev) => {
+              const withoutPreviews = prev.filter(
+                (img) => !localPreviews.some((lp) => lp.publicId === img.publicId)
+              );
+              const combined = [...withoutPreviews, ...uploadedList];
+              console.log('[2. After UniversalImageUploader updates state]', combined);
+              if (onChange) {
+                onChange(shouldReturnUrlOnly ? combined.map((i) => i.url) : combined);
+              }
+              return combined;
+            });
+          } else {
+            // Revert temporary previews if upload returned empty
+            setGalleryImages((prev) =>
+              prev.filter((img) => !localPreviews.some((lp) => lp.publicId === img.publicId))
+            );
           }
+        } catch {
+          // Clean up on error
+          localPreviews.forEach((lp) => {
+            try {
+              URL.revokeObjectURL(lp.url);
+            } catch {
+              // ignore
+            }
+          });
+          setGalleryImages((prev) =>
+            prev.filter((img) => !localPreviews.some((lp) => lp.publicId === img.publicId))
+          );
         }
       } else {
         const file = fileList[0];
-        const oldPublicId = singleImage?.publicId;
-        const uploaded = await upload(file, oldPublicId);
-        if (uploaded) {
-          setSingleImage(uploaded);
-          if (onChange) {
-            onChange(shouldReturnUrlOnly ? uploaded.url : uploaded);
+        const localPreviewUrl = URL.createObjectURL(file);
+        const previousSingle = singleImage;
+
+        // Instant local preview for single mode
+        setSingleImage({
+          url: localPreviewUrl,
+          publicId: 'blob-preview-single',
+          originalFilename: file.name,
+          size: file.size,
+        });
+
+        try {
+          const oldPublicId = previousSingle?.publicId;
+          const uploaded = await upload(file, oldPublicId);
+
+          try {
+            URL.revokeObjectURL(localPreviewUrl);
+          } catch {
+            // ignore
           }
+
+          if (uploaded) {
+            setSingleImage(uploaded);
+            if (onChange) {
+              onChange(shouldReturnUrlOnly ? uploaded.url : uploaded);
+            }
+          } else {
+            setSingleImage(previousSingle);
+          }
+        } catch {
+          try {
+            URL.revokeObjectURL(localPreviewUrl);
+          } catch {
+            // ignore
+          }
+          setSingleImage(previousSingle);
         }
       }
     },
@@ -268,10 +347,6 @@ export const UniversalImageUploader: React.FC<UniversalImageUploaderProps> = ({
 
   // Remove gallery image
   const handleRemoveGalleryImage = (index: number) => {
-    const item = galleryImages[index];
-    if (item?.publicId) {
-      deleteAsset(item.publicId);
-    }
     const updated = galleryImages.filter((_, idx) => idx !== index);
     setGalleryImages(updated);
     if (onChange) {

@@ -89,10 +89,27 @@ export const AgencyLoginPage: React.FC = () => {
         }
 
         // Agency lifecycle routing — backend status drives everything
-        if (onboardingStatus === 'APPROVED' || activeBiz?.verificationStatus === 'APPROVED' || activeBiz?.status === 'ACTIVE') {
-          // Show congratulations animation if not seen yet, else go to dashboard
-          const hasSeenAnim = localStorage.getItem('apnatrip_agency_seen_approval_anim') === 'true';
-          navigate(hasSeenAnim ? '/agency/dashboard' : '/agency/onboarding/submitted', { replace: true });
+        const isApproved =
+          onboardingStatus === 'APPROVED' ||
+          activeBiz?.verificationStatus === 'APPROVED' ||
+          activeBiz?.verificationStatus === 'VERIFIED' ||
+          activeBiz?.status === 'ACTIVE' ||
+          activeBiz?.approvalStatus === 'APPROVED';
+
+        console.log('[AgencyLogin] Post-login redirect determination:', {
+          currentRoute: '/agency/login',
+          targetRoute: isApproved ? '/agency/dashboard' : onboardingStatus === 'REJECTED' ? '/agency/application-rejected' : '/agency/verification-pending',
+          userRole: user?.role || 'AGENCY',
+          partnerType: activeBiz?.businessTypes?.[0] || 'agency',
+          approvalStatus: activeBiz?.verificationStatus || activeBiz?.approvalStatus || 'APPROVED',
+          onboardingStatus,
+          hasAccessToken: !!token,
+          sessionType: 'AGENCY_SESSION',
+        });
+
+        if (isApproved) {
+          // Navigate directly to Agency Dashboard
+          navigate('/agency/dashboard', { replace: true });
         } else if (onboardingStatus === 'REJECTED' || activeBiz?.verificationStatus === 'REJECTED') {
           navigate('/agency/application-rejected', { replace: true });
         } else if (onboardingStatus === 'UNDER_REVIEW' || onboardingStatus === 'PENDING_APPROVAL' || onboardingStatus === 'DOCUMENTS_SUBMITTED') {

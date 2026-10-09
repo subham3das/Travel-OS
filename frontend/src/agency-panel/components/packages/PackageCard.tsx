@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin,
@@ -41,6 +42,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
   onHide,
   onDelete,
 }) => {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -167,7 +169,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
                   if (pkg.status === 'Draft') {
                     onEdit(pkg.id);
                   } else {
-                    window.location.href = `/agency/departures?packageId=${pkg.id}`;
+                    navigate(`/agency/packages/${pkg.id}/edit?step=4`);
                   }
                 }}
                 className="text-[9px] font-extrabold text-[#583BE8] bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded-md border border-purple-200 transition-colors cursor-pointer"

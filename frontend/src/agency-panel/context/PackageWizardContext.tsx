@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   PackageWizardDraft,
   INITIAL_WIZARD_DRAFT,
+  EMPTY_WIZARD_DRAFT,
   Step1BasicInfo,
   Step2DestinationInfo,
   Step3PricingInfo,
@@ -18,12 +20,14 @@ import {
 import { Step4ItineraryInfo, ItineraryDay, ItineraryPlanItem, normalizeItineraryDays } from '../types/itinerary';
 import { Step5GalleryInfo, GalleryImage, VideoFile, CategoryTag } from '../types/gallery';
 import { FAQItem, CustomCancellationRule } from '../data/policies';
+import { agencyPackagesService } from '../services/agencyPackages.service';
 
 const DRAFT_STORAGE_KEY = 'apnatrip_agency_package_wizard_draft';
 
 interface PackageWizardContextType {
   currentStep: number;
   draft: PackageWizardDraft;
+  autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
   updateStep1: (data: Partial<Step1BasicInfo>) => void;
   updateStep2: (data: Partial<Step2DestinationInfo>) => void;
   updateStep3: (data: Partial<Step3PricingInfo>) => void;
@@ -83,6 +87,10 @@ interface PackageWizardContextType {
   prevStep: () => void;
   goToStep: (step: number) => void;
   resetDraft: () => void;
+  startFreshDraft: () => void;
+  loadActiveDraft: (data: any) => void;
+  completionPercentage: number;
+  validateAllSteps: () => { isValid: boolean; firstInvalidStep: number; missingSections: string[] };
   isStep1Valid: boolean;
   isStep2Valid: boolean;
   isStep3Valid: boolean;
@@ -94,9 +102,59 @@ interface PackageWizardContextType {
   isStep7Valid: boolean;
   isStep8Valid: boolean;
   isItineraryDurationValid: boolean;
+  hasValidSchedule: boolean;
   isAllStepsValid: boolean;
   isCurrentStepValid: boolean;
 }
+
+/**
+ * Validates whether the package has a configured schedule without relying on transient UI state.
+ */
+export const checkPackageHasValidSchedule = (draft: any): boolean => {
+  if (!draft) return false;
+
+  const departures =
+    draft?.stepDepartures?.departures ||
+    draft?.departures ||
+    draft?.upcomingDepartures ||
+    [];
+
+  if (Array.isArray(departures) && departures.length > 0) {
+    const hasValid = departures.some((dep: any) => {
+      if (!dep) return false;
+      // Valid if departure date string is specified
+      if (dep.departureDate && typeof dep.departureDate === 'string' && dep.departureDate.trim().length > 0) {
+        return true;
+      }
+      if (dep.date && typeof dep.date === 'string' && dep.date.trim().length > 0) {
+        return true;
+      }
+      // Or valid if departure time and closing/reporting times are defined
+      if (dep.departureTime && (dep.reportingTime || dep.bookingClosingTime)) {
+        return true;
+      }
+      return false;
+    });
+    if (hasValid) return true;
+  }
+
+  // Top-level direct package fields
+  if (
+    draft.departureDate &&
+    typeof draft.departureDate === 'string' &&
+    draft.departureDate.trim().length > 0
+  ) {
+    return true;
+  }
+  if (
+    draft.departureDate &&
+    (draft.departureTime || draft.reportingTime || draft.bookingClosingTime)
+  ) {
+    return true;
+  }
+
+  return false;
+};
 
 const PackageWizardContext = createContext<PackageWizardContextType | undefined>(undefined);
 
@@ -106,67 +164,71 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        if (parsed?.status === 'PUBLISHED' || parsed?.isPublished) {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+          return EMPTY_WIZARD_DRAFT;
+        }
         if (parsed && typeof parsed === 'object') {
           return {
-            ...INITIAL_WIZARD_DRAFT,
+            ...EMPTY_WIZARD_DRAFT,
             ...parsed,
             currentStep: parsed.currentStep || 1,
-            step1: { ...INITIAL_WIZARD_DRAFT.step1, ...(parsed.step1 || {}) },
-            step2: { ...INITIAL_WIZARD_DRAFT.step2, ...(parsed.step2 || {}) },
-            step3: { ...INITIAL_WIZARD_DRAFT.step3, ...(parsed.step3 || {}) },
+            step1: { ...EMPTY_WIZARD_DRAFT.step1, ...(parsed.step1 || {}) },
+            step2: { ...EMPTY_WIZARD_DRAFT.step2, ...(parsed.step2 || {}) },
+            step3: { ...EMPTY_WIZARD_DRAFT.step3, ...(parsed.step3 || {}) },
             stepDepartures: {
               departures: parsed?.stepDepartures?.departures?.length
                 ? parsed.stepDepartures.departures
-                : INITIAL_WIZARD_DRAFT.stepDepartures.departures,
+                : [],
             },
             step4: {
-              days: parsed?.step4?.days?.length ? normalizeItineraryDays(parsed.step4.days) : INITIAL_WIZARD_DRAFT.step4.days,
-              activeDayId: parsed?.step4?.activeDayId || INITIAL_WIZARD_DRAFT.step4.activeDayId,
+              days: parsed?.step4?.days?.length ? normalizeItineraryDays(parsed.step4.days) : [],
+              activeDayId: parsed?.step4?.activeDayId || '',
             },
             stepAccommodation: {
               accommodationConfirmed: parsed?.stepAccommodation?.accommodationConfirmed ?? false,
               hotels: Array.isArray(parsed?.stepAccommodation?.hotels) ? parsed.stepAccommodation.hotels : [],
             },
             step5: {
-              coverImage: parsed?.step5?.coverImage || INITIAL_WIZARD_DRAFT.step5.coverImage,
+              coverImage: parsed?.step5?.coverImage || '',
               galleryImages: parsed?.step5?.galleryImages?.length
                 ? parsed.step5.galleryImages
-                : INITIAL_WIZARD_DRAFT.step5.galleryImages,
-              videos: parsed?.step5?.videos || INITIAL_WIZARD_DRAFT.step5.videos,
-              imageCategories: parsed?.step5?.imageCategories || INITIAL_WIZARD_DRAFT.step5.imageCategories,
+                : [],
+              videos: parsed?.step5?.videos || [],
+              imageCategories: parsed?.step5?.imageCategories || [],
               previewIndex: parsed?.step5?.previewIndex || 0,
             },
             step6: {
-              includedItems: parsed?.step6?.includedItems || INITIAL_WIZARD_DRAFT.step6.includedItems,
-              customIncludedItems: parsed?.step6?.customIncludedItems || INITIAL_WIZARD_DRAFT.step6.customIncludedItems,
-              excludedItems: parsed?.step6?.excludedItems || INITIAL_WIZARD_DRAFT.step6.excludedItems,
-              customExcludedItems: parsed?.step6?.customExcludedItems || INITIAL_WIZARD_DRAFT.step6.customExcludedItems,
-              packingItems: parsed?.step6?.packingItems || INITIAL_WIZARD_DRAFT.step6.packingItems,
-              customPackingItems: parsed?.step6?.customPackingItems || INITIAL_WIZARD_DRAFT.step6.customPackingItems,
-              optionalAddOns: parsed?.step6?.optionalAddOns || INITIAL_WIZARD_DRAFT.step6.optionalAddOns,
+              includedItems: parsed?.step6?.includedItems || [],
+              customIncludedItems: parsed?.step6?.customIncludedItems || [],
+              excludedItems: parsed?.step6?.excludedItems || [],
+              customExcludedItems: parsed?.step6?.customExcludedItems || [],
+              packingItems: parsed?.step6?.packingItems || [],
+              customPackingItems: parsed?.step6?.customPackingItems || [],
+              optionalAddOns: parsed?.step6?.optionalAddOns || [],
               importantNotes: parsed?.step6?.importantNotes || '',
             },
             step7: {
-              cancellationPolicy: parsed?.step7?.cancellationPolicy || INITIAL_WIZARD_DRAFT.step7.cancellationPolicy,
-              customCancellationRules: parsed?.step7?.customCancellationRules || INITIAL_WIZARD_DRAFT.step7.customCancellationRules,
-              bookingTerms: parsed?.step7?.bookingTerms || INITIAL_WIZARD_DRAFT.step7.bookingTerms,
-              refundProcessing: parsed?.step7?.refundProcessing || INITIAL_WIZARD_DRAFT.step7.refundProcessing,
-              requiredDocuments: parsed?.step7?.requiredDocuments || INITIAL_WIZARD_DRAFT.step7.requiredDocuments,
-              customDocuments: parsed?.step7?.customDocuments || INITIAL_WIZARD_DRAFT.step7.customDocuments,
-              healthSafety: parsed?.step7?.healthSafety || INITIAL_WIZARD_DRAFT.step7.healthSafety,
-              faqs: parsed?.step7?.faqs || INITIAL_WIZARD_DRAFT.step7.faqs,
-              emergencyContact: parsed?.step7?.emergencyContact || INITIAL_WIZARD_DRAFT.step7.emergencyContact,
-              legalConfirmed: parsed?.step7?.legalConfirmed ?? INITIAL_WIZARD_DRAFT.step7.legalConfirmed,
+              cancellationPolicy: parsed?.step7?.cancellationPolicy || 'Moderate',
+              customCancellationRules: parsed?.step7?.customCancellationRules || [],
+              bookingTerms: parsed?.step7?.bookingTerms || [],
+              refundProcessing: parsed?.step7?.refundProcessing || 'Standard Refund',
+              requiredDocuments: parsed?.step7?.requiredDocuments || [],
+              customDocuments: parsed?.step7?.customDocuments || [],
+              healthSafety: parsed?.step7?.healthSafety || [],
+              faqs: parsed?.step7?.faqs || [],
+              emergencyContact: parsed?.step7?.emergencyContact || { phone: '', alternatePhone: '', email: '', is24x7: false },
+              legalConfirmed: parsed?.step7?.legalConfirmed ?? false,
             },
             step8: {
-              seoSettings: parsed?.step8?.seoSettings || INITIAL_WIZARD_DRAFT.step8.seoSettings,
-              publishMode: parsed?.step8?.publishMode || INITIAL_WIZARD_DRAFT.step8.publishMode,
-              scheduleEnabled: parsed?.step8?.scheduleEnabled || INITIAL_WIZARD_DRAFT.step8.scheduleEnabled,
-              publishDate: parsed?.step8?.publishDate || INITIAL_WIZARD_DRAFT.step8.publishDate,
-              publishTime: parsed?.step8?.publishTime || INITIAL_WIZARD_DRAFT.step8.publishTime,
-              timezone: parsed?.step8?.timezone || INITIAL_WIZARD_DRAFT.step8.timezone,
-              visibilityTargets: parsed?.step8?.visibilityTargets || INITIAL_WIZARD_DRAFT.step8.visibilityTargets,
-              finalAgreement: parsed?.step8?.finalAgreement ?? INITIAL_WIZARD_DRAFT.step8.finalAgreement,
+              seoSettings: parsed?.step8?.seoSettings || EMPTY_WIZARD_DRAFT.step8.seoSettings,
+              publishMode: parsed?.step8?.publishMode || 'Published',
+              scheduleEnabled: parsed?.step8?.scheduleEnabled || false,
+              publishDate: parsed?.step8?.publishDate || '',
+              publishTime: parsed?.step8?.publishTime || '09:00',
+              timezone: parsed?.step8?.timezone || 'Asia/Kolkata (IST)',
+              visibilityTargets: parsed?.step8?.visibilityTargets || ['Website'],
+              finalAgreement: parsed?.step8?.finalAgreement ?? false,
             },
           };
         }
@@ -174,22 +236,186 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch {
       // Ignore storage errors
     }
-    return INITIAL_WIZARD_DRAFT;
+    return EMPTY_WIZARD_DRAFT;
   });
 
-  const [currentStep, setCurrentStep] = useState<number>(draft.currentStep || 1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stepParam = searchParams.get('step');
+  const initialStepNum = stepParam ? Math.max(1, Math.min(10, parseInt(stepParam, 10) || 1)) : (draft.currentStep || 1);
+  const [currentStep, setCurrentStep] = useState<number>(initialStepNum);
+
+  useEffect(() => {
+    const s = searchParams.get('step');
+    if (s) {
+      const parsed = parseInt(s, 10);
+      if (parsed >= 1 && parsed <= 10 && parsed !== currentStep) {
+        setCurrentStep(parsed);
+      }
+    }
+  }, [searchParams, currentStep]);
 
   useEffect(() => {
     setDraft((prev) => ({ ...prev, currentStep }));
   }, [currentStep]);
 
+  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+
   useEffect(() => {
     try {
+      if (draft.status === 'PUBLISHED') {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        return;
+      }
+      if (!draft.step1?.packageName && !draft.draftId && !draft.step2?.primaryDestination) {
+        return;
+      }
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
     } catch {
       // Ignore storage errors
     }
   }, [draft]);
+
+  // Debounced backend autosave for active drafts
+  useEffect(() => {
+    if (draft.status === 'PUBLISHED') return;
+    if (!draft.step1?.packageName && !draft.draftId && !draft.step2?.primaryDestination) return;
+
+    setAutosaveStatus('saving');
+    const timer = setTimeout(async () => {
+      try {
+        const d = draftRef.current;
+        const rawCover = d.step5?.coverImage;
+        const cleanCover =
+          typeof rawCover === 'string'
+            ? rawCover
+            : (rawCover as any)?.url || (rawCover as any)?.secure_url || '';
+        const cleanGallery = (d.step5?.galleryImages || [])
+          .map((g: any) => {
+            if (!g) return null;
+            if (typeof g === 'string') return { url: g, publicId: '' };
+            return {
+              url: g.url || (g as any).secure_url || '',
+              publicId: g.publicId || g.id || '',
+              width: g.width,
+              height: g.height,
+              format: g.format,
+              size: g.size,
+              bytes: g.bytes,
+              uploadedAt: g.uploadedAt,
+              originalFilename: g.originalFilename || g.name || '',
+              category: g.category || '',
+            };
+          })
+          .filter((img: any) => Boolean(img?.url));
+
+        const payload = {
+          title: d.step1?.packageName || 'Draft Package',
+          packageName: d.step1?.packageName,
+          subtitle: d.step1?.shortDescription || '',
+          description: d.step1?.shortDescription || '',
+          category: (d.step1?.packageType as string) || 'Domestic',
+          adventureType: d.step1?.adventureType || 'General Adventure',
+          durationDays: d.step2?.days || 3,
+          durationNights: d.step2?.nights || 2,
+          destination: d.step2?.primaryDestination || (d.step2?.destinationsCovered || []).join(', ') || 'Himalayan Circuit',
+          destinationCountry: 'India',
+          destinationRegion: d.step2?.primaryDestination || 'North India',
+          pickupCity: d.step2?.pickupCity || '',
+          dropOffCity: d.step2?.dropOffCity || '',
+          pickupLocation: d.step2?.pickupCity || '',
+          dropOffLocation: d.step2?.dropOffCity || '',
+          meetingPoint: d.step2?.meetingPoint || '',
+          travelModes: d.step2?.travelModes || [],
+          price: d.step3?.discountedPrice || d.step3?.originalPrice || 9999,
+          originalPrice: d.step3?.originalPrice || 11999,
+          availableSeats: d.step3?.maxTravelers || 20,
+          totalSeats: d.step3?.maxTravelers || 20,
+          coverImage: cleanCover,
+          galleryImages: cleanGallery,
+          inclusions: [...(d.step6?.includedItems || []), ...(d.step6?.customIncludedItems || [])],
+          exclusions: [...(d.step6?.excludedItems || []), ...(d.step6?.customExcludedItems || [])],
+          itinerary: (d.step4?.days || []).map((day) => ({
+            day: day.dayNumber,
+            title: day.title,
+            description: day.description || '',
+            plans: (day.plans || [])
+              .map((p: any) => {
+                const resolvedText = (
+                  typeof p === 'string'
+                    ? p
+                    : p?.text ?? p?.title ?? p?.description ?? p?.content ?? p?.name ?? ''
+                ).toString().trim();
+                return {
+                  text: resolvedText,
+                  icon: p?.icon || '',
+                  notes: p?.notes || '',
+                };
+              })
+              .filter((p: any) => p.text.length > 0),
+            meals: (day.meals || []).join(', '),
+            stay: day.stay || 'Hotel',
+          })),
+          accommodationConfirmed: Boolean(d.stepAccommodation?.accommodationConfirmed),
+          accommodations: d.stepAccommodation?.accommodationConfirmed
+            ? (d.stepAccommodation?.hotels || []).map((h) => ({
+                hotelName: h.hotelName,
+                hotelImages: h.hotelImages || [],
+                category: h.category || 'Hotel',
+                address: h.address || '',
+                city: h.city || '',
+                amenities: h.amenities || [],
+                roomType: h.roomType || '',
+                checkIn: h.checkIn || '',
+                checkOut: h.checkOut || '',
+                shortDescription: h.shortDescription || '',
+                dayRange: h.dayRange || '',
+              }))
+            : [],
+          departures: d.stepDepartures?.departures || [],
+          cancellationPolicy: d.step7?.cancellationPolicy || '',
+          bookingTerms: d.step7?.bookingTerms || [],
+          emergencyContact: d.step7?.emergencyContact || null,
+          whatsappGroupLink: d.step7?.whatsappGroupLink || '',
+          faqs: d.step7?.faqs || [],
+          isDraft: true,
+        };
+
+        let res: any;
+        if (d.packageId) {
+          res = await agencyPackagesService.updatePackage(d.packageId, payload);
+        } else if (d.draftId) {
+          res = await agencyPackagesService.createPackage({ ...payload, draftId: d.draftId });
+        } else {
+          res = await agencyPackagesService.createPackage(payload);
+        }
+
+        if (res && (res.packageId || (res as any).id || (res as any)._id)) {
+          const newDraftId = (res as any)._id?.toString() || res.packageId || (res as any).id;
+          if (newDraftId && draftRef.current.draftId !== newDraftId) {
+            setDraft((prev) => ({ ...prev, draftId: newDraftId }));
+          }
+        }
+        setAutosaveStatus('saved');
+      } catch (err) {
+        console.warn('Backend draft autosave notice:', err);
+        setAutosaveStatus('error');
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [
+    draft.step1,
+    draft.step2,
+    draft.step3,
+    draft.stepDepartures,
+    draft.step4,
+    draft.stepAccommodation,
+    draft.step5,
+    draft.step6,
+    draft.step7,
+  ]);
 
   const updateStep1 = (data: Partial<Step1BasicInfo>) => {
     setDraft((prev) => ({
@@ -642,11 +868,13 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const setCoverImage = (url: string) => {
-    updateStep5({ coverImage: url });
+  const setCoverImage = (url: any) => {
+    const cleanUrl = typeof url === 'string' ? url : url?.url || '';
+    updateStep5({ coverImage: cleanUrl });
   };
 
-  const addGalleryImage = (url: string) => {
+  const addGalleryImage = (url: any) => {
+    const cleanUrl = typeof url === 'string' ? url : url?.url || '';
     setDraft((prev) => {
       const current = prev?.step5?.galleryImages || [];
       if (current.length >= 20) {
@@ -655,8 +883,8 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       const newImg: GalleryImage = {
         id: `img-${Date.now()}`,
-        url,
-        name: `photo_${current.length + 1}.jpg`,
+        url: cleanUrl,
+        name: `photo_${current.length + 1}.webp`,
       };
       return {
         ...prev,
@@ -1023,27 +1251,228 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const nextStep = () => {
-    setCurrentStep((prev) => Math.min(prev + 1, 10));
+    setCurrentStep((prev) => {
+      const next = Math.min(prev + 1, 10);
+      setSearchParams(
+        (p) => {
+          const nextParams = new URLSearchParams(p);
+          nextParams.set('step', String(next));
+          return nextParams;
+        },
+        { replace: true }
+      );
+      return next;
+    });
   };
 
   const prevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
+    setCurrentStep((prev) => {
+      const next = Math.max(prev - 1, 1);
+      setSearchParams(
+        (p) => {
+          const nextParams = new URLSearchParams(p);
+          nextParams.set('step', String(next));
+          return nextParams;
+        },
+        { replace: true }
+      );
+      return next;
+    });
   };
 
   const goToStep = (step: number) => {
     if (step >= 1 && step <= 10) {
       setCurrentStep(step);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('step', String(step));
+          return next;
+        },
+        { replace: true }
+      );
     }
   };
 
-  const resetDraft = () => {
-    setDraft(INITIAL_WIZARD_DRAFT);
-    setCurrentStep(1);
+  const startFreshDraft = () => {
     try {
       localStorage.removeItem(DRAFT_STORAGE_KEY);
+      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch {
       // Ignore
     }
+    setDraft(EMPTY_WIZARD_DRAFT);
+    setCurrentStep(1);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('step', '1');
+        return next;
+      },
+      { replace: true }
+    );
+  };
+
+  const resetDraft = () => {
+    startFreshDraft();
+  };
+
+  const loadActiveDraft = (data: any) => {
+    if (!data) return;
+    const raw = data.rawDoc || data.raw || data;
+    setDraft((prev) => ({
+      ...prev,
+      draftId: raw._id?.toString() || raw.packageId || raw.id,
+      packageId: raw.packageId || raw.id || raw._id?.toString(),
+      status: raw.status || 'DRAFT',
+      step1: {
+        packageName: raw.title || raw.packageName || '',
+        shortDescription: raw.subtitle || raw.description || '',
+        packageType: (raw.category as any) || 'Domestic',
+        adventureType: raw.adventureType || 'General Adventure',
+        tripDifficulty: (raw.tripDifficulty as any) || 'Moderate',
+        visibility: raw.visibility || 'Draft',
+      },
+      step2: {
+        primaryDestination: raw.destination || '',
+        destinationsCovered: raw.destinationsCovered || (raw.destination ? [raw.destination] : []),
+        durationPreset: `${raw.durationDays || 3} Days / ${raw.durationNights || 2} Nights`,
+        days: Number(raw.durationDays || 3),
+        nights: Number(raw.durationNights || 2),
+        seasons: raw.seasons || [],
+        bestMonths: raw.bestMonths || [],
+        pickupCity: raw.pickupCity || raw.pickupLocation || '',
+        dropOffCity: raw.dropOffCity || raw.dropOffLocation || '',
+        meetingPoint: raw.meetingPoint || '',
+        travelModes: raw.travelModes || ['Private Vehicle'],
+      },
+      step3: {
+        pricingModel: 'Price Per Person',
+        originalPrice: Number(raw.originalPrice || raw.price || 0),
+        discountedPrice: Number(raw.price || 0),
+        maxTravelers: Number(raw.availableSeats || raw.totalSeats || 20),
+        recommendedGroupSize: Number(raw.recommendedGroupSize || 10),
+        paymentType: 'Full Payment',
+        advanceAmount: 0,
+        inclusions: [],
+        extraCharges: {
+          singleOccupancy: false,
+          childPrice: false,
+          extraBed: false,
+          peakSeasonSurcharge: false,
+        },
+        allowCouponCodes: true,
+        cancellationPolicy: 'Moderate',
+      },
+      stepDepartures: {
+        departures: Array.isArray(raw.departures) && raw.departures.length > 0
+          ? raw.departures.map((d: any, idx: number) => ({
+              id: d.id || d.departureId || `dep-${idx + 1}`,
+              departureDate: d.departureDate ? new Date(d.departureDate).toISOString().split('T')[0] : '',
+              departureTime: d.departureTime || '09:00',
+              timezone: d.timezone || 'Asia/Kolkata (IST)',
+              pickupLocation: d.pickupLocation || raw.pickupCity || raw.destination || 'Airport',
+              reportingTime: d.reportingTime || '07:30 AM',
+              bookingClosingDate: d.bookingClosingDate ? new Date(d.bookingClosingDate).toISOString().split('T')[0] : '',
+              bookingClosingTime: d.bookingClosingTime || '23:59',
+              maximumTravelers: d.maximumTravelers || d.capacity || raw.totalSeats || 20,
+              bookedTravelers: d.bookedTravelers || d.bookedSeats || 0,
+              availableSeats: d.availableSeats !== undefined ? d.availableSeats : (d.capacity || raw.totalSeats || 20) - (d.bookedSeats || 0),
+              status: d.status || 'Upcoming',
+              returnDate: d.returnDate ? new Date(d.returnDate).toISOString().split('T')[0] : '',
+              returnTime: d.returnTime || '09:00',
+            }))
+          : (Array.isArray(raw.upcomingDepartures) && raw.upcomingDepartures.length > 0
+              ? raw.upcomingDepartures.map((d: any, idx: number) => ({
+                  id: d.id || d.departureId || `dep-${idx + 1}`,
+                  departureDate: d.departureDate ? new Date(d.departureDate).toISOString().split('T')[0] : '',
+                  departureTime: d.departureTime || '09:00',
+                  timezone: d.timezone || 'Asia/Kolkata (IST)',
+                  pickupLocation: d.pickupLocation || raw.pickupCity || raw.destination || 'Airport',
+                  reportingTime: d.reportingTime || '07:30 AM',
+                  bookingClosingDate: d.bookingClosingDate ? new Date(d.bookingClosingDate).toISOString().split('T')[0] : '',
+                  bookingClosingTime: d.bookingClosingTime || '23:59',
+                  maximumTravelers: d.maximumTravelers || d.capacity || raw.totalSeats || 20,
+                  bookedTravelers: d.bookedTravelers || d.bookedSeats || 0,
+                  availableSeats: d.availableSeats !== undefined ? d.availableSeats : (d.capacity || raw.totalSeats || 20) - (d.bookedSeats || 0),
+                  status: d.status || 'Upcoming',
+                  returnDate: d.returnDate ? new Date(d.returnDate).toISOString().split('T')[0] : '',
+                  returnTime: d.returnTime || '09:00',
+                }))
+              : []),
+      },
+      step4: {
+        days: Array.isArray(raw.itinerary) && raw.itinerary.length > 0 ? normalizeItineraryDays(raw.itinerary) : [],
+        activeDayId: '',
+      },
+      stepAccommodation: {
+        accommodationConfirmed: Boolean(raw.accommodationConfirmed),
+        hotels: Array.isArray(raw.accommodations)
+          ? raw.accommodations.map((h: any, idx: number) => ({
+              id: h._id?.toString() || `hotel-${idx + 1}`,
+              hotelName: h.hotelName || '',
+              hotelImages: Array.isArray(h.hotelImages) ? h.hotelImages : [],
+              category: h.category || 'Hotel',
+              address: h.address || '',
+              city: h.city || '',
+              amenities: Array.isArray(h.amenities) ? h.amenities : [],
+              roomType: h.roomType || '',
+              checkIn: h.checkIn || '',
+              checkOut: h.checkOut || '',
+              shortDescription: h.shortDescription || '',
+              dayRange: h.dayRange || '',
+            }))
+          : [],
+      },
+      step5: {
+        coverImage: raw.coverImage || raw.featuredImage || '',
+        galleryImages: Array.isArray(raw.galleryImages)
+          ? raw.galleryImages.map((img: any, idx: number) => ({
+              id: img.publicId || `img-${idx + 1}`,
+              url: typeof img === 'string' ? img : img.url,
+              publicId: img.publicId || '',
+              width: img.width,
+              height: img.height,
+              format: img.format,
+              bytes: img.bytes,
+              size: img.size,
+              uploadedAt: img.uploadedAt,
+              name: img.originalFilename || `image_${idx + 1}.webp`,
+              category: img.category,
+            }))
+          : [],
+        videos: [],
+        imageCategories: [],
+        previewIndex: 0,
+      },
+      step6: {
+        includedItems: Array.isArray(raw.inclusions) ? raw.inclusions : [],
+        customIncludedItems: [],
+        excludedItems: Array.isArray(raw.exclusions) ? raw.exclusions : [],
+        customExcludedItems: [],
+        packingItems: [],
+        customPackingItems: [],
+        optionalAddOns: [],
+        importantNotes: '',
+      },
+      step7: {
+        cancellationPolicy: raw.cancellationPolicy || raw.step7?.cancellationPolicy || 'Moderate',
+        customCancellationRules: raw.customCancellationRules || raw.step7?.customCancellationRules || [],
+        bookingTerms: Array.isArray(raw.bookingTerms) ? raw.bookingTerms : (raw.step7?.bookingTerms || ['Standard booking terms apply']),
+        refundProcessing: raw.refundProcessing || raw.step7?.refundProcessing || 'Standard Refund',
+        requiredDocuments: raw.requiredDocuments || raw.step7?.requiredDocuments || [],
+        customDocuments: raw.customDocuments || raw.step7?.customDocuments || [],
+        healthSafety: raw.healthSafety || raw.step7?.healthSafety || [],
+        faqs: Array.isArray(raw.faq || raw.faqs) ? (raw.faq || raw.faqs) : (raw.step7?.faqs || []),
+        emergencyContact: raw.emergencyContact || raw.step7?.emergencyContact || { phone: '', alternatePhone: '', email: '', is24x7: false },
+        whatsappGroupLink: raw.whatsappGroupLink || raw.step7?.whatsappGroupLink || '',
+        legalConfirmed: raw.legalConfirmed ?? raw.step7?.legalConfirmed ?? true,
+      },
+      step8: {
+        ...EMPTY_WIZARD_DRAFT.step8,
+        finalAgreement: raw.status === 'PUBLISHED' ? true : Boolean(raw.step8?.finalAgreement),
+      },
+    }));
   };
 
   const isStep1Valid = Boolean(
@@ -1069,17 +1498,8 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
       (draft?.step3?.paymentType === 'Full Payment' || (draft?.step3?.advanceAmount ?? 0) > 0)
   );
 
-  const isStepDeparturesValid = Boolean(
-    (draft?.stepDepartures?.departures?.length ?? 0) > 0 &&
-      draft?.stepDepartures?.departures?.every(
-        (dep) =>
-          dep.departureDate &&
-          dep.departureTime &&
-          dep.bookingClosingDate &&
-          dep.maximumTravelers > 0 &&
-          new Date(dep.bookingClosingDate) <= new Date(dep.departureDate)
-      )
-  );
+  const hasValidSchedule = checkPackageHasValidSchedule(draft);
+  const isStepDeparturesValid = hasValidSchedule;
 
   const itineraryDaysCount = draft?.step4?.days?.length ?? 0;
   const packageDaysCount = draft?.step2?.days ?? 7;
@@ -1088,7 +1508,21 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
   const isStep4Valid = Boolean(
     itineraryDaysCount > 0 &&
       isItineraryDurationValid &&
-      draft?.step4?.days?.every((day) => day.title && day.title.trim().length > 0)
+      draft?.step4?.days?.every((day) => {
+        const hasTitle = Boolean(day.title && day.title.trim().length > 0);
+        const hasPlans = Array.isArray(day.plans) && day.plans.length > 0;
+        const allPlansValid =
+          hasPlans &&
+          day.plans.every((p) => {
+            const text = (
+              typeof p === 'string'
+                ? p
+                : p?.text ?? (p as any)?.title ?? (p as any)?.description ?? (p as any)?.content ?? (p as any)?.name ?? ''
+            ).toString().trim();
+            return text.length > 0;
+          });
+        return hasTitle && allPlansValid;
+      })
   );
 
   const isStepAccommodationValid = Boolean(
@@ -1115,12 +1549,19 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const step7 = draft?.step7;
+  const isWhatsappLinkValid =
+    !step7?.whatsappGroupLink ||
+    step7.whatsappGroupLink.trim() === '' ||
+    /^https:\/\/(chat\.whatsapp\.com\/[A-Za-z0-9_-]+|wa\.me\/[0-9]+)/i.test(step7.whatsappGroupLink.trim());
+
   const isStep7Valid = Boolean(
     step7?.cancellationPolicy &&
       (step7?.bookingTerms?.length ?? 0) >= 1 &&
+      (step7?.faqs?.length ?? 0) >= 1 &&
       (step7?.emergencyContact?.phone?.trim()?.length ?? 0) >= 10 &&
       (step7?.emergencyContact?.email?.trim()?.includes('@') ?? false) &&
-      step7?.legalConfirmed === true
+      step7?.legalConfirmed === true &&
+      isWhatsappLinkValid
   );
 
   const isStep8Valid = Boolean(draft?.step8?.finalAgreement === true);
@@ -1136,6 +1577,99 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
     isStep6Valid &&
     isStep7Valid &&
     isStep8Valid;
+
+  const validStepCount = [
+    isStep1Valid,
+    isStep2Valid,
+    isStep3Valid,
+    isStepDeparturesValid,
+    isStep4Valid,
+    isStepAccommodationValid,
+    isStep5Valid,
+    isStep6Valid,
+    isStep7Valid,
+  ].filter(Boolean).length;
+  const completionPercentage = Math.round((validStepCount / 9) * 100);
+
+  const validateAllSteps = () => {
+    const missingSections: string[] = [];
+    let firstInvalidStep = 0;
+
+    if (!isStep1Valid) {
+      missingSections.push('Step 1: Basic Information (Title & Package Type)');
+      if (!firstInvalidStep) firstInvalidStep = 1;
+    }
+    if (!isStep2Valid) {
+      missingSections.push('Step 2: Destination & Route (Primary Destination, Pickup/Drop)');
+      if (!firstInvalidStep) firstInvalidStep = 2;
+    }
+    if (!isStep3Valid) {
+      missingSections.push('Step 3: Pricing & Capacity (Base Price, Max Travelers)');
+      if (!firstInvalidStep) firstInvalidStep = 3;
+    }
+    if (!isStepDeparturesValid) {
+      missingSections.push('Step 4: Departure Schedule (At least one future scheduled date)');
+      if (!firstInvalidStep) firstInvalidStep = 4;
+    }
+    if (!isStep4Valid) {
+      if (itineraryDaysCount === 0) {
+        missingSections.push('Step 5: Itinerary (Itinerary days are required)');
+      } else if (!isItineraryDurationValid) {
+        missingSections.push(`Step 5: Itinerary (Days count [${itineraryDaysCount}] must match package duration [${packageDaysCount} days])`);
+      } else {
+        draft?.step4?.days?.forEach((day) => {
+          if (!day.title || day.title.trim().length === 0) {
+            missingSections.push(`Step 5: Itinerary - Day ${day.dayNumber}: Title is required`);
+          }
+          if (!day.plans || day.plans.length === 0) {
+            missingSections.push(`Step 5: Itinerary - Day ${day.dayNumber} ("${day.title || 'Untitled'}") requires at least one planned activity`);
+          } else {
+            day.plans.forEach((p, pIdx) => {
+              const text = (
+                typeof p === 'string'
+                  ? p
+                  : p?.text ?? (p as any)?.title ?? (p as any)?.description ?? (p as any)?.content ?? (p as any)?.name ?? ''
+              ).toString().trim();
+              if (!text) {
+                missingSections.push(`Step 5: Itinerary - Day ${day.dayNumber} ("${day.title || 'Untitled'}"): Plan item ${pIdx + 1} activity text is required`);
+              }
+            });
+          }
+        });
+      }
+      if (!firstInvalidStep) firstInvalidStep = 5;
+    }
+    if (!isStepAccommodationValid) {
+      missingSections.push('Step 6: Accommodation (Hotel names required if enabled)');
+      if (!firstInvalidStep) firstInvalidStep = 6;
+    }
+    if (!isStep5Valid) {
+      missingSections.push('Step 7: Gallery & Media (Cover image + min 3 gallery photos)');
+      if (!firstInvalidStep) firstInvalidStep = 7;
+    }
+    if (!isStep6Valid) {
+      missingSections.push('Step 8: Inclusions & Exclusions (Min 5 inclusions, min 3 exclusions)');
+      if (!firstInvalidStep) firstInvalidStep = 8;
+    }
+    if (!isStep7Valid) {
+      if (!isWhatsappLinkValid) {
+        missingSections.push('Step 9: WhatsApp Group Link must be a valid WhatsApp invite/chat URL');
+      } else {
+        missingSections.push('Step 9: Policies & Emergency Contact (Cancellation, FAQs, phone/email, legal agreement)');
+      }
+      if (!firstInvalidStep) firstInvalidStep = 9;
+    }
+    if (!isStep8Valid) {
+      missingSections.push('Step 10: Final Agreement checkbox');
+      if (!firstInvalidStep) firstInvalidStep = 10;
+    }
+
+    return {
+      isValid: missingSections.length === 0,
+      firstInvalidStep: firstInvalidStep || 1,
+      missingSections,
+    };
+  };
 
   let isCurrentStepValid = false;
   switch (currentStep) {
@@ -1176,6 +1710,7 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         currentStep,
         draft,
+        autosaveStatus,
         updateStep1,
         updateStep2,
         updateStep3,
@@ -1235,6 +1770,10 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
         prevStep,
         goToStep,
         resetDraft,
+        startFreshDraft,
+        loadActiveDraft,
+        completionPercentage,
+        validateAllSteps,
         isStep1Valid,
         isStep2Valid,
         isStep3Valid,
@@ -1245,6 +1784,7 @@ export const PackageWizardProvider: React.FC<{ children: React.ReactNode }> = ({
         isStep6Valid,
         isStep7Valid,
         isStep8Valid,
+        hasValidSchedule,
         isItineraryDurationValid,
         isAllStepsValid,
         isCurrentStepValid,

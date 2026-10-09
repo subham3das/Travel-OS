@@ -20,12 +20,14 @@ export const PackageHero: React.FC<PackageHeroProps> = ({ pkg, onOpenGallery }) 
     setIsWishlisted(wishlistService.isPackageSaved(pkg.id));
   }, [pkg.id]);
 
+  const resolveUrl = (item: any): string => (typeof item === 'string' ? item : item?.url || '');
+
   const handleToggleWishlist = () => {
     const nextState = wishlistService.toggleSavePackage({
       id: pkg.id,
       title: pkg.title,
       price: pkg.price,
-      image: (pkg.gallery && pkg.gallery[0]) || pkg.coverImage,
+      image: resolveUrl((pkg.gallery && pkg.gallery[0]) || pkg.coverImage),
       agency: pkg.agencyName || 'Verified Partner',
       duration: pkg.duration,
     });
@@ -57,7 +59,7 @@ export const PackageHero: React.FC<PackageHeroProps> = ({ pkg, onOpenGallery }) 
     <div className="relative w-full h-[340px] sm:h-[450px] bg-slate-900 overflow-hidden select-none">
       {/* Cover Image */}
       <img
-        src={images[currentIdx]}
+        src={resolveUrl(images[currentIdx])}
         alt={pkg.title}
         className="w-full h-full object-cover transition-all duration-500 cursor-pointer"
         onClick={onOpenGallery}

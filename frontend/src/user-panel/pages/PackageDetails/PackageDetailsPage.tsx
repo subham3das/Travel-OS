@@ -8,7 +8,6 @@ import { PackageOverview } from './components/PackageOverview';
 import { IncludedSection } from './components/IncludedSection';
 import { ExcludedSection } from './components/ExcludedSection';
 import { ItineraryTimeline } from './components/ItineraryTimeline';
-import { RouteMap } from './components/RouteMap';
 import { AccommodationSection } from './components/AccommodationSection';
 import { ActivitiesSection } from './components/ActivitiesSection';
 import { ReviewSection } from './components/ReviewSection';
@@ -120,10 +119,7 @@ export const PackageDetailsPage: React.FC = () => {
         {/* 4. Day-wise Itinerary Timeline */}
         <ItineraryTimeline itinerary={pkg.itinerary} />
 
-        {/* 5. Route Map */}
-        <RouteMap routeDetails={pkg.routeDetails} destinationName={pkg.destinationName} />
-
-        {/* 6. Accommodation */}
+        {/* 5. Accommodation */}
         <AccommodationSection hotels={pkg.hotels} />
 
         {/* 7. Top Activities */}
@@ -159,7 +155,7 @@ export const PackageDetailsPage: React.FC = () => {
 
           <div className="relative w-full max-w-4xl h-[60vh] sm:h-[75vh] flex items-center justify-center">
             <img
-              src={galleryImages[activeGalleryIdx]}
+              src={typeof galleryImages[activeGalleryIdx] === 'string' ? galleryImages[activeGalleryIdx] : (galleryImages[activeGalleryIdx] as any)?.url || ''}
               alt="Gallery Preview"
               className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
             />
@@ -187,17 +183,20 @@ export const PackageDetailsPage: React.FC = () => {
           </div>
 
           <div className="flex gap-2 overflow-x-auto py-2">
-            {galleryImages.map((img, idx) => (
-              <button
-                key={idx}
-                onClick={() => setActiveGalleryIdx(idx)}
-                className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                  idx === activeGalleryIdx ? 'border-[#6356E5] scale-105' : 'border-transparent opacity-50'
-                }`}
-              >
-                <img src={img} alt="Thumb" className="w-full h-full object-cover" />
-              </button>
-            ))}
+            {galleryImages.map((img, idx) => {
+              const thumbUrl = typeof img === 'string' ? img : (img as any)?.url || '';
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setActiveGalleryIdx(idx)}
+                  className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                    idx === activeGalleryIdx ? 'border-[#6356E5] scale-105' : 'border-transparent opacity-50'
+                  }`}
+                >
+                  <img src={thumbUrl} alt="Thumb" className="w-full h-full object-cover" />
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

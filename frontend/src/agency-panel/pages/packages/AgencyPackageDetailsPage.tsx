@@ -222,7 +222,7 @@ export const AgencyPackageDetailsPage: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate(`/agency/departures?packageId=${pkg.packageId || pkg.id}`)}
+                  onClick={() => navigate(`/agency/packages/${pkg.packageId || pkg.id}/edit?step=4`)}
                   className="px-4 py-2.5 rounded-xl bg-[#583BE8] hover:bg-[#492de0] text-white text-xs font-black transition-all shadow-sm shadow-[#583BE8]/20 shrink-0 cursor-pointer self-start sm:self-auto"
                 >
                   Schedule Departure →

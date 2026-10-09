@@ -191,10 +191,40 @@ router.post(
  */
 router.get('/packages/stats', authenticateAgency, requireApprovedAgency, agencyPackageController.getPackageStats);
 router.get('/packages', authenticateAgency, requireApprovedAgency, agencyPackageController.getPackages);
-router.post('/packages', authenticateAgency, requireApprovedAgency, agencyPackageController.createPackage);
+router.post(
+  '/packages',
+  authenticateAgency,
+  requireApprovedAgency,
+  (req, res, next) => {
+    console.log('[5. In the request body arriving at Express (POST /packages)]', req.body?.galleryImages);
+    next();
+  },
+  agencyPackageController.createPackage
+);
+router.get('/packages/active-draft', authenticateAgency, requireApprovedAgency, agencyPackageController.getActiveDraft);
+router.delete('/packages/active-draft', authenticateAgency, requireApprovedAgency, agencyPackageController.discardActiveDraft);
 router.get('/packages/:id', authenticateAgency, requireApprovedAgency, agencyPackageController.getPackageById);
-router.patch('/packages/:id', authenticateAgency, requireApprovedAgency, agencyPackageController.updatePackage);
+router.patch(
+  '/packages/:id',
+  authenticateAgency,
+  requireApprovedAgency,
+  (req, res, next) => {
+    console.log('[5. In the request body arriving at Express (PATCH /packages/:id)]', req.body?.galleryImages);
+    next();
+  },
+  agencyPackageController.updatePackage
+);
 router.patch('/packages/:id/status', authenticateAgency, requireApprovedAgency, agencyPackageController.updatePackageStatus);
+router.post(
+  '/packages/:id/publish',
+  authenticateAgency,
+  requireApprovedAgency,
+  (req, res, next) => {
+    console.log('[5. In the request body arriving at Express (POST /packages/:id/publish)]', req.body?.galleryImages);
+    next();
+  },
+  agencyPackageController.publishPackage
+);
 router.post('/packages/:id/duplicate', authenticateAgency, requireApprovedAgency, agencyPackageController.duplicatePackage);
 router.delete('/packages/:id', authenticateAgency, requireApprovedAgency, agencyPackageController.deletePackage);
 

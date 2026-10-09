@@ -24,7 +24,7 @@ export const WizardLayout: React.FC<WizardLayoutProps> = ({ children }) => {
 
   const handleNext = () => {
     if (isCurrentStepValid) {
-      if (currentStep < 9) {
+      if (currentStep < 10) {
         nextStep();
       }
     }
@@ -53,14 +53,14 @@ export const WizardLayout: React.FC<WizardLayoutProps> = ({ children }) => {
         </main>
       </div>
 
-      {/* Sticky Bottom Action Footer (Steps 1-8) */}
-      {currentStep < 9 && (
+      {/* Sticky Bottom Action Footer (Steps 1-9) */}
+      {currentStep < 10 && (
         <WizardFooter
           currentStep={currentStep}
           onPrevious={handlePrevious}
           onNext={handleNext}
           isNextDisabled={!isCurrentStepValid}
-          nextLabel={currentStep === 8 ? 'Preview & Publish' : 'Next'}
+          nextLabel={currentStep === 9 ? 'Review & Publish' : 'Next'}
         />
       )}
     </div>

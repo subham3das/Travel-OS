@@ -41,6 +41,7 @@ export class AgencyPackageController {
 
   public createPackage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      console.log('[6. Inside the controller (createPackage)]', req.body?.galleryImages);
       const newPackage = await agencyPackageService.createPackage(req.agency!._id, req.body);
       ResponseUtil.success(res, newPackage, 'Package created successfully', 201);
     } catch (error) {
@@ -51,6 +52,7 @@ export class AgencyPackageController {
   public updatePackage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = String(req.params.id);
+      console.log('[6. Inside the controller (updatePackage)]', req.body?.galleryImages);
       const updated = await agencyPackageService.updatePackage(req.agency!._id, id, req.body);
       ResponseUtil.success(res, updated, 'Package updated successfully');
     } catch (error) {
@@ -72,6 +74,17 @@ export class AgencyPackageController {
     }
   };
 
+  public publishPackage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      console.log('[6. Inside the controller (publishPackage)]', { id, galleryImages: req.body?.galleryImages });
+      const published = await agencyPackageService.publishPackage(req.agency!._id, id);
+      ResponseUtil.success(res, published, 'Package published successfully');
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public duplicatePackage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = String(req.params.id);
@@ -87,6 +100,28 @@ export class AgencyPackageController {
       const id = String(req.params.id);
       await agencyPackageService.deletePackage(req.agency!._id, id);
       ResponseUtil.success(res, { success: true }, 'Package deleted successfully');
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getActiveDraft = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const draft = await agencyPackageService.getActiveDraft(req.agency!._id);
+      ResponseUtil.success(
+        res,
+        draft ? { ...agencyPackageService['mapToAgencyPackage'](draft), rawDoc: draft } : null,
+        draft ? 'Active draft found' : 'No active draft'
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public discardActiveDraft = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await agencyPackageService.discardActiveDraft(req.agency!._id);
+      ResponseUtil.success(res, { success: true }, 'Active draft discarded successfully');
     } catch (error) {
       next(error);
     }

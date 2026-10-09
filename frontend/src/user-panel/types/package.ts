@@ -79,8 +79,11 @@ export interface TourPackage {
   difficulty: 'Easy' | 'Easy to Moderate' | 'Moderate' | 'Challenging';
   bestTime: string;
   vehicle: string;
+  pickupCity?: string;
+  dropOffCity?: string;
   startLocation: string;
   endLocation: string;
+  whatsappGroupLink?: string;
   routeDetails?: {
     distance: string;
     travelTime: string;

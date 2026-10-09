@@ -2,6 +2,7 @@ import React from 'react';
 import { usePackageWizard } from '../../../hooks/usePackageWizard';
 import { Calendar, Clock, MapPin, Users, Plus, Trash2, ShieldAlert, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 import { DepartureScheduleStatus } from '../../../types/packageWizard';
+import { ModernTimePicker } from '../../common/ModernTimePicker';
 
 export const DeparturesStep: React.FC = () => {
   const {
@@ -40,7 +41,7 @@ export const DeparturesStep: React.FC = () => {
           return (
             <div
               key={dep.id}
-              className="bg-white rounded-3xl p-5 sm:p-6 border border-purple-200/90 shadow-2xs space-y-5 relative overflow-hidden"
+              className="bg-white rounded-3xl p-5 sm:p-6 border border-purple-200/90 shadow-2xs space-y-5 relative"
             >
               {/* Header Bar */}
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -108,11 +109,9 @@ export const DeparturesStep: React.FC = () => {
                 {/* Departure Time */}
                 <div>
                   <label className="text-slate-700 block mb-1">Departure Time *</label>
-                  <input
-                    type="time"
-                    value={dep.departureTime}
-                    onChange={(e) => updateDepartureItem(dep.id, { departureTime: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-extrabold"
+                  <ModernTimePicker
+                    value={dep.departureTime || '09:00'}
+                    onChange={(val) => updateDepartureItem(dep.id, { departureTime: val })}
                   />
                 </div>
 
@@ -146,12 +145,9 @@ export const DeparturesStep: React.FC = () => {
                 {/* Reporting Time */}
                 <div>
                   <label className="text-slate-700 block mb-1">Reporting Time *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 07:30 AM"
-                    value={dep.reportingTime}
-                    onChange={(e) => updateDepartureItem(dep.id, { reportingTime: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-bold"
+                  <ModernTimePicker
+                    value={dep.reportingTime || '07:30'}
+                    onChange={(val) => updateDepartureItem(dep.id, { reportingTime: val })}
                   />
                 </div>
 
@@ -175,11 +171,9 @@ export const DeparturesStep: React.FC = () => {
                 {/* Booking Closing Time */}
                 <div>
                   <label className="text-slate-700 block mb-1">Booking Closing Time *</label>
-                  <input
-                    type="time"
-                    value={dep.bookingClosingTime}
-                    onChange={(e) => updateDepartureItem(dep.id, { bookingClosingTime: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-slate-800 font-extrabold"
+                  <ModernTimePicker
+                    value={dep.bookingClosingTime || '23:59'}
+                    onChange={(val) => updateDepartureItem(dep.id, { bookingClosingTime: val })}
                   />
                 </div>
 

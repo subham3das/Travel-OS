@@ -474,6 +474,12 @@ export class BookingService {
     }).lean();
 
     if (booking) {
+      if (booking.packageId) {
+        const pkgDoc: any = await PackageModel.findById(booking.packageId).select('whatsappGroupLink').lean();
+        if (pkgDoc?.whatsappGroupLink) {
+          (booking as any).whatsappGroupLink = pkgDoc.whatsappGroupLink;
+        }
+      }
       return booking;
     }
 

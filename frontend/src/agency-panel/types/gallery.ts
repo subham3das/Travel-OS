@@ -17,6 +17,15 @@ export interface GalleryImage {
   sizeMB?: number;
   isCover?: boolean;
   category?: CategoryTag;
+  publicId?: string;
+  width?: number;
+  height?: number;
+  format?: string;
+  size?: number;
+  bytes?: number;
+  uploadedAt?: string | Date;
+  originalFilename?: string;
+  alt?: string;
 }
 
 export interface VideoFile {

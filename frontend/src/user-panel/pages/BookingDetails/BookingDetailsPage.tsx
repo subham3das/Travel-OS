@@ -16,10 +16,12 @@ import {
   Car,
   Users,
   Phone,
+  AlertTriangle,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { bookingService } from '../../services/booking.service';
 import apiClient from '../../../services/apiClient';
+import { openWhatsAppContact, makePhoneCall } from '../../utils/contact';
 
 export const BookingDetailsPage: React.FC = () => {
   const { bookingId, id } = useParams<{ bookingId?: string; id?: string }>();
@@ -64,6 +66,10 @@ export const BookingDetailsPage: React.FC = () => {
               cb.serviceType === 'SELF_DRIVE_RENTAL' ||
               cb.serviceType === 'self_drive_car' ||
               cb.serviceType === 'self_drive_bike';
+            const bStatus =
+              cb.bookingStatus === 'CANCELLED' && cb.cancelledBy === 'OWNER'
+                ? 'CANCELLED BY OWNER'
+                : cb.bookingStatus || cb.status || 'PENDING';
 
             setBooking({
               id: cb.bookingId || cb._id,
@@ -96,7 +102,7 @@ export const BookingDetailsPage: React.FC = () => {
               totalAmount: cb.totalAmount,
               amountPaid: cb.depositPaid,
               remainingAmount: cb.remainingAmount,
-              bookingStatus: cb.bookingStatus || cb.status || 'PENDING',
+              bookingStatus: bStatus,
               paymentStatus: cb.paymentStatus || 'DEPOSIT_PAID',
               departureDate: cb.startDate
                 ? new Date(cb.startDate).toLocaleDateString()
@@ -120,6 +126,11 @@ export const BookingDetailsPage: React.FC = () => {
                 'Rental Vehicle',
               isCarRental: true,
               timeline: cb.timeline || [],
+              pickupCode: cb.pickupCode || cb.rideStartCode,
+              returnCode: cb.returnCode || cb.rideCloseCode,
+              cancelledBy: cb.cancelledBy,
+              cancelledAt: cb.cancelledAt,
+              cancellationReason: cb.cancellationReason,
               associatedTripId: undefined,
               specialNotes: cb.specialNotes || '',
               cancellationPolicy:
@@ -130,7 +141,65 @@ export const BookingDetailsPage: React.FC = () => {
             return;
           }
         } catch {
-          // If car booking lookup also fails
+          // If car booking lookup fails, try rental
+        }
+
+        // 3. Try rental booking endpoint
+        try {
+          const rentalRes = await apiClient.get<any>(`/rental/${encodeURIComponent(targetBookingId)}`);
+          const rb = rentalRes.data?.data?.booking || rentalRes.data?.booking || rentalRes.data?.data || rentalRes.data;
+          if (isMounted && rb) {
+            const carObj = rb.carId as any;
+            const agencyObj = rb.agencyId as any;
+            const bStatus =
+              rb.bookingStatus === 'CANCELLED' && rb.cancelledBy === 'OWNER'
+                ? 'CANCELLED BY OWNER'
+                : rb.bookingStatus || 'PENDING';
+
+            setBooking({
+              id: rb.bookingId || rb._id,
+              bookingId: rb.bookingId || rb._id,
+              packageName: `${carObj?.brand || ''} ${carObj?.name || 'Self-Drive Vehicle'}`.trim(),
+              packageThumbnail:
+                carObj?.images?.[0] ||
+                carObj?.thumbnail ||
+                'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800',
+              agencyName: agencyObj?.businessName || agencyObj?.name || 'Verified Rental Agency',
+              agencyPhone: agencyObj?.phone || '+91 98765 00000',
+              customerName: rb.customerName,
+              customerEmail: rb.customerEmail,
+              customerPhone: rb.customerPhone,
+              travelersCount: 4,
+              totalAmount: rb.totalAmount,
+              amountPaid: rb.amountPaid || rb.totalAmount,
+              remainingAmount: 0,
+              bookingStatus: bStatus,
+              paymentStatus: rb.paymentStatus || 'PAID',
+              departureDate: rb.startDate ? new Date(rb.startDate).toLocaleDateString() : 'Confirmed',
+              returnDate: rb.endDate ? new Date(rb.endDate).toLocaleDateString() : '',
+              pickupTime: rb.startDate
+                ? new Date(rb.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '10:00 AM',
+              pickupLocation: rb.pickupLocation || 'Pickup Hub',
+              dropLocation: rb.dropLocation || rb.pickupLocation || 'Return Hub',
+              vehicleNumber: carObj?.registrationNumber || 'Commercial Fleet',
+              vehicleModel: `${carObj?.brand || ''} ${carObj?.name || 'Self-Drive Vehicle'}`.trim(),
+              isCarRental: true,
+              timeline: rb.timeline || [],
+              pickupCode: rb.pickupCode || rb.bookingConfirmationCode,
+              returnCode: rb.returnCode,
+              cancelledBy: rb.cancelledBy,
+              cancelledAt: rb.cancelledAt,
+              cancellationReason: rb.cancellationReason,
+              associatedTripId: undefined,
+              specialNotes: rb.specialNotes || '',
+              cancellationPolicy: 'Standard cancellation policy applies.',
+            });
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // If rental booking lookup also fails
         }
 
         if (isMounted) {
@@ -279,6 +348,49 @@ export const BookingDetailsPage: React.FC = () => {
     );
   }
 
+  const isCancelledByOwner =
+    booking.bookingStatus === 'CANCELLED BY OWNER' ||
+    booking.cancelledBy === 'OWNER';
+  const isCancelled =
+    isCancelledByOwner ||
+    (booking.bookingStatus || '').toUpperCase() === 'CANCELLED';
+
+  const effectiveTimeline =
+    booking.timeline && booking.timeline.length > 0
+      ? booking.timeline
+      : isCancelledByOwner
+      ? [
+          {
+            id: 'step-created',
+            title: 'Booking Created',
+            subtitle: 'Vehicle reserved',
+            status: 'completed',
+            timestamp: booking.departureDate || 'Created',
+          },
+          {
+            id: 'step-paid',
+            title: 'Payment Successful',
+            subtitle: 'Payment verified',
+            status: 'completed',
+            timestamp: booking.paymentStatus || 'Paid',
+          },
+          {
+            id: 'step-cancelled',
+            title: 'Booking Cancelled by Owner',
+            subtitle: booking.cancellationReason
+              ? `Reason: ${booking.cancellationReason}`
+              : 'Cancelled by fleet operator',
+            status: 'completed',
+            timestamp: booking.cancelledAt
+              ? new Date(booking.cancelledAt).toLocaleTimeString('en-IN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : 'Cancelled',
+          },
+        ]
+      : [];
+
   return (
     <div className="min-h-screen bg-[#F8F9FC] text-[#0F172A] font-sans selection:bg-[#6356E5]/20 selection:text-[#6356E5] pb-24">
       {/* Header Bar */}
@@ -319,37 +431,73 @@ export const BookingDetailsPage: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-2xs space-y-3"
         >
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm font-black text-[#0F172A]">
-                  Booking Status:
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase">
-                  {booking.bookingStatus || 'CONFIRMED'}
-                </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                  isCancelled
+                    ? 'bg-rose-50 text-rose-600'
+                    : 'bg-emerald-50 text-emerald-600'
+                }`}
+              >
+                {isCancelled ? (
+                  <AlertTriangle className="w-6 h-6" />
+                ) : (
+                  <CheckCircle2 className="w-6 h-6" />
+                )}
               </div>
-              <p className="text-xs font-medium text-slate-400 pt-0.5">
-                Payment: <span className="font-extrabold text-emerald-600">{booking.paymentStatus || 'PAID'}</span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm font-black text-[#0F172A]">
+                    Booking Status:
+                  </span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase border ${
+                      isCancelled
+                        ? 'bg-rose-100 text-rose-800 border-rose-300'
+                        : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    }`}
+                  >
+                    {booking.bookingStatus || 'CONFIRMED'}
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-400 pt-0.5">
+                  Payment: <span className="font-extrabold text-emerald-600">{booking.paymentStatus || 'PAID'}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="text-right flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Price</span>
+              <span className="text-lg font-black text-[#0F172A]">
+                ₹{(booking.totalAmount || 0).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+
+          {/* Cancellation Notice Banner */}
+          {isCancelled && (
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 space-y-1.5 text-xs">
+              <div className="flex items-center gap-2 text-rose-700 font-black">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{isCancelledByOwner ? 'Booking Cancelled by Owner' : 'Booking Cancelled'}</span>
+              </div>
+              {booking.cancellationReason && (
+                <p className="text-[11px] text-rose-600 font-medium pl-6">
+                  Reason: <span className="font-bold">{booking.cancellationReason}</span>
+                </p>
+              )}
+              <p className="text-[10px] text-slate-500 pl-6">
+                If you have already paid, our support team will process your refund according to the cancellation policy.
               </p>
             </div>
-          </div>
-
-          <div className="text-right flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Price</span>
-            <span className="text-lg font-black text-[#0F172A]">
-              ₹{(booking.totalAmount || 0).toLocaleString('en-IN')}
-            </span>
-          </div>
+          )}
         </motion.div>
 
-        {/* Backend-Driven Booking Timeline (Phase 11) */}
-        {booking.timeline && booking.timeline.length > 0 && (
+        {/* Backend-Driven Booking Timeline */}
+        {effectiveTimeline && effectiveTimeline.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -364,7 +512,7 @@ export const BookingDetailsPage: React.FC = () => {
               <span className="text-[10px] font-bold text-slate-400">Live Status</span>
             </div>
             <div className="relative pl-6 space-y-4 pt-1 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
-              {booking.timeline.map((step: any, index: number) => {
+              {effectiveTimeline.map((step: any, index: number) => {
                 const isCompleted = step.status === 'completed';
                 const isCurrent = step.status === 'current';
                 return (
@@ -551,6 +699,35 @@ export const BookingDetailsPage: React.FC = () => {
                   </a>
                 )}
               </div>
+
+              {/* Pickup & Return Verification Codes */}
+              {!isCancelled && booking.pickupCode && (booking.bookingStatus === 'BOOKED' || booking.bookingStatus === 'READY_FOR_PICKUP' || booking.bookingStatus === 'CONFIRMED') && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-1 shadow-xs">
+                  <span className="text-[10px] font-black uppercase text-amber-800 tracking-wider">
+                    Vehicle Pickup Confirmation Code
+                  </span>
+                  <div className="text-2xl font-black font-mono tracking-widest text-amber-900 select-all py-0.5">
+                    {booking.pickupCode}
+                  </div>
+                  <p className="text-[11px] text-amber-700 font-medium">
+                    Show this 6-digit verification code to the vehicle owner upon pickup.
+                  </p>
+                </div>
+              )}
+
+              {!isCancelled && booking.returnCode && booking.bookingStatus === 'ACTIVE' && (
+                <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-center space-y-1 shadow-xs">
+                  <span className="text-[10px] font-black uppercase text-indigo-800 tracking-wider">
+                    Vehicle Return Confirmation Code
+                  </span>
+                  <div className="text-2xl font-black font-mono tracking-widest text-indigo-900 select-all py-0.5">
+                    {booking.returnCode}
+                  </div>
+                  <p className="text-[11px] text-indigo-700 font-medium">
+                    Show this return code at drop-off to complete your rental.
+                  </p>
+                </div>
+              )}
 
               {/* Vehicle & Trip Specs Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
@@ -740,11 +917,26 @@ export const BookingDetailsPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => navigate('/chat')}
+            onClick={() =>
+              openWhatsAppContact({
+                phone: booking.agencyPhone,
+                bookingId: booking.bookingId || booking.id,
+                userName: booking.customerName,
+              })
+            }
+            className="py-3 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+          >
+            <span className="font-bold">💬</span>
+            <span>Contact on WhatsApp</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => makePhoneCall(booking.agencyPhone)}
             className="py-3 px-4 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
           >
-            <MessageSquare className="w-4 h-4 text-purple-600" />
-            <span>{booking.isCarRental ? 'Contact Provider' : 'Contact Agency'}</span>
+            <Phone className="w-4 h-4 text-emerald-600" />
+            <span>Call</span>
           </button>
         </motion.div>
       </main>

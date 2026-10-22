@@ -18,23 +18,47 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({
   vehicle,
   isFavorite = false,
   onToggleFavorite,
+  onSelectVehicle,
+  onBookNow,
 }) => {
   const navigate = useNavigate();
 
-  const goToDetail = () => navigate(`/car-rental/${vehicle.id}`);
+  const vId = vehicle.id || (vehicle as any)._id;
+  const isRentalVehicle =
+    vehicle.serviceType === 'SELF_DRIVE_RENTAL' ||
+    vehicle.serviceType === 'self_drive_car' ||
+    vehicle.serviceType === 'self_drive_bike' ||
+    vehicle.category === 'self_drive' ||
+    vehicle.specs?.driverIncluded === false ||
+    Boolean((vehicle as any).rentalPricing?.dailyRate);
+
+  const priceDisplay =
+    vehicle.routePrice ||
+    vehicle.pricing?.fixedPrice ||
+    vehicle.pricing?.basePricePerDay ||
+    (vehicle as any).rentalPricing?.dailyRate ||
+    1500;
+
+  const goToDetail = () => {
+    if (onSelectVehicle) {
+      onSelectVehicle(vehicle);
+    } else {
+      navigate(`/car-rental/${vId}`);
+    }
+  };
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onToggleFavorite?.(vehicle.id);
+    onToggleFavorite?.(vId);
   };
 
   const handleShareClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/car-rental/${vehicle.id}`;
+    const url = `${window.location.origin}/car-rental/${vId}`;
     if (navigator.share) {
       navigator.share({
         title: `${vehicle.name} - ApnaTrip Car Rental`,
-        text: `Rent ${vehicle.name} from ${vehicle.provider.name} on ApnaTrip for ₹${vehicle.pricing.basePricePerDay.toLocaleString()}/day!`,
+        text: `Rent ${vehicle.name} from ${vehicle.provider?.name || 'ApnaTrip Host'} on ApnaTrip for ₹${priceDisplay.toLocaleString()}/day!`,
         url,
       }).catch(() => {});
     } else {
@@ -44,7 +68,11 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({
 
   const handleBookClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    goToDetail();
+    if (onBookNow) {
+      onBookNow(vehicle);
+    } else {
+      goToDetail();
+    }
   };
 
   return (
@@ -181,7 +209,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({
 
             <div className="text-right">
               <span className="text-base sm:text-lg font-black text-[#FF4D6D]">
-                ₹{(vehicle.routePrice || vehicle.pricing.fixedPrice || vehicle.pricing.basePricePerDay).toLocaleString()}
+                ₹{priceDisplay.toLocaleString()}
               </span>
               <span className="text-[10px] font-bold text-slate-400 block -mt-0.5">Fixed Price</span>
             </div>
@@ -191,7 +219,7 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({
               onClick={handleBookClick}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF4D6D] to-[#FF3358] hover:opacity-95 text-white text-xs font-black shadow-xs shadow-[#FF4D6D]/20 transition-all cursor-pointer focus:outline-none"
             >
-              Book Now
+              {isRentalVehicle ? 'Rent Now' : 'Book Now'}
             </button>
           </div>
         </div>

@@ -20,6 +20,7 @@ import userNotificationRoutes from './userNotification.routes.js';
 import reviewRoutes from './review.routes.js';
 import carRoutes from './car.routes.js';
 import carBookingRoutes from './carBooking.routes.js';
+import rentalBookingRoutes from './rentalBooking.routes.js';
 import couponRoutes from './coupon.routes.js';
 import subscriptionRoutes from './subscription.routes.js';
 import registrationRoutes from './registration.routes.js';
@@ -69,6 +70,7 @@ router.use('/my', myRoutes);
 router.use('/cars', carRoutes);
 router.use('/car-rental', carRoutes);
 router.use('/car-bookings', carBookingRoutes);
+router.use('/rental', rentalBookingRoutes);
 
 // Discovery & Explore Engine
 router.get('/explore', optionalAuthenticate, discoveryController.getExploreFeed);

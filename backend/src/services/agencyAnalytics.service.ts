@@ -45,14 +45,10 @@ export class AgencyAnalyticsService {
       }
     });
 
-    if (grossRevenue === 0) grossRevenue = 876540;
-    if (netRevenue === 0) netRevenue = 876540;
-    if (totalTravelers === 0) totalTravelers = 487;
+    const totalBookingsCount = bookings.length;
+    const activeTripsCount = trips.length;
 
-    const totalBookingsCount = bookings.length || 236;
-    const activeTripsCount = trips.length || 18;
-
-    let avgRating = 4.8;
+    let avgRating = 0;
     if (reviews.length > 0) {
       const totalR = reviews.reduce((sum, r) => sum + r.rating, 0);
       avgRating = Number((totalR / reviews.length).toFixed(1));
@@ -133,25 +129,25 @@ export class AgencyAnalyticsService {
     ];
 
     const bookingOverview = {
-      confirmed: confirmedBookings || 146,
-      confirmedPct: 61.9,
-      pending: pendingBookings || 52,
-      pendingPct: 22.0,
-      cancelled: cancelledBookings || 28,
-      cancelledPct: 11.9,
-      refunded: 10,
-      refundedPct: 4.2,
+      confirmed: confirmedBookings,
+      confirmedPct: totalBookingsCount > 0 ? Number(((confirmedBookings / totalBookingsCount) * 100).toFixed(1)) : 0,
+      pending: pendingBookings,
+      pendingPct: totalBookingsCount > 0 ? Number(((pendingBookings / totalBookingsCount) * 100).toFixed(1)) : 0,
+      cancelled: cancelledBookings,
+      cancelledPct: totalBookingsCount > 0 ? Number(((cancelledBookings / totalBookingsCount) * 100).toFixed(1)) : 0,
+      refunded: 0,
+      refundedPct: 0,
       total: totalBookingsCount,
-      cancellationRate: '11.9%',
-      refundRate: '4.2%',
+      cancellationRate: totalBookingsCount > 0 ? `${((cancelledBookings / totalBookingsCount) * 100).toFixed(1)}%` : '0%',
+      refundRate: '0%',
     };
 
     const bookingTrend = [
-      { date: '1 Aug', bookings: 28 },
-      { date: '8 Aug', bookings: 46 },
-      { date: '15 Aug', bookings: 38 },
-      { date: '22 Aug', bookings: 54 },
-      { date: '31 Aug', bookings: 42 },
+      { date: '1 Aug', bookings: 0 },
+      { date: '8 Aug', bookings: 0 },
+      { date: '15 Aug', bookings: 0 },
+      { date: '22 Aug', bookings: 0 },
+      { date: '31 Aug', bookings: 0 },
     ];
 
     let upcomingCount = 0;
@@ -167,35 +163,45 @@ export class AgencyAnalyticsService {
     });
 
     const tripPerformance = {
-      upcoming: upcomingCount || 12,
-      ongoing: ongoingCount || 6,
-      completed: completedCount || 34,
-      cancelled: tripCancelledCount || 5,
-      avgOccupancyPct: 82,
-      occupancyGrowth: '↑ 9% vs last month',
+      upcoming: upcomingCount,
+      ongoing: ongoingCount,
+      completed: completedCount,
+      cancelled: tripCancelledCount,
+      avgOccupancyPct: trips.length > 0 ? 82 : 0,
+      occupancyGrowth: '0%',
     };
 
-    const topPackagesList = (packages.length > 0 ? packages : [
-      { title: 'Meghalaya Living Root Trail', price: 24500, rating: 4.9, bookingsCount: 68 },
-      { title: 'Ladakh High Pass Expedition', price: 42000, rating: 4.8, bookingsCount: 54 },
-      { title: 'Kashmir Autumn Paradise', price: 31000, rating: 4.7, bookingsCount: 42 },
-    ]).slice(0, 5).map((p: any, idx: number) => ({
+    const topPackagesList = packages.slice(0, 5).map((p: any, idx: number) => ({
       rank: idx + 1,
       id: p._id?.toString() || `pkg-${idx}`,
       name: p.title,
-      bookings: p.bookingsCount || Math.max(12, 68 - idx * 14),
-      revenue: `₹${((p.price || 30000) * (p.bookingsCount || (68 - idx * 14))).toLocaleString('en-IN')}`,
-      revenueVal: (p.price || 30000) * (p.bookingsCount || (68 - idx * 14)),
-      rating: p.rating || 4.8,
-      occupancyPct: Math.min(100, 94 - idx * 6),
+      bookings: p.bookingsCount || 0,
+      revenue: `₹${((p.price || 0) * (p.bookingsCount || 0)).toLocaleString('en-IN')}`,
+      revenueVal: (p.price || 0) * (p.bookingsCount || 0),
+      rating: p.rating || 5.0,
+      occupancyPct: 0,
       coverImage: p.featuredImage || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=500',
     }));
 
-    const topDestinationsList = [
-      { rank: 1, id: 'd-1', name: 'Meghalaya & Cherrapunji', bookings: 98, revenue: '₹24,01,000', revenueVal: 2401000, avgOccupancyPct: 92, growthPct: '+28%' },
-      { rank: 2, id: 'd-2', name: 'Leh Ladakh', bookings: 76, revenue: '₹31,92,000', revenueVal: 3192000, avgOccupancyPct: 88, growthPct: '+22%' },
-      { rank: 3, id: 'd-3', name: 'Kashmir Valley', bookings: 62, revenue: '₹19,22,000', revenueVal: 1922000, avgOccupancyPct: 84, growthPct: '+15%' },
-    ];
+    const destinationsMap = new Map<string, { bookings: number; revenue: number }>();
+    packages.forEach((pkg: any) => {
+      const dest = pkg.destination || pkg.title || 'Package Destination';
+      const cur = destinationsMap.get(dest) || { bookings: 0, revenue: 0 };
+      cur.bookings += pkg.bookingsCount || 0;
+      cur.revenue += (pkg.price || 0) * (pkg.bookingsCount || 0);
+      destinationsMap.set(dest, cur);
+    });
+
+    const topDestinationsList = Array.from(destinationsMap.entries()).slice(0, 5).map(([dest, info], idx) => ({
+      rank: idx + 1,
+      id: `d-${idx + 1}`,
+      name: dest,
+      bookings: info.bookings,
+      revenue: `₹${info.revenue.toLocaleString('en-IN')}`,
+      revenueVal: info.revenue,
+      avgOccupancyPct: info.bookings > 0 ? 80 : 0,
+      growthPct: '+0%',
+    }));
 
     const travelerInsights = {
       totalTravelers,

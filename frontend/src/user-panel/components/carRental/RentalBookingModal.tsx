@@ -90,9 +90,56 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quote, setQuote] = useState<any>(null);
 
+  // Rental Duration & Tier State
+  const [rentalType, setRentalType] = useState<'hourly' | 'daily' | 'weekly' | 'monthly'>('daily');
+  const [durationValue, setDurationValue] = useState<number>(1);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
+
+  // Dynamic Rate Calculation
+  const vAny = vehicle as any;
+  const pricing = vAny?.rentalPricing || {};
+  const baseDay = pricing.dailyRate || vAny?.pricing?.pricePerDay || vAny?.pricePerDay || 1500;
+  const hourlyRate = pricing.hourlyRate || Math.round(baseDay / 10);
+  const dailyRate = baseDay;
+  const weeklyRate = pricing.weeklyRate || dailyRate * 6;
+  const monthlyRate = pricing.monthlyRate || dailyRate * 24;
+
+  const currentRate = React.useMemo(() => {
+    switch (rentalType) {
+      case 'hourly': return hourlyRate;
+      case 'daily': return dailyRate;
+      case 'weekly': return weeklyRate;
+      case 'monthly': return monthlyRate;
+      default: return dailyRate;
+    }
+  }, [rentalType, hourlyRate, dailyRate, weeklyRate, monthlyRate]);
+
+  const calculatedBaseRental = currentRate * Math.max(1, durationValue);
+  const calculatedGst = Math.round(calculatedBaseRental * 0.05);
+  const securityDepositAmt = quote?.securityDeposit || (vehicle as any)?.rentalPolicies?.securityDeposit || 2000;
+  const calculatedTotal = calculatedBaseRental + calculatedGst + securityDepositAmt;
+
+  // Auto-compute Return Date from Duration
+  useEffect(() => {
+    if (!pickupDateTime) return;
+    const pDate = new Date(pickupDateTime);
+    if (isNaN(pDate.getTime())) return;
+    const rDate = new Date(pDate);
+    const dur = Math.max(1, durationValue);
+    if (rentalType === 'hourly') {
+      rDate.setHours(rDate.getHours() + dur);
+    } else if (rentalType === 'daily') {
+      rDate.setDate(rDate.getDate() + dur);
+    } else if (rentalType === 'weekly') {
+      rDate.setDate(rDate.getDate() + dur * 7);
+    } else if (rentalType === 'monthly') {
+      rDate.setMonth(rDate.getMonth() + dur);
+    }
+    setReturnDateTime(rDate.toISOString().slice(0, 16));
+  }, [pickupDateTime, rentalType, durationValue]);
 
   // Sync defaults
   useEffect(() => {
@@ -152,29 +199,30 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
 
   // Fetch dynamic quote whenever vehicle or dates change
   useEffect(() => {
-    if (!isOpen || !vehicle?.id || !pickupDateTime || !returnDateTime) return;
+    const vId = vehicle?.id || (vehicle as any)?._id;
+    if (!isOpen || !vId || !pickupDateTime || !returnDateTime) return;
     let isMounted = true;
     const fetchQuote = async () => {
       setIsQuoting(true);
-      setQuoteError(null);
       try {
         const res = await carRentalService.getRentalPriceEstimate(
-          vehicle.id,
+          vId,
           pickupDateTime,
           returnDateTime
         );
-        if (isMounted) {
-          if (res.available === false) {
+        if (isMounted && res) {
+          if (res.available === false || res.isAvailable === false) {
             setQuoteError(res.message || 'Vehicle is not available for these selected dates.');
             setQuote(null);
           } else {
-            setQuote(res.pricing);
+            setQuote(res.quote || res.pricing || res);
+            setQuoteError(null);
           }
         }
       } catch (err: any) {
         if (isMounted) {
-          setQuoteError(err.response?.data?.message || 'Failed to calculate dynamic rental pricing.');
-          setQuote(null);
+          console.warn('Dynamic rental estimate advisory:', err);
+          // Do not hard-block booking since client calculates live rates
         }
       } finally {
         if (isMounted) setIsQuoting(false);
@@ -185,16 +233,20 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, vehicle?.id, pickupDateTime, returnDateTime]);
+  }, [isOpen, vehicle?.id, (vehicle as any)?._id, pickupDateTime, returnDateTime]);
 
   if (!isOpen || !vehicle) return null;
 
   const isBike = vehicle.vehicleSubCategory === 'bike';
-  const policies = vehicle.rentalPolicies || {
+  const defaultPolicies = {
     securityDeposit: 2000,
     includedKmPerDay: 200,
     extraKmCharge: 10,
     fuelPolicy: 'same_to_same',
+  };
+  const policies = {
+    ...defaultPolicies,
+    ...(vehicle.rentalPolicies || {}),
   };
 
   // Helper: Dynamic Razorpay checkout script loader
@@ -218,11 +270,11 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
   };
 
   const handleNextToCustomer = () => {
-    if (quoteError) return;
     if (!pickupLocation.trim()) {
-      setQuoteError('Please enter or select a pickup location.');
+      setBookingError('Please enter or select a pickup location.');
       return;
     }
+    setBookingError(null);
     setStep(2);
   };
 
@@ -250,11 +302,14 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
     setBookingError(null);
     try {
       let bookingToUse = confirmedBooking;
+      const vId = vehicle.id || (vehicle as any)._id;
 
       // 1. Transactionally create rental booking if not already existing
       if (!bookingToUse?.bookingId && !bookingToUse?._id) {
         const res = await carRentalService.createRentalBooking({
-          carId: vehicle.id,
+          carId: vId,
+          rentalType,
+          durationValue,
           pickupDateTime,
           returnDateTime,
           pickupLocation,
@@ -414,6 +469,46 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
           {/* Step 1: Dates, Hub Location & Dynamic Quote */}
           {step === 1 && (
             <div className="space-y-4">
+              {/* Rental Duration & Plan Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 space-y-1">
+                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-500" />
+                    Rental Type
+                  </label>
+                  <select
+                    value={rentalType}
+                    onChange={(e) => setRentalType(e.target.value as any)}
+                    className="w-full bg-transparent font-bold text-xs sm:text-sm text-slate-800 dark:text-white outline-none cursor-pointer"
+                  >
+                    <option value="hourly" className="dark:bg-slate-800">Hourly (₹{hourlyRate.toLocaleString()}/hr)</option>
+                    <option value="daily" className="dark:bg-slate-800">Daily (₹{dailyRate.toLocaleString()}/day)</option>
+                    <option value="weekly" className="dark:bg-slate-800">Weekly (₹{weeklyRate.toLocaleString()}/wk)</option>
+                    <option value="monthly" className="dark:bg-slate-800">Monthly (₹{monthlyRate.toLocaleString()}/mo)</option>
+                  </select>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 space-y-1">
+                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    Enter Duration
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={rentalType === 'hourly' ? 72 : rentalType === 'daily' ? 60 : rentalType === 'weekly' ? 24 : 12}
+                      value={durationValue}
+                      onChange={(e) => setDurationValue(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-full bg-transparent font-bold text-xs sm:text-sm text-slate-800 dark:text-white outline-none"
+                    />
+                    <span className="text-xs font-semibold text-slate-400 shrink-0 capitalize">
+                      {rentalType === 'hourly' ? 'hours' : rentalType === 'daily' ? 'days' : rentalType === 'weekly' ? 'weeks' : 'months'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Pickup & Return Dates */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 space-y-1">
@@ -432,13 +527,13 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 space-y-1">
                   <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-indigo-500" />
-                    Return Date & Time
+                    Return Date & Time (Auto)
                   </label>
                   <input
                     type="datetime-local"
                     value={returnDateTime}
-                    onChange={(e) => setReturnDateTime(e.target.value)}
-                    className="w-full bg-transparent font-bold text-xs sm:text-sm text-slate-800 dark:text-white outline-none cursor-pointer"
+                    readOnly
+                    className="w-full bg-transparent font-bold text-xs sm:text-sm text-slate-800 dark:text-white outline-none opacity-80 cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -458,56 +553,44 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
                 />
               </div>
 
-              {/* Quote Breakdown Card */}
-              {isQuoting ? (
-                <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 flex items-center justify-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 py-6">
-                  <Sparkles className="w-4 h-4 animate-spin" />
-                  Calculating optimal rental tier & live availability...
-                </div>
-              ) : quoteError ? (
-                <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{quoteError}</span>
-                </div>
-              ) : quote ? (
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/10">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Duration:</span>
-                      <span className="text-xs font-black text-slate-800 dark:text-white">
-                        {quote.durationHours} Hours ({quote.pricingTierApplied.toUpperCase()} TIER)
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
-                      Best Price Applied
+              {/* Dynamic Booking Summary Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/10">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Duration:</span>
+                    <span className="text-xs font-black text-slate-800 dark:text-white uppercase">
+                      {durationValue} {rentalType}{durationValue > 1 ? 's' : ''} (₹{currentRate.toLocaleString()}/{rentalType === 'hourly' ? 'hr' : rentalType === 'daily' ? 'day' : rentalType === 'weekly' ? 'wk' : 'mo'})
                     </span>
                   </div>
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
+                    Direct Owner Rate
+                  </span>
+                </div>
 
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                      <span>Base Rental ({quote.durationHours}h)</span>
-                      <span className="font-bold text-slate-800 dark:text-white">₹{quote.baseRentalCharge.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                      <span>GST & State Taxes (5%)</span>
-                      <span className="font-bold text-slate-800 dark:text-white">₹{quote.gstAmount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-indigo-600 dark:text-indigo-400 font-semibold">
-                      <span className="flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        Security Deposit (100% Refundable)
-                      </span>
-                      <span className="font-bold">₹{quote.securityDeposit.toLocaleString()}</span>
-                    </div>
-                    <div className="pt-2 border-t border-slate-200 dark:border-white/10 flex justify-between items-center text-sm font-black text-[#0F172A] dark:text-white">
-                      <span>Total Payable Now</span>
-                      <span className="text-base text-indigo-600 dark:text-indigo-400 font-extrabold">
-                        ₹{quote.finalPayableAmount.toLocaleString()}
-                      </span>
-                    </div>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                    <span>Rental Cost ({durationValue} {rentalType})</span>
+                    <span className="font-bold text-slate-800 dark:text-white">₹{calculatedBaseRental.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                    <span>GST &amp; Taxes (5%)</span>
+                    <span className="font-bold text-slate-800 dark:text-white">₹{calculatedGst.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-indigo-600 dark:text-indigo-400 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Security Deposit (100% Refundable)
+                    </span>
+                    <span className="font-bold">₹{securityDepositAmt.toLocaleString()}</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200 dark:border-white/10 flex justify-between items-center text-sm font-black text-[#0F172A] dark:text-white">
+                    <span>Total Amount</span>
+                    <span className="text-base text-indigo-600 dark:text-indigo-400 font-extrabold">
+                      ₹{calculatedTotal.toLocaleString()}
+                    </span>
                   </div>
                 </div>
-              ) : null}
+              </div>
 
               {/* Policies Snapshot */}
               <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 dark:text-slate-400">
@@ -520,7 +603,7 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
                 <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-slate-800/40">
                   <span className="block text-slate-400 font-medium">Fuel Policy</span>
                   <span className="font-bold capitalize text-slate-800 dark:text-slate-200">
-                    {policies.fuelPolicy.replace(/_/g, ' ')}
+                    {(policies.fuelPolicy || 'same_to_same').replace(/_/g, ' ')}
                   </span>
                 </div>
               </div>
@@ -713,7 +796,7 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
                   >
                     <span className="block text-xs font-black">Pay Full Amount</span>
                     <span className="block text-[10px] opacity-80">
-                      ₹{quote?.finalPayableAmount.toLocaleString()} (Includes Deposit)
+                      ₹{(quote?.finalPayableAmount || calculatedTotal).toLocaleString()} (Includes Deposit)
                     </span>
                   </button>
 
@@ -728,7 +811,7 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
                   >
                     <span className="block text-xs font-black">Pay Deposit Only</span>
                     <span className="block text-[10px] opacity-80">
-                      ₹{quote?.securityDeposit.toLocaleString()} (Rental at Pickup)
+                      ₹{(quote?.securityDeposit || securityDepositAmt).toLocaleString()} (Rental at Pickup)
                     </span>
                   </button>
                 </div>
@@ -802,10 +885,32 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
                 </p>
               </div>
 
+              {/* 6-Digit Pickup Confirmation Code Card */}
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-1.5 shadow-xs">
+                <span className="text-[11px] font-black tracking-wider uppercase text-amber-700 dark:text-amber-400">
+                  Vehicle Pickup Confirmation Code
+                </span>
+                <div className="text-3xl font-black font-mono tracking-widest text-amber-900 dark:text-amber-200 select-all py-1">
+                  {confirmedBooking?.bookingConfirmationCode || confirmedBooking?.confirmationCode || confirmedBooking?.pickupCode || '------'}
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-200/60 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200">
+                  Status: READY FOR PICKUP
+                </div>
+                <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 pt-1">
+                  Share this 6-digit verification code with the vehicle host upon pickup to activate your rental.
+                </p>
+              </div>
+
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 text-left text-xs space-y-2 border border-slate-100 dark:border-white/10">
                 <div className="flex justify-between">
                   <span className="text-slate-500 font-medium">Vehicle</span>
                   <span className="font-bold text-slate-800 dark:text-white">{vehicle.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">Rental Plan</span>
+                  <span className="font-bold text-slate-800 dark:text-white capitalize">
+                    {durationValue} {rentalType}{durationValue > 1 ? 's' : ''}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500 font-medium">Pickup Hub</span>
@@ -814,7 +919,7 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
                 <div className="flex justify-between">
                   <span className="text-slate-500 font-medium">Security Deposit Status</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                    ₹{quote?.securityDeposit || 2000} (Securely Escrowed)
+                    ₹{securityDepositAmt} (Securely Escrowed)
                   </span>
                 </div>
               </div>
@@ -860,7 +965,7 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
             {step === 1 && (
               <button
                 type="button"
-                disabled={Boolean(quoteError) || isQuoting || !quote}
+                disabled={!pickupLocation.trim() || quote?.isAvailable === false}
                 onClick={handleNextToCustomer}
                 className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-black shadow-md shadow-indigo-600/25 flex items-center gap-1.5 transition-all cursor-pointer"
               >
@@ -895,7 +1000,7 @@ export const RentalBookingModal: React.FC<RentalBookingModalProps> = ({
                 ) : (
                   <>
                     <span>
-                      Pay ₹{paymentType === 'full' ? quote?.finalPayableAmount.toLocaleString() : quote?.securityDeposit.toLocaleString()} via Razorpay
+                      Pay ₹{(paymentType === 'full' ? (quote?.finalPayableAmount || calculatedTotal) : (quote?.securityDeposit || securityDepositAmt)).toLocaleString()} via Razorpay
                     </span>
                     <ChevronRight className="w-4 h-4" />
                   </>

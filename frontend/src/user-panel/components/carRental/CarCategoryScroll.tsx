@@ -14,7 +14,7 @@ const CATEGORIES: CategoryOption[] = [
   { id: 'local', label: 'Local', icon: <Building2 className="w-5 h-5 sm:w-6 sm:h-6" /> },
   { id: 'airport', label: 'Airport', icon: <Plane className="w-5 h-5 sm:w-6 sm:h-6" /> },
   { id: 'hourly', label: 'Hourly', icon: <Clock className="w-5 h-5 sm:w-6 sm:h-6" /> },
-  { id: 'self_drive', label: 'Self Drive', icon: <Key className="w-5 h-5 sm:w-6 sm:h-6" /> },
+  { id: 'self_drive', label: 'Rental Cars', icon: <Key className="w-5 h-5 sm:w-6 sm:h-6" /> },
   { id: 'luxury', label: 'Luxury', icon: <Crown className="w-5 h-5 sm:w-6 sm:h-6" /> },
 ];
 

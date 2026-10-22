@@ -571,8 +571,10 @@ export class RegistrationService {
         documents: newAgency.documents || agencyDoc.documents,
         bank: newAgency.bankDetails || agencyDoc.bankDetails,
         subscriptionId: subscription._id,
-        subscriptionPlan: isCarRental ? 'Car Rental Partner Registration (₹1000)' : 'Travel Agency Registration (₹1000)',
-        subscriptionAmount: subscription.amountPaid || 1000,
+        subscriptionPlan: isCarRental
+          ? (subscription.amountPaid === 0 ? 'Car Rental Partner Registration (Fee Waived: ₹0)' : 'Car Rental Partner Registration (₹1000)')
+          : (subscription.amountPaid === 0 ? 'Travel Agency Registration (Fee Waived: ₹0)' : 'Travel Agency Registration (₹1000)'),
+        subscriptionAmount: typeof subscription.amountPaid === 'number' ? subscription.amountPaid : 1000,
         paymentId,
         paymentStatus: 'SUCCESS',
         registrationStatus: 'Pending Approval',

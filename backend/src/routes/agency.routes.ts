@@ -18,7 +18,7 @@ import { agencyCarRentalController } from '../controllers/agencyCarRental.contro
 import { sellerPaymentProfileController } from '../controllers/sellerPaymentProfile.controller.js';
 import { settlementController } from '../controllers/settlement.controller.js';
 import { refundController } from '../controllers/refund.controller.js';
-import { authenticateAgency, requireApprovedAgency } from '../middlewares/agencyAuth.middleware.js';
+import { authenticateAgency, authenticatePartner, requireApprovedAgency } from '../middlewares/agencyAuth.middleware.js';
 import { validateRequest } from '../middlewares/validate.middleware.js';
 import { uploadDocument } from '../middlewares/upload.middleware.js';
 import { carRentalChatController } from '../controllers/carRentalChat.controller.js';
@@ -72,11 +72,11 @@ router.post('/auth/login', validateRequest({ body: PartnerLoginSchema }), agency
 
 router.post(
   '/businesses/create',
-  authenticateAgency,
+  authenticatePartner,
   validateRequest({ body: PartnerCreateBusinessSchema }),
   agencyAuthController.createBusiness
 );
-router.get('/businesses', authenticateAgency, agencyAuthController.getMyBusinesses);
+router.get('/businesses', authenticatePartner, agencyAuthController.getMyBusinesses);
 
 router.post(
   '/auth/forgot-password',
@@ -88,7 +88,7 @@ router.post(
   validateRequest({ body: AgencyResetPasswordSchema }),
   agencyAuthController.resetPassword
 );
-router.get('/auth/me', authenticateAgency, agencyAuthController.getMe);
+router.get('/auth/me', authenticatePartner, agencyAuthController.getMe);
 router.post(
   '/auth/change-password',
   authenticateAgency,

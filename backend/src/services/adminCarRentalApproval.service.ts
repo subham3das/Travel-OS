@@ -9,6 +9,7 @@ import { mailService } from './mail.service.js';
 import { envConfig } from '../config/env.config.js';
 import { logger } from '../config/logger.config.js';
 import { NotFoundError } from '../utils/errors.util.js';
+import { sellerPaymentProfileService } from './sellerPaymentProfile.service.js';
 
 export interface CarRentalFiltersQuery {
   page?: number;
@@ -143,8 +144,20 @@ export class AdminCarRentalApprovalService {
     activities: any[] = []
   ): FormattedCarRentalRequestItem {
     const profile = agency.carRentalProfile || {};
-    const docs = profile.documents && profile.documents.length > 0 ? profile.documents : agency.documents || [];
-    const totalDocs = docs.length || 5;
+    // Car Rental onboarding does not collect uploaded documents; do NOT copy from Agency documents
+    let docs: any[] = [];
+    if (Array.isArray(profile.documents) && profile.documents.length > 0) {
+      // Exclude any agency documents that may have been previously copied
+      const agencyDocUrls = new Set((agency.documents || []).map((d: any) => d.fileUrl).filter(Boolean));
+      docs = profile.documents.filter((d: any) => {
+        if (!d || !d.fileUrl || d.fileUrl === '#') return false;
+        if (agencyDocUrls.has(d.fileUrl)) return false;
+        const type = String(d.type || '').toLowerCase();
+        if (type.includes('trade license') || type.includes('agency') || type.includes('incorporation')) return false;
+        return true;
+      });
+    }
+    const totalDocs = docs.length;
     const uploadedDocs = docs.filter((d: any) => d.fileUrl && d.fileUrl !== '#').length;
 
     const submittedDateStr = agency.createdAt
@@ -179,10 +192,12 @@ export class AdminCarRentalApprovalService {
             },
             {
               id: 'cr-t2',
-              title: 'Compliance & Permits Uploaded',
+              title: uploadedDocs > 0 ? 'Compliance & Permits Uploaded' : 'Business & Payout Details Verified',
               timestamp: submittedDateStr,
-              completed: uploadedDocs > 0,
-              desc: `${uploadedDocs} documents uploaded for verification.`,
+              completed: true,
+              desc: uploadedDocs > 0
+                ? `${uploadedDocs} documents uploaded for verification.`
+                : 'Owner details and payout information verified. No document upload required.',
             },
             {
               id: 'cr-t3',
@@ -272,7 +287,7 @@ export class AdminCarRentalApprovalService {
       reviewNotes: latestNote,
       lastUpdated: lastUpdatedStr,
       assignedReviewer: agency.carRentalApprovedBy ? String(agency.carRentalApprovedBy) : 'Compliance Team',
-      complianceScore: agency.complianceScore || (uploadedDocs >= 3 ? 90 : 75),
+      complianceScore: agency.complianceScore || 90,
       timeline,
       activities: activities.map((act) => ({
         id: act._id?.toString() || `act-${Math.random()}`,
@@ -289,9 +304,9 @@ export class AdminCarRentalApprovalService {
         status: act.status || 'Success',
       })),
       documents: docs.map((doc: any) => ({
-        id: doc.id || `cr-doc-${Math.random()}`,
-        name: doc.name || 'Commercial Permit Document',
-        type: doc.type || 'Commercial Vehicle Permit',
+        id: doc.id || doc._id?.toString() || `cr-doc-${Math.random()}`,
+        name: doc.name || 'Commercial Vehicle Document',
+        type: doc.type || 'Commercial Vehicle Document',
         status: doc.status || 'Pending',
         fileUrl: doc.fileUrl || '',
         uploadedAt: doc.uploadedAt
@@ -322,14 +337,31 @@ export class AdminCarRentalApprovalService {
         driver: c.driver,
       })),
       drivers,
-      bankDetails: profile.bankDetails || agency.bankDetails || {
-        accountHolderName: profile.ownerName || agency.name,
-        bankName: 'Verified Settlement Bank',
-        accountNumber: '••••••••4892',
-        ifscCode: 'HDFC0001234',
-        verified: true,
-        status: 'Verified',
-      },
+      bankDetails: (() => {
+        const sourceBank = profile.bankDetails || agency.bankDetails;
+        if (sourceBank && (sourceBank.bankName || sourceBank.accountNumber || sourceBank.ifscCode)) {
+          return {
+            accountHolderName: sourceBank.accountHolderName || profile.ownerName || agency.owner?.name || agency.name || '—',
+            bankName: sourceBank.bankName || '—',
+            accountNumber: sourceBank.accountNumber || '—',
+            ifscCode: sourceBank.ifscCode || '—',
+            branch: sourceBank.branch || profile.city || agency.city || '—',
+            upiId: sourceBank.upiId || '—',
+            verified: sourceBank.verified ?? false,
+            status: sourceBank.status || (sourceBank.verified ? 'Verified' : 'Under Review'),
+          };
+        }
+        return {
+          accountHolderName: profile.ownerName || agency.owner?.name || agency.name || '—',
+          bankName: '—',
+          accountNumber: '—',
+          ifscCode: '—',
+          branch: '—',
+          upiId: '—',
+          verified: false,
+          status: 'Under Review',
+        };
+      })(),
     };
   }
 
@@ -722,6 +754,13 @@ export class AdminCarRentalApprovalService {
     }
 
     await agency.save();
+
+    // Ensure SellerPaymentProfile is provisioned and approved for Car Rental
+    try {
+      await sellerPaymentProfileService.ensureProfileForAgency(agency._id, 'Car Rental');
+    } catch (profErr: any) {
+      logger.warn('Failed to auto-ensure SellerPaymentProfile during Car Rental approval: %s', profErr?.message || profErr);
+    }
 
     // Audit Log
     await AuditLoggerService.log({
@@ -1133,7 +1172,16 @@ export class AdminCarRentalApprovalService {
     const agency = await AgencyModel.findById(id);
     if (!agency) throw new Error('Car Rental application not found.');
 
-    const docs = agency.carRentalProfile?.documents || agency.documents || [];
+    const docs = Array.isArray(agency.carRentalProfile?.documents) ? agency.carRentalProfile.documents : [];
+    if (docs.length === 0) {
+      return {
+        success: true,
+        message: 'No documents required for this onboarding.',
+        request: this.formatCarRentalItem(agency),
+        updatedStats: await this.getSummaryStats(),
+      };
+    }
+
     const idSet = documentIds && documentIds.length > 0 ? new Set(documentIds) : null;
     let approvedCount = 0;
 
@@ -1145,7 +1193,6 @@ export class AdminCarRentalApprovalService {
     });
 
     agency.markModified('carRentalProfile.documents');
-    agency.markModified('documents');
     await agency.save();
 
     await AuditLoggerService.log({

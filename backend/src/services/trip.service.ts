@@ -3,6 +3,7 @@ import { BookingModel, IBooking } from '../models/booking.model.js';
 import { TripModel, ITrip } from '../models/trip.model.js';
 import { PackageModel } from '../models/package.model.js';
 import { CarBookingModel } from '../models/carBooking.model.js';
+import { RentalBookingModel } from '../models/rentalBooking.model.js';
 import { ReviewModel } from '../models/review.model.js';
 import { NotFoundError } from '../utils/errors.util.js';
 import { logger } from '../config/logger.config.js';
@@ -52,13 +53,24 @@ export class TripService {
    * Get all trips and bookings for a customer
    */
   public async getCustomerTrips(userId: string) {
-    const userFilter: any = { isDeleted: false };
-    if (mongoose.Types.ObjectId.isValid(userId)) {
-      userFilter.userId = new mongoose.Types.ObjectId(userId);
-    } else if (userId) {
-      userFilter.userId = userId;
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return {
+        trips: [],
+        bookings: [],
+        stats: {
+          totalTrips: 0,
+          upcomingTrips: 0,
+          completedTrips: 0,
+          countriesVisited: 0,
+          lifetimeSpend: '₹0',
+          avgRatingGiven: 5.0,
+          badges: [],
+        },
+      };
     }
-    const bookings = await BookingModel.find(userFilter).sort({ createdAt: -1 }).lean();
+
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const bookings = await BookingModel.find({ userId: userObjectId, isDeleted: false }).sort({ createdAt: -1 }).lean();
 
     const trips: any[] = [];
     const formattedBookings: any[] = [];
@@ -234,23 +246,36 @@ export class TripService {
     }
 
     // ─── 2. Fetch Car Rental Bookings ──────────────────────────────────────────
-    const carCustomerFilter: any = { isDeleted: { $ne: true } };
-    if (mongoose.Types.ObjectId.isValid(userId)) {
-      carCustomerFilter.$or = [
-        { customerId: new mongoose.Types.ObjectId(userId) },
-        { customerId: userId },
-      ];
-    } else if (userId) {
-      carCustomerFilter.customerId = userId;
-    }
+    const [carBookings, rentalBookings] = await Promise.all([
+      CarBookingModel.find({
+        $or: [{ customerId: userObjectId }, { customerId: userId }],
+        isDeleted: { $ne: true },
+      })
+        .populate('carId')
+        .populate('agencyId')
+        .sort({ createdAt: -1 })
+        .lean(),
+      RentalBookingModel.find({
+        $or: [{ customerId: userObjectId }, { customerId: userId }],
+        isDeleted: false,
+      })
+        .populate('carId')
+        .populate('agencyId')
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
 
-    const carBookings = await CarBookingModel.find(carCustomerFilter)
-      .populate('carId')
-      .populate('agencyId')
-      .sort({ createdAt: -1 })
-      .lean();
+    const allVehicleBookings = [
+      ...carBookings.map((cb: any) => ({ ...cb, isRental: false })),
+      ...rentalBookings.map((rb: any) => ({
+        ...rb,
+        isRental: true,
+        serviceType: 'SELF_DRIVE_RENTAL',
+        tripType: 'Self-Drive Rental',
+      })),
+    ];
 
-    for (const cb of carBookings) {
+    for (const cb of allVehicleBookings) {
       const cbStatus =
         cb.bookingStatus === 'COMPLETED'
           ? 'Completed'
@@ -263,7 +288,7 @@ export class TripService {
           : cb.bookingStatus === 'PENDING'
           ? 'Booking Pending'
           : cb.bookingStatus === 'CANCELLED'
-          ? 'Cancelled'
+          ? ((cb as any).cancelledBy === 'OWNER' ? 'CANCELLED BY OWNER' : 'Cancelled')
           : cb.bookingStatus;
 
       const countdown = this.calculateCountdown(cb.startDate);
@@ -329,7 +354,12 @@ export class TripService {
         invoiceUrl: `/api/car-bookings/${cb.bookingId}/receipt`,
         transactionId: cb.transactionId || `TXN-${cb.bookingId}`,
         timeline: cb.timeline || [],
+        pickupCode: (cb as any).pickupCode || (cb as any).rideStartCode,
+        returnCode: (cb as any).returnCode || (cb as any).rideCloseCode,
         canCancel: cb.bookingStatus !== 'COMPLETED' && cb.bookingStatus !== 'CANCELLED',
+        cancelledBy: (cb as any).cancelledBy,
+        cancelledAt: (cb as any).cancelledAt,
+        cancellationReason: (cb as any).cancellationReason,
       });
 
       // Add to trips list (if requested, accepted, confirmed, or completed)

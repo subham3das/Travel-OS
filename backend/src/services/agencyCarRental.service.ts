@@ -4,15 +4,17 @@ import { CarModel } from '../models/car.model.js';
 import { VehicleRouteModel, IVehicleRoute } from '../models/vehicleRoute.model.js';
 import { DriverModel } from '../models/driver.model.js';
 import { CarBookingModel } from '../models/carBooking.model.js';
+import { RentalBookingModel } from '../models/rentalBooking.model.js';
 import { CarReviewModel } from '../models/carReview.model.js';
 import { NotificationModel } from '../models/notification.model.js';
 import { AuditLoggerService } from './auditLogger.service.js';
 import bcrypt from 'bcrypt';
-import { TokenUtil } from '../utils/token.util.js';
 import { carBookingService } from './carBooking.service.js';
+import { rentalBookingService } from './rentalBooking.service.js';
 import { NotFoundError, BadRequestError, ConflictError, ForbiddenError } from '../utils/errors.util.js';
 import { sellerPaymentProfileService } from './sellerPaymentProfile.service.js';
 import { socketService } from './socket.service.js';
+import { TokenUtil } from '../utils/token.util.js';
 import { logger } from '../config/logger.config.js';
 
 export interface RegisterCarRentalDTO {
@@ -1406,27 +1408,92 @@ export class AgencyCarRentalService {
   public async getBookings(agencyId: string, status?: string) {
     const agencyObjectId = new mongoose.Types.ObjectId(agencyId);
     const filter: any = { agencyId: agencyObjectId, isDeleted: false };
+    const rentalFilter: any = { agencyId: agencyObjectId, isDeleted: false };
 
     if (status && status !== 'all') {
       filter.bookingStatus = status.toUpperCase();
+      rentalFilter.bookingStatus = status.toUpperCase();
     }
 
-    const bookings = await CarBookingModel.find(filter)
-      .populate('carId', 'name brand type category dailyPrice images thumbnail registrationNumber')
-      .sort({ createdAt: -1 })
-      .lean();
+    const [carBookings, rentalBookings] = await Promise.all([
+      CarBookingModel.find(filter)
+        .populate('carId', 'name brand type category dailyPrice images thumbnail registrationNumber serviceType')
+        .sort({ createdAt: -1 })
+        .lean(),
+      RentalBookingModel.find(rentalFilter)
+        .populate('carId', 'name brand type category dailyPrice images thumbnail registrationNumber serviceType rentalPricing')
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
 
-    return bookings;
+    const formattedCarBookings = carBookings.map((b: any) => ({
+      ...b,
+      bookingProduct: 'CAR_BOOKING',
+      isRental: false,
+    }));
+
+    const formattedRentalBookings = rentalBookings.map((b: any) => ({
+      ...b,
+      bookingProduct: 'RENTAL',
+      isRental: true,
+      pickupDateTime: b.startDate,
+      returnDateTime: b.endDate,
+    }));
+
+    return [...formattedCarBookings, ...formattedRentalBookings].sort(
+      (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   /**
    * 16. Update Rental Booking Status (Supports both _id and bookingId)
    */
   public async updateBookingStatus(agencyId: string, bookingId: string, status: string, rejectionReason?: string) {
+    const agencyObjectId = new mongoose.Types.ObjectId(agencyId);
+    const upperStatus = status.toUpperCase();
+
+    // Check RentalBookingModel first
+    const rentalBooking = await RentalBookingModel.findOne({
+      $or: [
+        { bookingId: bookingId },
+        ...(mongoose.Types.ObjectId.isValid(bookingId) ? [{ _id: new mongoose.Types.ObjectId(bookingId) }] : []),
+      ],
+      agencyId: agencyObjectId,
+    });
+
+    if (rentalBooking) {
+      if (upperStatus === 'CANCELLED') {
+        return rentalBookingService.ownerCancelBooking(agencyId, bookingId, rejectionReason);
+      }
+      if (upperStatus === 'REJECTED') {
+        return rentalBookingService.cancelBooking({ agencyId }, bookingId, rejectionReason);
+      }
+
+      rentalBooking.bookingStatus = upperStatus as any;
+      if (upperStatus === 'ACTIVE') {
+        await CarModel.findByIdAndUpdate(rentalBooking.carId, {
+          isAvailable: false,
+          status: 'booked',
+        });
+      } else if (upperStatus === 'COMPLETED') {
+        rentalBooking.completedAt = new Date();
+        await CarModel.findByIdAndUpdate(rentalBooking.carId, {
+          isAvailable: true,
+          status: 'available',
+        });
+      }
+      await rentalBooking.save();
+      return rentalBooking;
+    }
+
+    if (upperStatus === 'CANCELLED') {
+      return carBookingService.ownerCancelBooking(agencyId, bookingId, rejectionReason);
+    }
+
     return carBookingService.agencyUpdateStatus(
       agencyId,
       bookingId,
-      status.toUpperCase() as any,
+      upperStatus as any,
       rejectionReason
     );
   }

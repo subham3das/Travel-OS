@@ -120,13 +120,18 @@ export const AgencyDetailsPage: React.FC = () => {
           </a>
 
           <button
-            onClick={() => navigate(`/chat/${agency.id}`)}
-            className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-purple-50 text-slate-700 hover:text-[#6356E5] transition-all cursor-pointer focus:outline-none"
+            onClick={() => {
+              const rawPhone = (agency.phone || '+919876500000').replace(/[^0-9]/g, '');
+              const targetPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
+              const msg = `Hello ${agency.name},\n\nI have an enquiry regarding your travel packages on ApnaTrip.\n\nThank you.`;
+              window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+            }}
+            className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-emerald-50 text-slate-700 hover:text-emerald-600 transition-all cursor-pointer focus:outline-none"
           >
             <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-700">
-              <MessageCircle className="w-5 h-5 text-[#6356E5]" />
+              <span className="text-lg">💬</span>
             </div>
-            <span className="text-xs font-extrabold">Message</span>
+            <span className="text-xs font-extrabold">WhatsApp</span>
           </button>
 
           <a

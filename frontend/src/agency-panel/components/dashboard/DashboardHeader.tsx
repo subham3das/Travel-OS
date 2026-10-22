@@ -62,7 +62,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const handleLogout = () => {
     setShowDropdown(false);
     logoutAgency();
-    navigate('/agency/login');
+    window.location.href = '/agency/login';
   };
 
   const rawName = agency?.agencyDisplayName || agency?.name || 'Agency Partner';

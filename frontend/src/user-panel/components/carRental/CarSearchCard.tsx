@@ -28,11 +28,9 @@ export const CarSearchCard: React.FC<CarSearchCardProps> = ({
   const [tripType, setTripType] = useState<TripType>('one_way');
   const [isTripTypeOpen, setIsTripTypeOpen] = useState(false);
 
-  const tripTypeLabels: Record<TripType, string> = {
+  const tripTypeLabels: Record<string, string> = {
     one_way: 'One Way',
     round_trip: 'Round Trip',
-    full_day: 'Full Day',
-    multi_day: 'Multi Day',
   };
 
   const handleSwap = () => {
@@ -58,6 +56,17 @@ export const CarSearchCard: React.FC<CarSearchCardProps> = ({
       onSubmit={handleSubmit}
       className="w-full bg-white rounded-3xl p-4 sm:p-6 border border-slate-100 shadow-sm relative space-y-4"
     >
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm sm:text-base font-black text-[#0F172A] tracking-tight">
+          Where are you travelling?
+        </h3>
+        {tripType === 'round_trip' && (
+          <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-rose-50 text-[#FF4D6D] border border-rose-100">
+            Return to Pickup
+          </span>
+        )}
+      </div>
+
       {/* Pickup & Drop Section with Floating Swap Button */}
       <div className="relative space-y-2.5">
         {/* Pickup Location */}
@@ -104,6 +113,14 @@ export const CarSearchCard: React.FC<CarSearchCardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Return to Pickup indicator for round trip */}
+      {tripType === 'round_trip' && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-50 text-indigo-700 text-xs font-bold border border-purple-100">
+          <span>↩️</span>
+          <span>Return to Pickup: <span className="font-extrabold">{pickup || 'Pickup Location'}</span></span>
+        </div>
+      )}
 
       {/* Date, Time & Trip Type Grid (3 Columns) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">

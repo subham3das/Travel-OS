@@ -514,9 +514,39 @@ class CarRentalService {
     address?: string;
     gender?: string;
     age?: number;
+    rentalType?: 'hourly' | 'daily' | 'weekly' | 'monthly';
+    durationValue?: number;
   }): Promise<any> {
-    const res = await apiClient.post<any>('/car-bookings/rentals', data);
-    return res.data?.data?.booking || res.data?.booking || res.data;
+    const res = await apiClient.post<any>('/rental/book', {
+      ...data,
+      rentalType: data.rentalType || 'daily',
+      durationValue: data.durationValue || 1,
+    }).catch(async () => {
+      return apiClient.post<any>('/car-bookings/rentals', data);
+    });
+    return res.data?.data?.booking || res.data?.data || res.data?.booking || res.data;
+  }
+
+  /**
+   * Dedicated Rental API methods
+   */
+  async createDedicatedRental(data: {
+    carId: string;
+    rentalType: 'hourly' | 'daily' | 'weekly' | 'monthly';
+    durationValue: number;
+    pickupDateTime: string;
+    pickupLocation: string;
+    dropLocation?: string;
+    specialNotes?: string;
+    emergencyContact?: { name: string; phone: string; relationship?: string };
+  }): Promise<any> {
+    const res = await apiClient.post<any>('/rental/book', data);
+    return res.data?.data || res.data;
+  }
+
+  async getMyRentals(): Promise<any[]> {
+    const res = await apiClient.get<any>('/rental/my-bookings');
+    return res.data?.data || res.data || [];
   }
 }
 

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { BookingModel, IBooking, BookingStatus, BookingPaymentStatus } from '../models/booking.model.js';
 import { CarBookingModel } from '../models/carBooking.model.js';
+import { RentalBookingModel } from '../models/rentalBooking.model.js';
 import { DepartureModel } from '../models/departure.model.js';
 import { PackageModel } from '../models/package.model.js';
 import { AgencyModel } from '../models/agency.model.js';
@@ -381,7 +382,7 @@ export class BookingService {
    */
   public async getCustomerBookings(userId: string) {
     const userObjectId = new mongoose.Types.ObjectId(userId);
-    const [bookings, carBookings] = await Promise.all([
+    const [bookings, carBookings, rentalBookings] = await Promise.all([
       BookingModel.find({
         userId: userObjectId,
         isDeleted: false,
@@ -391,6 +392,14 @@ export class BookingService {
       CarBookingModel.find({
         $or: [{ customerId: userObjectId }, { customerId: userId }],
         isDeleted: { $ne: true },
+      })
+        .populate('carId')
+        .populate('agencyId')
+        .sort({ createdAt: -1 })
+        .lean(),
+      RentalBookingModel.find({
+        $or: [{ customerId: userObjectId }, { customerId: userId }],
+        isDeleted: false,
       })
         .populate('carId')
         .populate('agencyId')
@@ -429,33 +438,79 @@ export class BookingService {
       const diffDays = Math.ceil((departure.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       const carObj = cb.carId as any;
       const agencyObj = cb.agencyId as any;
-      const isRental =
-        cb.serviceType === 'SELF_DRIVE_RENTAL' ||
-        cb.serviceType === 'self_drive_car' ||
-        cb.serviceType === 'self_drive_bike';
-      const carName = carObj?.name ? `${carObj?.brand || ''} ${carObj?.name}`.trim() : (cb.vehicleModel || 'Rental Vehicle');
+      const carName = carObj?.name ? `${carObj?.brand || ''} ${carObj?.name}`.trim() : (cb.vehicleModel || 'Car Booking');
 
       return {
         id: cb.bookingId,
         _id: cb._id.toString(),
         bookingId: cb.bookingId,
-        bookingType: isRental ? 'SELF_DRIVE_RENTAL' : 'ROUTE_BOOKING',
-        serviceType: cb.serviceType || (isRental ? 'SELF_DRIVE_RENTAL' : 'ROUTE_BOOKING'),
-        packageName: `${carName} (${isRental ? 'Self-Drive' : 'Route Booking'})`,
+        bookingType: 'CAR_BOOKING',
+        serviceType: cb.serviceType || 'ROUTE_BOOKING',
+        packageName: `${carName} (Route Booking)`,
+        vehicleName: carName,
+        vehicleImage: carObj?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800',
         coverImage: carObj?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800',
         agencyName: agencyObj?.businessName || agencyObj?.name || 'Car Rental Partner',
-        bookingStatus: cb.bookingStatus === 'CONFIRMED' ? 'Confirmed' : (cb.bookingStatus === 'ACCEPTED' ? 'Trip Ready' : cb.bookingStatus),
+        agencyPhone: agencyObj?.phone || '',
+        bookingStatus: cb.bookingStatus,
         paymentStatus: cb.paymentStatus,
         departureDate: departure.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+        pickupTime: cb.pickupTime || '',
+        pickupLocation: cb.pickupLocation,
+        dropLocation: cb.dropLocation,
         countdownDays: Math.max(0, diffDays),
         totalAmount: cb.totalAmount,
         travelersCount: cb.passengersCount || 1,
+        rideStartCode: cb.rideStartCode,
+        rideCloseCode: cb.rideCloseCode,
         associatedTripId: `CAR-${cb.bookingId}`,
         createdAt: cb.createdAt,
       };
     });
 
-    return [...formattedTours, ...formattedCars].sort(
+    const formattedRentals = rentalBookings.map((rb: any) => {
+      const departure = new Date(rb.startDate);
+      const returnDate = new Date(rb.endDate);
+      const now = new Date();
+      const diffDays = Math.ceil((departure.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const carObj = rb.carId as any;
+      const agencyObj = rb.agencyId as any;
+      const carName = carObj?.name ? `${carObj?.brand || ''} ${carObj?.name}`.trim() : 'Rental Vehicle';
+
+      return {
+        id: rb.bookingId,
+        _id: rb._id.toString(),
+        bookingId: rb.bookingId,
+        bookingType: 'RENTAL_BOOKING',
+        serviceType: 'RENTAL_BOOKING',
+        packageName: `${carName} (${(rb.rentalType || 'daily').toUpperCase()} RENTAL)`,
+        vehicleName: carName,
+        vehicleImage: carObj?.images?.[0] || carObj?.thumbnail || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800',
+        coverImage: carObj?.images?.[0] || carObj?.thumbnail || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800',
+        agencyName: agencyObj?.businessName || agencyObj?.name || 'ApnaTrip Rental Partner',
+        ownerName: agencyObj?.businessName || agencyObj?.name || 'Rental Owner',
+        agencyPhone: agencyObj?.phone || '',
+        bookingStatus: rb.bookingStatus,
+        paymentStatus: rb.paymentStatus,
+        duration: `${rb.durationValue} ${rb.rentalType}${rb.durationValue > 1 ? 's' : ''}`,
+        rentalType: rb.rentalType,
+        durationValue: rb.durationValue,
+        rateApplied: rb.rateApplied,
+        pickupDate: departure.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        returnDate: returnDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        departureDate: departure.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+        pickupLocation: rb.pickupLocation,
+        returnLocation: rb.returnLocation,
+        countdownDays: Math.max(0, diffDays),
+        totalAmount: rb.totalAmount,
+        bookingConfirmationCode: rb.bookingConfirmationCode,
+        returnCode: rb.returnCode,
+        associatedTripId: `RENT-${rb.bookingId}`,
+        createdAt: rb.createdAt,
+      };
+    });
+
+    return [...formattedTours, ...formattedCars, ...formattedRentals].sort(
       (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -501,6 +556,58 @@ export class BookingService {
       .lean();
 
     if (!carBooking) {
+      const rentalBooking = await RentalBookingModel.findOne({
+        $or: [
+          { bookingId: bookingIdentifier },
+          ...(mongoose.Types.ObjectId.isValid(bookingIdentifier) ? [{ _id: bookingIdentifier }] : []),
+        ],
+        $and: [
+          {
+            $or: [{ customerId: userObjectId }, { customerId: userId }],
+          },
+        ],
+        isDeleted: false,
+      })
+        .populate('carId')
+        .populate('agencyId')
+        .lean();
+
+      if (rentalBooking) {
+        const carObj = rentalBooking.carId as any;
+        const agencyObj = rentalBooking.agencyId as any;
+        const carName = carObj?.name ? `${carObj?.brand || ''} ${carObj?.name}`.trim() : 'Rental Vehicle';
+
+        return {
+          id: rentalBooking.bookingId,
+          _id: rentalBooking._id.toString(),
+          bookingId: rentalBooking.bookingId,
+          bookingType: 'RENTAL_BOOKING',
+          serviceType: 'RENTAL_BOOKING',
+          packageName: `${carName} (${(rentalBooking.rentalType || 'daily').toUpperCase()} RENTAL)`,
+          vehicleName: carName,
+          vehicleImage: carObj?.images?.[0] || carObj?.thumbnail || '',
+          coverImage: carObj?.images?.[0] || carObj?.thumbnail || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800',
+          agencyName: agencyObj?.businessName || agencyObj?.name || 'ApnaTrip Rental Partner',
+          agencyPhone: agencyObj?.phone || '',
+          ownerName: agencyObj?.businessName || agencyObj?.name || 'Rental Owner',
+          bookingStatus: rentalBooking.bookingStatus,
+          paymentStatus: rentalBooking.paymentStatus,
+          duration: `${rentalBooking.durationValue} ${rentalBooking.rentalType}`,
+          rentalType: rentalBooking.rentalType,
+          durationValue: rentalBooking.durationValue,
+          rateApplied: rentalBooking.rateApplied,
+          pickupDate: new Date(rentalBooking.startDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          returnDate: new Date(rentalBooking.endDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          pickupLocation: rentalBooking.pickupLocation,
+          returnLocation: rentalBooking.returnLocation,
+          totalAmount: rentalBooking.totalAmount,
+          bookingConfirmationCode: rentalBooking.bookingConfirmationCode,
+          returnCode: rentalBooking.returnCode,
+          timeline: rentalBooking.timeline,
+          createdAt: rentalBooking.createdAt,
+        };
+      }
+
       throw new NotFoundError(`Booking "${bookingIdentifier}" not found or unauthorized`);
     }
 

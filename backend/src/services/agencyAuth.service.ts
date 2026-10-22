@@ -7,6 +7,7 @@ import { PartnerOtpModel } from '../models/partnerOtp.model.js';
 import { TokenUtil } from '../utils/token.util.js';
 import { envConfig } from '../config/env.config.js';
 import { mailService } from './mail.service.js';
+import { subscriptionService } from './subscription.service.js';
 import { AuditLoggerService } from './auditLogger.service.js';
 import { logger } from '../config/logger.config.js';
 
@@ -624,6 +625,18 @@ export class AgencyAuthService {
       yearEstablished: data.yearEstablished || '',
       registrationNumber: data.registrationNumber || '',
       website: data.website || '',
+      bankDetails: data.bankDetails || {
+        accountHolderName: data.accountHolderName || ownerName,
+        bankName: data.bankName || '',
+        accountNumber: data.accountNumber || '',
+        ifscCode: data.ifscCode || '',
+        branch: data.branch || data.city || '',
+        upiId: data.upiId || '',
+        accountType: data.accountType || 'Current Account',
+        payoutMethod: data.payoutMethod || 'bank',
+        verified: false,
+        status: 'Under Review',
+      },
       carRentalProfile: isCarRental
         ? {
             businessName: data.name,
@@ -636,34 +649,67 @@ export class AgencyAuthService {
             pinCode: data.pinCode,
             fleetSize: data.fleetSize || 1,
             supportedVehicleServices: data.supportedVehicleServices || ['self_drive_car'],
+            bankDetails: data.bankDetails || {
+              accountHolderName: data.accountHolderName || ownerName,
+              bankName: data.bankName || '',
+              accountNumber: data.accountNumber || '',
+              ifscCode: data.ifscCode || '',
+              branch: data.branch || data.city || '',
+              upiId: data.upiId || '',
+            },
           }
         : undefined,
     };
 
     if (business) {
+      const existingTypes = (business.businessTypes && business.businessTypes.length > 0)
+        ? [...business.businessTypes]
+        : [business.businessType === 'Car Rental' ? 'car_rental' : 'agency'];
+      const targetType = isCarRental ? 'car_rental' : 'agency';
+      if (!existingTypes.includes(targetType)) {
+        existingTypes.push(targetType);
+      }
+      businessData.businessTypes = existingTypes;
+      businessData.activeBusiness = targetType;
+
+      // Preserve paymentStatus if partner previously paid
+      const wasPaid = business.paymentStatus === 'PAID';
       Object.assign(business, businessData);
+      if (wasPaid) {
+        business.paymentStatus = 'PAID';
+      }
       await business.save();
       return business;
     }
 
+    // Check if partner has previously paid the one-time registration fee on network
+    const feeStatus = await subscriptionService.hasPartnerPaidRegistrationFee({
+      ownerId,
+      email,
+      phone,
+    });
+
     businessData.applicationId = applicationId;
-    businessData.paymentStatus = 'PENDING';
+    businessData.paymentStatus = feeStatus.paid ? 'PAID' : 'PENDING';
     businessData.approvalStatus = 'PENDING';
     businessData.verificationStatus = 'PENDING';
     businessData.status = 'PENDING';
-    businessData.onboardingStatus = 'PAYMENT_PENDING';
+    businessData.onboardingStatus = feeStatus.paid ? 'UNDER_REVIEW' : 'PAYMENT_PENDING';
     businessData.timeline = [
       {
         id: `t-${Date.now()}`,
-        title: 'Business Registration Started',
+        title: feeStatus.paid ? 'Business Registration Started (Fee Waived)' : 'Business Registration Started',
         timestamp: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
         completed: true,
-        desc: `${isCarRental ? 'Car Rental' : 'Travel Agency'} business profile created. Ready for registration fee.`,
+        desc: feeStatus.paid
+          ? `${isCarRental ? 'Car Rental' : 'Travel Agency'} profile created. Registration fee waived (one-time fee already paid on network). Ready for review.`
+          : `${isCarRental ? 'Car Rental' : 'Travel Agency'} business profile created. Ready for registration fee.`,
       },
     ];
 
     const newBusiness = await AgencyModel.create(businessData);
     return newBusiness;
+
   }
 
   /**

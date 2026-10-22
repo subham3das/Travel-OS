@@ -501,17 +501,28 @@ export const CarRentalApprovalDrawer: React.FC<CarRentalApprovalDrawerProps> = (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
-                      Uploaded Compliance Documents ({documents.length})
+                      Compliance Documents {documents.length > 0 ? `(${documents.length})` : ''}
                     </span>
-                    <button
-                      onClick={() => handleApproveDocs()}
-                      className="text-xs font-bold text-[#6356E5] hover:underline cursor-pointer"
-                    >
-                      Approve All Docs
-                    </button>
+                    {documents.length > 0 && (
+                      <button
+                        onClick={() => handleApproveDocs()}
+                        className="text-xs font-bold text-[#6356E5] hover:underline cursor-pointer"
+                      >
+                        Approve All Docs
+                      </button>
+                    )}
                   </div>
 
-                  {documents.map((doc) => (
+                  {documents.length === 0 ? (
+                    <div className="bg-white p-8 rounded-2xl border border-slate-100 text-center text-slate-400">
+                      <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                      <p className="text-xs font-bold text-slate-700">No documents required for this onboarding.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Car Rental onboarding only collects Owner & Payout Details. No document upload is required.
+                      </p>
+                    </div>
+                  ) : (
+                    documents.map((doc) => (
                     <div
                       key={doc.id}
                       className="bg-white p-4 rounded-2xl border border-slate-100 shadow-2xs space-y-2"
@@ -576,7 +587,7 @@ export const CarRentalApprovalDrawer: React.FC<CarRentalApprovalDrawerProps> = (
                         )}
                       </div>
                     </div>
-                  ))}
+                  )))}
                 </div>
               )}
 

@@ -252,15 +252,41 @@ export class MyTripService {
    */
   public async getMyCarRentalBookings(userId: string) {
     const { CarBookingModel } = await import('../models/carBooking.model.js');
+    const { RentalBookingModel } = await import('../models/rentalBooking.model.js');
     const userObjectId = new mongoose.Types.ObjectId(userId);
-    return CarBookingModel.find({
-      $or: [{ customerId: userObjectId }, { customerId: userId }],
-      isDeleted: { $ne: true },
-    })
-      .populate('carId')
-      .populate('agencyId')
-      .sort({ createdAt: -1 })
-      .lean();
+
+    const [carBookings, rentalBookings] = await Promise.all([
+      CarBookingModel.find({
+        $or: [{ customerId: userObjectId }, { customerId: userId }],
+        isDeleted: { $ne: true },
+      })
+        .populate('carId')
+        .populate('agencyId')
+        .sort({ createdAt: -1 })
+        .lean(),
+      RentalBookingModel.find({
+        $or: [{ customerId: userObjectId }, { customerId: userId }],
+        isDeleted: false,
+      })
+        .populate('carId')
+        .populate('agencyId')
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
+
+    const formattedCar = carBookings.map((b: any) => ({ ...b, isRental: false, bookingProduct: 'CAR_BOOKING' }));
+    const formattedRental = rentalBookings.map((b: any) => ({
+      ...b,
+      isRental: true,
+      bookingProduct: 'RENTAL',
+      serviceType: 'SELF_DRIVE_RENTAL',
+      pickupDateTime: b.startDate,
+      returnDateTime: b.endDate,
+    }));
+
+    return [...formattedCar, ...formattedRental].sort(
+      (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 }
 

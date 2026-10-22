@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Ban,
   Users,
+  Play,
 } from 'lucide-react';
 import { agencyCarRentalService } from '../../services/agencyCarRental.service';
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
@@ -64,6 +65,54 @@ export const AgencyCarRentalBookingsPage: React.FC = () => {
 
   // Cancel Booking Modal State
   const [cancellingBooking, setCancellingBooking] = useState<any | null>(null);
+  const [cancellationReasonInput, setCancellationReasonInput] = useState<string>('');
+
+  // Code Verification Modal State
+  const [verifyingModalBooking, setVerifyingModalBooking] = useState<any | null>(null);
+  const [verifyType, setVerifyType] = useState<'pickup' | 'return' | 'ride_start' | 'ride_close'>('pickup');
+  const [codeInput, setCodeInput] = useState<string>('');
+  const [isVerifyingCode, setIsVerifyingCode] = useState<boolean>(false);
+
+  const handleVerifyCodeSubmit = async (overrideBooking?: any, overrideType?: any) => {
+    const targetBooking = overrideBooking || verifyingModalBooking;
+    const targetType = overrideType || verifyType;
+    if (!targetBooking || !codeInput.trim()) {
+      showToast('Please enter the 6-digit code', 'error');
+      return;
+    }
+    const cleanCode = codeInput.trim().replace(/\s/g, '');
+    if (cleanCode.length !== 6) {
+      showToast('Code must be exactly 6 digits', 'error');
+      return;
+    }
+    setIsVerifyingCode(true);
+    try {
+      const bId = targetBooking.bookingId || targetBooking._id;
+      if (targetType === 'pickup') {
+        await agencyCarRentalService.verifyPickupCode(bId, cleanCode);
+        showToast('Pickup verified! Booking is now ACTIVE and vehicle marked UNAVAILABLE.', 'success');
+      } else if (targetType === 'return') {
+        await agencyCarRentalService.verifyReturnCode(bId, cleanCode);
+        showToast('Return verified! Booking is COMPLETED and vehicle marked AVAILABLE.', 'success');
+      } else if (targetType === 'ride_start') {
+        await agencyCarRentalService.verifyRideStartCode(bId, cleanCode);
+        showToast('Ride started! Status is now ACTIVE.', 'success');
+      } else if (targetType === 'ride_close') {
+        await agencyCarRentalService.verifyRideCloseCode(bId, cleanCode);
+        showToast('Ride completed! Vehicle marked AVAILABLE.', 'success');
+      }
+
+      setVerifyingModalBooking(null);
+      setViewingBooking(null);
+      setCodeInput('');
+      await fetchBookings();
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message || 'Invalid Pickup Code';
+      showToast(errMsg, 'error');
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
 
   const fetchBookings = async () => {
     try {
@@ -191,22 +240,40 @@ export const AgencyCarRentalBookingsPage: React.FC = () => {
   // Cancel Booking Submit
   const handleCancelSubmit = async () => {
     if (!cancellingBooking) return;
+    const bId = cancellingBooking.bookingId || cancellingBooking._id;
+    const isRental = Boolean(
+      cancellingBooking.isRental ||
+      cancellingBooking.bookingProduct === 'RENTAL' ||
+      cancellingBooking.rentalType ||
+      cancellingBooking.serviceType === 'SELF_DRIVE_RENTAL'
+    );
     setActionInProgress(cancellingBooking._id);
     try {
-      await agencyCarRentalService.updateBookingStatus(
-        cancellingBooking._id || cancellingBooking.bookingId,
-        'CANCELLED'
+      await agencyCarRentalService.cancelBookingAsOwner(
+        bId,
+        isRental,
+        cancellationReasonInput.trim() || undefined
       );
-      showToast('Booking cancelled', 'success');
+      showToast('Booking cancelled by owner. Vehicle is now available.', 'success');
       setBookings((prev) =>
         prev.map((b) =>
-          b._id === cancellingBooking._id ? { ...b, bookingStatus: 'CANCELLED' } : b
+          b._id === cancellingBooking._id || b.bookingId === cancellingBooking.bookingId
+            ? {
+                ...b,
+                bookingStatus: 'CANCELLED',
+                cancelledBy: 'OWNER',
+                cancellationReason: cancellationReasonInput.trim(),
+              }
+            : b
         )
       );
       setCancellingBooking(null);
+      setCancellationReasonInput('');
       await fetchBookings();
     } catch (err: any) {
-      showToast(err.message || 'Failed to cancel booking', 'error');
+      const errMsg =
+        err.response?.data?.message || err.message || 'This booking can no longer be cancelled.';
+      showToast(errMsg, 'error');
     } finally {
       setActionInProgress(null);
     }
@@ -489,59 +556,157 @@ export const AgencyCarRentalBookingsPage: React.FC = () => {
                           {/* 8. Actions */}
                           <td className="py-3.5 px-3 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* Actions for Pending Booking */}
-                              {isPending && (
+                              {/* If Cancelled, show red Cancelled badge and disable/omit verify actions */}
+                              {bStatus === 'CANCELLED' ? (
+                                <span className="px-2.5 py-1 rounded-xl bg-rose-100 text-rose-800 text-[11px] font-black border border-rose-300">
+                                  Cancelled
+                                </span>
+                              ) : (
                                 <>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenAssignDriverModal(b)}
-                                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-xs"
-                                  >
-                                    <Check className="w-3.5 h-3.5" />
-                                    <span>Confirm Booking</span>
-                                  </button>
+                                  {/* Actions for Pending Booking */}
+                                  {isPending && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenAssignDriverModal(b)}
+                                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+                                      >
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Confirm Booking</span>
+                                      </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => setRejectingBooking(b)}
-                                    className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-bold transition-colors cursor-pointer"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-
-                              {/* Actions for Confirmed Booking */}
-                              {isConfirmed && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenAssignDriverModal(b)}
-                                    title="Change Assigned Driver"
-                                    className="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-[#583BE8] border border-indigo-200 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
-                                  >
-                                    <UserCheck className="w-3.5 h-3.5" />
-                                    <span>Change Driver</span>
-                                  </button>
-
-                                  {b.driverPhone && (
-                                    <a
-                                      href={`tel:${b.driverPhone}`}
-                                      title={`Call Driver (${b.driverPhone})`}
-                                      className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
-                                    >
-                                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                                    </a>
+                                      <button
+                                        type="button"
+                                        onClick={() => setRejectingBooking(b)}
+                                        className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-bold transition-colors cursor-pointer"
+                                      >
+                                        Reject
+                                      </button>
+                                    </>
                                   )}
 
-                                  <button
-                                    type="button"
-                                    onClick={() => setCancellingBooking(b)}
-                                    title="Cancel Booking"
-                                    className="p-1.5 rounded-xl bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer flex items-center justify-center"
-                                  >
-                                    <Ban className="w-3.5 h-3.5" />
-                                  </button>
+                                  {/* Actions for Confirmed Booking */}
+                                  {isConfirmed && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenAssignDriverModal(b)}
+                                        title="Change Assigned Driver"
+                                        className="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-[#583BE8] border border-indigo-200 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                      >
+                                        <UserCheck className="w-3.5 h-3.5" />
+                                        <span>Change Driver</span>
+                                      </button>
+
+                                      {b.driverPhone && (
+                                        <a
+                                          href={`tel:${b.driverPhone}`}
+                                          title={`Call Driver (${b.driverPhone})`}
+                                          className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center"
+                                        >
+                                          <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                                        </a>
+                                      )}
+                                    </>
+                                  )}
+
+                                  {/* Code Verification Actions (Rental & Ride Lifecycle) */}
+                                  {(() => {
+                                    const isRentalType =
+                                      b.serviceType === 'SELF_DRIVE_RENTAL' ||
+                                      b.bookingType === 'SELF_DRIVE_RENTAL' ||
+                                      b.rentalPricing ||
+                                      !b.driverName;
+
+                                    if (isRentalType) {
+                                      if (bStatus === 'READY_FOR_PICKUP' || bStatus === 'CONFIRMED' || bStatus === 'BOOKED') {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setVerifyingModalBooking(b);
+                                              setVerifyType('pickup');
+                                              setCodeInput('');
+                                            }}
+                                            className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[11px] shadow-xs cursor-pointer flex items-center gap-1"
+                                            title="Verify Customer Pickup Code"
+                                          >
+                                            <ShieldCheck className="w-3.5 h-3.5" />
+                                            <span>Verify Pickup</span>
+                                          </button>
+                                        );
+                                      }
+                                      if (bStatus === 'ACTIVE') {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setVerifyingModalBooking(b);
+                                              setVerifyType('return');
+                                              setCodeInput('');
+                                            }}
+                                            className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] shadow-xs cursor-pointer flex items-center gap-1"
+                                            title="Verify Return Code"
+                                          >
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            <span>Verify Return</span>
+                                          </button>
+                                        );
+                                      }
+                                    } else {
+                                      if (bStatus === 'CONFIRMED' || bStatus === 'READY_FOR_RIDE') {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setVerifyingModalBooking(b);
+                                              setVerifyType('ride_start');
+                                              setCodeInput('');
+                                            }}
+                                            className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] shadow-xs cursor-pointer flex items-center gap-1"
+                                            title="Verify Ride Start Code"
+                                          >
+                                            <Play className="w-3.5 h-3.5" />
+                                            <span>Start Ride</span>
+                                          </button>
+                                        );
+                                      }
+                                      if (bStatus === 'ACTIVE') {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setVerifyingModalBooking(b);
+                                              setVerifyType('ride_close');
+                                              setCodeInput('');
+                                            }}
+                                            className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] shadow-xs cursor-pointer flex items-center gap-1"
+                                            title="Verify Ride Close Code"
+                                          >
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            <span>End Ride</span>
+                                          </button>
+                                        );
+                                      }
+                                    }
+                                    return null;
+                                  })()}
+
+                                  {/* Cancel Booking Button: ONLY when status is BOOKED, READY_FOR_PICKUP, READY_FOR_RIDE */}
+                                  {(bStatus === 'BOOKED' || bStatus === 'READY_FOR_PICKUP' || bStatus === 'READY_FOR_RIDE') && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setCancellingBooking(b);
+                                        setCancellationReasonInput('');
+                                      }}
+                                      title="Cancel Booking"
+                                      className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                                    >
+                                      <Ban className="w-3.5 h-3.5" />
+                                      <span>Cancel Booking</span>
+                                    </button>
+                                  )}
                                 </>
                               )}
 
@@ -892,6 +1057,90 @@ export const AgencyCarRentalBookingsPage: React.FC = () => {
                         </span>
                       </div>
                     </div>
+
+                    {/* Live Verification Box (Owner Verification Flow) */}
+                    {viewingBooking.bookingStatus !== 'CANCELLED' && viewingBooking.bookingStatus !== 'REJECTED' && (
+                      <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-black uppercase text-amber-900 flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 text-amber-600" />
+                            Security Code Verification Box
+                          </span>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800">
+                            Status: {viewingBooking.bookingStatus}
+                          </span>
+                        </div>
+
+                        {viewingBooking.bookingStatus === 'ACTIVE' ? (
+                          <div className="space-y-2">
+                            <p className="text-xs text-slate-700 font-medium">
+                              Vehicle currently <strong>ON RENT / IN RIDE</strong>. Enter customer's 6-digit Return / Close Code to complete:
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                maxLength={6}
+                                value={codeInput}
+                                onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, ''))}
+                                placeholder="Enter 6-digit Return Code"
+                                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 font-mono text-sm tracking-widest font-black uppercase bg-white focus:outline-none focus:border-indigo-600"
+                              />
+                              <button
+                                type="button"
+                                disabled={isVerifyingCode || codeInput.trim().length !== 6}
+                                onClick={async () => {
+                                  await handleVerifyCodeSubmit(
+                                    viewingBooking,
+                                    viewingBooking.serviceType === 'SELF_DRIVE_RENTAL' || viewingBooking.bookingType === 'SELF_DRIVE_RENTAL'
+                                      ? 'return'
+                                      : 'ride_close'
+                                  );
+                                }}
+                                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs transition-all shadow-xs cursor-pointer"
+                              >
+                                {isVerifyingCode ? 'Verifying...' : 'Complete & Return'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : viewingBooking.bookingStatus === 'COMPLETED' ? (
+                          <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            <span>This reservation is completed. Vehicle is marked AVAILABLE.</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-xs text-slate-700 font-medium">
+                              Enter Customer Pickup / Ride Confirmation Code to hand over vehicle:
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                maxLength={6}
+                                value={codeInput}
+                                onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, ''))}
+                                placeholder="Enter 6-digit Confirmation Code"
+                                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 font-mono text-sm tracking-widest font-black uppercase bg-white focus:outline-none focus:border-indigo-600"
+                              />
+                              <button
+                                type="button"
+                                disabled={isVerifyingCode || codeInput.trim().length !== 6}
+                                onClick={async () => {
+                                  await handleVerifyCodeSubmit(
+                                    viewingBooking,
+                                    viewingBooking.serviceType === 'SELF_DRIVE_RENTAL' || viewingBooking.bookingType === 'SELF_DRIVE_RENTAL'
+                                      ? 'pickup'
+                                      : 'ride_start'
+                                  );
+                                }}
+                                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-black text-xs transition-all shadow-xs cursor-pointer"
+                              >
+                                {isVerifyingCode ? 'Verifying...' : 'Verify & Handover'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-4 border-t border-slate-100 flex justify-end">
@@ -970,26 +1219,121 @@ export const AgencyCarRentalBookingsPage: React.FC = () => {
                 >
                   <div className="flex items-center gap-2.5 text-rose-600">
                     <Ban className="w-5 h-5" />
-                    <h3 className="text-base font-black text-[#0F172A]">Cancel Booking</h3>
+                    <h3 className="text-base font-black text-[#0F172A]">Cancel this booking?</h3>
                   </div>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Are you sure you want to cancel confirmed booking #{cancellingBooking.bookingId}?
-                    The traveler will be notified immediately.
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    This booking will be cancelled and the customer will be notified. The reserved vehicle will become available for new bookings.
                   </p>
+                  <div className="space-y-1.5 pt-1">
+                    <label className="text-[11px] font-bold text-slate-500">Cancellation Reason (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Vehicle maintenance required, schedule conflict"
+                      value={cancellationReasonInput}
+                      onChange={(e) => setCancellationReasonInput(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+                    />
+                  </div>
                   <div className="flex justify-end gap-2 pt-2">
                     <button
                       type="button"
-                      onClick={() => setCancellingBooking(null)}
-                      className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold cursor-pointer"
+                      onClick={() => {
+                        setCancellingBooking(null);
+                        setCancellationReasonInput('');
+                      }}
+                      className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold cursor-pointer transition-colors"
                     >
                       Keep Booking
                     </button>
                     <button
                       type="button"
                       onClick={handleCancelSubmit}
-                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black cursor-pointer shadow-xs"
+                      disabled={Boolean(actionInProgress)}
+                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-xs transition-colors flex items-center gap-1.5"
                     >
-                      Cancel Booking
+                      {actionInProgress && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      <span>Cancel Booking</span>
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* VERIFY CODE MODAL */}
+          <AnimatePresence>
+            {verifyingModalBooking && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-100"
+                >
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2.5 text-[#0F172A]">
+                      <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                      <h3 className="text-base font-black">
+                        {verifyType === 'pickup'
+                          ? 'Verify Pickup Code'
+                          : verifyType === 'return'
+                          ? 'Verify Return Code'
+                          : verifyType === 'ride_start'
+                          ? 'Verify Ride Start Code'
+                          : 'Verify Ride Close Code'}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setVerifyingModalBooking(null)}
+                      className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    {verifyType === 'pickup' &&
+                      'Ask the customer for their 6-digit Confirmation Code to hand over the vehicle and activate the rental.'}
+                    {verifyType === 'return' &&
+                      'Ask the customer for their 6-digit Return Code shown in their active booking to complete the rental.'}
+                    {verifyType === 'ride_start' &&
+                      'Ask the customer for their 6-digit Ride Start Code to begin the ride.'}
+                    {verifyType === 'ride_close' &&
+                      'Ask the customer for their 6-digit Ride Close Code to conclude the ride.'}
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-400 block">
+                      Enter 6-Digit Code
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      autoFocus
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, ''))}
+                      placeholder="e.g. 483219"
+                      className="w-full px-4 py-3 rounded-2xl border-2 border-indigo-200 focus:border-indigo-600 text-xl font-mono font-black text-center tracking-widest text-[#0F172A] outline-none"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setVerifyingModalBooking(null)}
+                      className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isVerifyingCode || codeInput.trim().length !== 6}
+                      onClick={() => handleVerifyCodeSubmit()}
+                      className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-xs flex items-center gap-1.5"
+                    >
+                      {isVerifyingCode ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      <span>{isVerifyingCode ? 'Verifying...' : 'Verify & Confirm'}</span>
                     </button>
                   </div>
                 </motion.div>

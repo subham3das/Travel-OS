@@ -18,10 +18,12 @@ import {
   MessageSquare,
   X,
   Clock,
+  Phone,
 } from 'lucide-react';
 import { Vehicle, VehicleReview, CarRoute } from '../../types/carRental';
 import { carRentalService, resolveCarImage } from '../../services/carRental.service';
 import { CarBookingModal } from '../../components/carRental/CarBookingModal';
+import { openWhatsAppContact, makePhoneCall } from '../../utils/contact';
 
 export const VehicleDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -258,7 +260,7 @@ export const VehicleDetailsPage: React.FC = () => {
             </div>
             <div className="text-right shrink-0">
               <div className="text-xl font-black text-[#FF4D6D]">
-                ₹{vehicle.pricing.basePricePerDay.toLocaleString()}
+                ₹{(vehicle.pricing?.basePricePerDay ?? vehicle.pricing?.fixedPrice ?? (vehicle as any).rentalPricing?.dailyRate ?? 1500).toLocaleString()}
               </div>
               <div className="text-[11px] text-slate-400 font-bold">/day</div>
             </div>
@@ -546,15 +548,31 @@ export const VehicleDetailsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Chat with Provider */}
-        <button
-          type="button"
-          onClick={handleChat}
-          className="w-full py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-[#0F172A] text-sm font-black flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors cursor-pointer"
-        >
-          <MessageSquare className="w-4 h-4 text-indigo-600" />
-          Chat with Provider
-        </button>
+        {/* Contact Provider: WhatsApp & Call Only */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              openWhatsAppContact({
+                phone: vehicle.provider?.contactPhone,
+                userName: '',
+              })
+            }
+            className="py-3.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+          >
+            <span>💬</span>
+            <span>WhatsApp</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => makePhoneCall(vehicle.provider?.contactPhone)}
+            className="py-3.5 px-4 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-[#0F172A] text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          >
+            <Phone className="w-4 h-4 text-emerald-600" />
+            <span>Call</span>
+          </button>
+        </div>
       </main>
 
       {/* Sticky Bottom Bar */}
@@ -564,8 +582,9 @@ export const VehicleDetailsPage: React.FC = () => {
             ₹{(
               (selectedRoute?.pricing?.oneWayPrice ?? selectedRoute?.price) ||
               vehicle.routePrice ||
-              vehicle.pricing.fixedPrice ||
-              vehicle.pricing.basePricePerDay ||
+              vehicle.pricing?.fixedPrice ||
+              vehicle.pricing?.basePricePerDay ||
+              (vehicle as any).rentalPricing?.dailyRate ||
               0
             ).toLocaleString()}
           </div>

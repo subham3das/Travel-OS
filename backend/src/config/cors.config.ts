@@ -34,10 +34,12 @@ export const corsOptions: CorsOptions = {
     'X-Application-Id',
     'x-agency-id',
     'X-Agency-Id',
+    'x-business-id',
+    'X-Business-Id',
     'x-onboarding-id',
     'X-Onboarding-Id',
   ],
-  exposedHeaders: ['X-Request-Id', 'X-Total-Count', 'x-application-id', 'x-agency-id'],
+  exposedHeaders: ['X-Request-Id', 'X-Total-Count', 'x-application-id', 'x-agency-id', 'x-business-id', 'X-Business-Id'],
   maxAge: 86400, // 24 hours pre-flight caching
 };
 

@@ -267,12 +267,18 @@ export const CarRentalApprovalTable: React.FC<CarRentalApprovalTableProps> = ({
 
                   {/* Documents Uploaded */}
                   <td className="py-4 px-3 text-center">
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-600">
-                      <FileText className="w-3 h-3 text-slate-400" />
-                      <span>
-                        {req.documentsUploadedCount}/{req.documentsTotalCount}
+                    {req.documentsTotalCount > 0 ? (
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-600">
+                        <FileText className="w-3 h-3 text-slate-400" />
+                        <span>
+                          {req.documentsUploadedCount}/{req.documentsTotalCount}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] font-medium text-slate-400 italic">
+                        No docs required
                       </span>
-                    </div>
+                    )}
                   </td>
 
                   {/* Registration Date */}

@@ -118,18 +118,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#FF4D6D] rounded-full ring-2 ring-white" />
             )}
           </button>
-
-          {/* Message / Chat Icon */}
-          <button
-            onClick={onMessageClick || (() => navigate('/chat'))}
-            className="relative p-2.5 rounded-full text-slate-700 hover:bg-slate-100 hover:text-[#0F172A] transition-colors focus:outline-none cursor-pointer"
-            aria-label="Messages"
-          >
-            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
-            {unreadMessagesCount > 0 && (
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#FF4D6D] rounded-full ring-2 ring-white" />
-            )}
-          </button>
         </div>
       </div>
     </header>

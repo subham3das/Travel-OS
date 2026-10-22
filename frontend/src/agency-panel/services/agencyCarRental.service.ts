@@ -240,6 +240,108 @@ export const agencyCarRentalService = {
   },
 
   /**
+   * 13b. Dedicated Owner Cancellation for Rental Booking
+   * POST /api/rental/owner/cancel
+   */
+  async cancelRentalAsOwner(bookingId: string, reason?: string): Promise<any> {
+    const res = await agencyApiClient.post<any>('/rental/owner/cancel', {
+      bookingId,
+      reason,
+      cancellationReason: reason,
+    });
+    if (res.success) {
+      return res.data;
+    }
+    throw new Error(res.message || 'Failed to cancel rental booking');
+  },
+
+  /**
+   * 13c. Dedicated Owner Cancellation for Car Booking
+   * POST /api/car-bookings/owner/cancel
+   */
+  async cancelCarBookingAsOwner(bookingId: string, reason?: string): Promise<any> {
+    const res = await agencyApiClient.post<any>('/car-bookings/owner/cancel', {
+      bookingId,
+      reason,
+      cancellationReason: reason,
+    });
+    if (res.success) {
+      return res.data;
+    }
+    throw new Error(res.message || 'Failed to cancel car booking');
+  },
+
+  /**
+   * 13d. Unified Owner Cancellation
+   */
+  async cancelBookingAsOwner(bookingId: string, isRental?: boolean, reason?: string): Promise<any> {
+    if (isRental) {
+      return this.cancelRentalAsOwner(bookingId, reason);
+    }
+    try {
+      return await this.cancelCarBookingAsOwner(bookingId, reason);
+    } catch {
+      return await this.cancelRentalAsOwner(bookingId, reason);
+    }
+  },
+
+  /**
+   * Verify Pickup Confirmation Code for Rental Booking
+   */
+  async verifyPickupCode(bookingId: string, code: string): Promise<any> {
+    const res = await agencyApiClient.post<any>('/rental/confirm', {
+      bookingId,
+      code,
+      pickupCode: code,
+    });
+    if (res.success) {
+      return res.data;
+    }
+    throw new Error(res.message || 'Failed to verify pickup code');
+  },
+
+  /**
+   * Verify Return Code for Rental Booking
+   */
+  async verifyReturnCode(bookingId: string, code: string): Promise<any> {
+    const res = await agencyApiClient.post<any>('/rental/return', {
+      bookingId,
+      code,
+      returnCode: code,
+    });
+    if (res.success) {
+      return res.data;
+    }
+    throw new Error(res.message || 'Failed to verify return code');
+  },
+
+  /**
+   * Verify Ride Start Code for Route Car Booking
+   */
+  async verifyRideStartCode(bookingId: string, code: string): Promise<any> {
+    const res = await agencyApiClient.post<any>(`/car-bookings/${bookingId}/verify-start`, {
+      code,
+    });
+    if (res.success) {
+      return res.data;
+    }
+    throw new Error(res.message || 'Failed to verify ride start code');
+  },
+
+  /**
+   * Verify Ride Close Code for Route Car Booking
+   */
+  async verifyRideCloseCode(bookingId: string, code: string): Promise<any> {
+    const res = await agencyApiClient.post<any>(`/car-bookings/${bookingId}/verify-close`, {
+      code,
+    });
+    if (res.success) {
+      return res.data;
+    }
+    throw new Error(res.message || 'Failed to verify ride close code');
+  },
+
+  /**
    * 14. Get Fleet Overview
    */
   async getFleetOverview(): Promise<{ breakdown: any; owners: any[] }> {

@@ -57,14 +57,50 @@ export const PartnerSubscriptionPage: React.FC = () => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
 
+  // One-Time Registration Fee Waiver State
+  const [feeWaived, setFeeWaived] = useState(false);
+  const [feeWaiverMessage, setFeeWaiverMessage] = useState<string | null>(null);
+  const [feeLoading, setFeeLoading] = useState(true);
+
   // Payment & Checkout State
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<any | null>(null);
 
   const basePrice = 1000;
-  const discountAmount = appliedCoupon?.discount || 0;
-  const finalPrice = Math.max(0, basePrice - discountAmount);
+  const discountAmount = feeWaived ? basePrice : (appliedCoupon?.discount || 0);
+  const finalPrice = feeWaived ? 0 : Math.max(0, basePrice - discountAmount);
+
+  // Check if partner has already paid the ₹1,000 one-time fee on the partner network
+  useEffect(() => {
+    let isMounted = true;
+    const checkFee = async () => {
+      try {
+        const queryParams = new URLSearchParams({
+          businessType,
+          ...(draftId ? { draftId } : {}),
+          ...(email ? { email } : {}),
+          ...(phone ? { phone } : {}),
+        });
+        const res: any = await agencyApiClient.get(
+          `/subscriptions/fee-status?${queryParams.toString()}`,
+          { requiresAuth: true }
+        );
+        if (isMounted && (res.data?.feeWaived || res.data?.alreadyPaid)) {
+          setFeeWaived(true);
+          setFeeWaiverMessage(res.data?.message || 'One-time registration fee previously paid.');
+        }
+      } catch (err) {
+        console.warn('Fee status check fallback:', err);
+      } finally {
+        if (isMounted) setFeeLoading(false);
+      }
+    };
+    checkFee();
+    return () => {
+      isMounted = false;
+    };
+  }, [businessType, draftId, email, phone]);
 
   // Redirect to waiting/verification page once payment is verified (after 2s for UX)
   useEffect(() => {
@@ -73,6 +109,7 @@ export const PartnerSubscriptionPage: React.FC = () => {
         setTimeout(() => navigate('/agency/verification-pending'), 2000);
       });
     }
+
   }, [successData, refreshAgencyProfile, navigate]);
 
   // Dynamically load Razorpay SDK
@@ -151,6 +188,37 @@ export const PartnerSubscriptionPage: React.FC = () => {
       if (!orderData?.subscriptionId) {
         throw new Error('Could not initialize subscription payment order.');
       }
+
+      // Check if one-time registration fee was waived because partner already paid
+      if (orderData.feeWaived || orderData.alreadyPaid || orderData.amount === 0) {
+        if (draftId) {
+          try {
+            await registrationDraftClient.submitRegistration({
+              draftId,
+              subscriptionId: orderData.subscriptionId,
+              paymentId: orderData.paymentId || 'WAIVED_PREVIOUSLY_PAID',
+              orderId: orderData.orderId,
+            });
+          } catch (regSubmitErr) {
+            console.warn('Frontend submitRegistration fallback:', regSubmitErr);
+          }
+        }
+
+        setSuccessData({
+          referenceNumber: orderData.subscriptionId,
+          applicationId: orderData.subscriptionId,
+          paymentId: orderData.paymentId || 'WAIVED_PREVIOUSLY_PAID',
+          invoiceNumber: orderData.invoiceNumber,
+          amountPaid: 0,
+          businessName: agency?.name || partnerName,
+          businessType,
+          serviceType: businessType === 'car_rental' ? 'Car Rental' : 'Travel Agency',
+          feeWaived: true,
+        });
+        setIsProcessingPayment(false);
+        return;
+      }
+
       if (!orderData.keyId) {
         throw new Error('Payment gateway configuration is missing. Please contact support.');
       }
@@ -407,63 +475,75 @@ export const PartnerSubscriptionPage: React.FC = () => {
                 </span>
               </h2>
 
-              {/* Coupon Section */}
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-[#583BE8]" />
-                  <span>Coupon Code</span>
-                </label>
-
-                {!appliedCoupon ? (
-                  <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. SAVE20"
-                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-black uppercase text-slate-800 placeholder:normal-case placeholder:font-normal focus:outline-hidden focus:ring-2 focus:ring-[#583BE8]/20 focus:border-[#583BE8]"
-                    />
-                    <button
-                      type="submit"
-                      disabled={couponLoading || !couponCode.trim()}
-                      className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black cursor-pointer transition-colors disabled:opacity-50 flex items-center gap-1 shrink-0"
-                    >
-                      {couponLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Apply</span>}
-                    </button>
-                  </form>
-                ) : (
-                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-black text-emerald-800 uppercase">
-                          {appliedCoupon.code}
-                        </span>
-                        <span className="text-[10px] font-extrabold bg-emerald-200/70 text-emerald-800 px-1.5 py-0.5 rounded-md">
-                          Coupon Applied
-                        </span>
-                      </div>
-                      <p className="text-[11px] font-bold text-emerald-700">
-                        {appliedCoupon.type === 'percentage'
-                          ? `-${appliedCoupon.percentage}% Discount (Saved ₹${appliedCoupon.discount})`
-                          : `-₹${appliedCoupon.discount} Discount Applied`}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoupon}
-                      className="text-xs font-black text-rose-600 hover:text-rose-700 cursor-pointer p-1"
-                    >
-                      Remove
-                    </button>
+              {/* Fee Status / Coupon Section */}
+              {feeWaived ? (
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1.5">
+                  <div className="flex items-center gap-2 text-emerald-800 font-black text-xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>One-Time Fee Waived (Previously Paid)</span>
                   </div>
-                )}
-
-                {couponError && (
-                  <p className="text-xs font-bold text-rose-600 mt-1">
-                    ✕ {couponError}
+                  <p className="text-[11px] text-emerald-700 font-medium leading-relaxed">
+                    You have already paid the ₹1,000 partner registration fee on the ApnaTrip Partner Network. As per network policy, partners only pay once across all panels.
                   </p>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-[#583BE8]" />
+                    <span>Coupon Code</span>
+                  </label>
+
+                  {!appliedCoupon ? (
+                    <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. SAVE20"
+                        className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-black uppercase text-slate-800 placeholder:normal-case placeholder:font-normal focus:outline-hidden focus:ring-2 focus:ring-[#583BE8]/20 focus:border-[#583BE8]"
+                      />
+                      <button
+                        type="submit"
+                        disabled={couponLoading || !couponCode.trim()}
+                        className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black cursor-pointer transition-colors disabled:opacity-50 flex items-center gap-1 shrink-0"
+                      >
+                        {couponLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Apply</span>}
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-black text-emerald-800 uppercase">
+                            {appliedCoupon.code}
+                          </span>
+                          <span className="text-[10px] font-extrabold bg-emerald-200/70 text-emerald-800 px-1.5 py-0.5 rounded-md">
+                            Coupon Applied
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-bold text-emerald-700">
+                          {appliedCoupon.type === 'percentage'
+                            ? `-${appliedCoupon.percentage}% Discount (Saved ₹${appliedCoupon.discount})`
+                            : `-₹${appliedCoupon.discount} Discount Applied`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="text-xs font-black text-rose-600 hover:text-rose-700 cursor-pointer p-1"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {couponError && (
+                    <p className="text-xs font-bold text-rose-600 mt-1">
+                      ✕ {couponError}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Price Breakdown */}
               <div className="space-y-2.5 text-xs font-semibold text-slate-600 pt-2 border-t border-slate-100">
@@ -472,12 +552,17 @@ export const PartnerSubscriptionPage: React.FC = () => {
                   <span className="font-extrabold text-[#0F172A]">₹{basePrice.toLocaleString('en-IN')}</span>
                 </div>
 
-                {discountAmount > 0 && (
+                {feeWaived ? (
+                  <div className="flex justify-between text-emerald-600 font-bold">
+                    <span>Partner Network Benefit (Waived)</span>
+                    <span>-₹{basePrice.toLocaleString('en-IN')}</span>
+                  </div>
+                ) : discountAmount > 0 ? (
                   <div className="flex justify-between text-emerald-600 font-bold">
                     <span>Discount</span>
                     <span>-₹{discountAmount.toLocaleString('en-IN')}</span>
                   </div>
-                )}
+                ) : null}
 
                 <div className="flex justify-between">
                   <span>GST</span>
@@ -487,7 +572,7 @@ export const PartnerSubscriptionPage: React.FC = () => {
                 <div className="pt-3 border-t border-slate-100 flex justify-between items-baseline">
                   <span className="text-sm font-black text-[#0F172A]">Total</span>
                   <div className="text-right">
-                    {discountAmount > 0 && (
+                    {(feeWaived || discountAmount > 0) && (
                       <span className="text-xs text-slate-400 line-through font-bold block">
                         ₹{basePrice.toLocaleString('en-IN')}
                       </span>
@@ -499,7 +584,7 @@ export const PartnerSubscriptionPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Razorpay Action Button */}
+              {/* Action Button */}
               <button
                 type="button"
                 onClick={handleCheckout}
@@ -509,7 +594,13 @@ export const PartnerSubscriptionPage: React.FC = () => {
                 {isProcessingPayment ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Processing Payment...</span>
+                    <span>Processing Submission...</span>
+                  </>
+                ) : feeWaived ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Activate Business (Fee Waived: ₹0)</span>
+                    <ArrowRight className="w-4 h-4" />
                   </>
                 ) : (
                   <>
@@ -519,6 +610,7 @@ export const PartnerSubscriptionPage: React.FC = () => {
                   </>
                 )}
               </button>
+
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold text-center">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />

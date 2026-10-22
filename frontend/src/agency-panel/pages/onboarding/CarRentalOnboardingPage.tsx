@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -28,7 +28,7 @@ import { useToast } from '../../../user-panel/context/ToastContext';
 
 export const CarRentalOnboardingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { agencyUser, setActiveAgency } = useAgencyAuthContext();
+  const { agencyUser, setActiveAgency, agency } = useAgencyAuthContext();
   const { loginAgency } = useAgencyAuth();
   const { refreshBusinessProfile } = useActiveBusiness();
   const { showToast } = useToast();
@@ -65,6 +65,19 @@ export const CarRentalOnboardingPage: React.FC = () => {
     ifscCode: '',
     upiId: '',
   });
+
+  useEffect(() => {
+    const defaultOwner = agencyUser?.name || (agency as any)?.ownerName || (agency as any)?.owner?.name || '';
+    const defaultEmail = agencyUser?.email || (agency as any)?.email || (agency as any)?.owner?.email || '';
+    const defaultPhone = agencyUser?.phone || (agency as any)?.phone || (agency as any)?.owner?.phone || '';
+
+    setFormData((prev) => ({
+      ...prev,
+      ownerName: prev.ownerName || defaultOwner,
+      email: prev.email || defaultEmail,
+      phone: prev.phone || defaultPhone,
+    }));
+  }, [agencyUser, agency]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -131,6 +144,9 @@ export const CarRentalOnboardingPage: React.FC = () => {
         businessType: 'car_rental',
         name: formData.businessName.trim(),
         legalBusinessName: (formData.legalBusinessName || formData.businessName).trim(),
+        ownerName: (formData.ownerName || agencyUser?.name || '').trim(),
+        email: (formData.email || agencyUser?.email || '').trim(),
+        phone: (formData.phone || agencyUser?.phone || '').trim(),
         businessAddress: formData.address.trim(),
         city: formData.city.trim(),
         state: formData.state.trim(),
@@ -138,6 +154,22 @@ export const CarRentalOnboardingPage: React.FC = () => {
         gstNumber: formData.gstNumber.trim(),
         panNumber: formData.panNumber.trim(),
         fleetSize: Number(formData.fleetSize) || 1,
+        accountHolderName: (formData.accountHolderName || formData.ownerName || agencyUser?.name || '').trim(),
+        bankName: formData.bankName.trim(),
+        accountNumber: formData.accountNumber.trim(),
+        ifscCode: formData.ifscCode.trim().toUpperCase(),
+        branch: formData.city.trim(),
+        upiId: formData.upiId.trim(),
+        bankDetails: {
+          accountHolderName: (formData.accountHolderName || formData.ownerName || agencyUser?.name || '').trim(),
+          bankName: formData.bankName.trim(),
+          accountNumber: formData.accountNumber.trim(),
+          ifscCode: formData.ifscCode.trim().toUpperCase(),
+          branch: formData.city.trim(),
+          upiId: formData.upiId.trim(),
+          accountType: 'Current Account',
+          payoutMethod: 'bank',
+        },
       });
 
       if (businessRes.data?.business) {
@@ -523,12 +555,14 @@ export const CarRentalOnboardingPage: React.FC = () => {
 
                   <div className="flex items-center justify-between py-1 border-b border-slate-200/60">
                     <span className="text-slate-500 font-medium">Owner Name:</span>
-                    <span className="font-bold text-slate-900">{formData.ownerName}</span>
+                    <span className="font-bold text-slate-900">{formData.ownerName || agencyUser?.name || ''}</span>
                   </div>
 
                   <div className="flex items-center justify-between py-1 border-b border-slate-200/60">
                     <span className="text-slate-500 font-medium">Contact:</span>
-                    <span className="font-bold text-slate-900">{formData.phone} • {formData.email}</span>
+                    <span className="font-bold text-slate-900">
+                      {[formData.phone || agencyUser?.phone, formData.email || agencyUser?.email].filter(Boolean).join(' • ')}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between py-1 border-b border-slate-200/60">

@@ -238,15 +238,6 @@ export const CarRentalPage: React.FC = () => {
               <Bell className="w-5 h-5" />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#FF4D6D] ring-2 ring-white" />
             </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/chat')}
-              aria-label="Messages"
-              className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
-            >
-              <MessageSquare className="w-5 h-5" />
-            </button>
           </div>
         </div>
       </header>
@@ -276,7 +267,7 @@ export const CarRentalPage: React.FC = () => {
             }`}
           >
             <Car className="w-4 h-4 text-[#FF4D6D]" />
-            <span>Driver-Based Booking</span>
+            <span>Car Booking</span>
           </button>
 
           <button
@@ -289,7 +280,7 @@ export const CarRentalPage: React.FC = () => {
             }`}
           >
             <Key className="w-4 h-4 text-indigo-600" />
-            <span>Self Drive Rentals</span>
+            <span>Rental Cars</span>
             <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-indigo-50 text-indigo-600 border border-indigo-200">
               Cars & Bikes
             </span>
@@ -303,6 +294,10 @@ export const CarRentalPage: React.FC = () => {
             <CarCategoryScroll
               selectedCategory={selectedCategory}
               onSelectCategory={(cat) => {
+                if (cat === 'self_drive') {
+                  setServiceMode('rental');
+                  return;
+                }
                 setSelectedCategory(cat);
                 setSelectedType(null);
               }}
@@ -474,7 +469,7 @@ export const CarRentalPage: React.FC = () => {
                   }`}
                 >
                   <Car className="w-4 h-4" />
-                  <span>Self Drive Cars</span>
+                  <span>Rental Cars</span>
                 </button>
                 <button
                   type="button"
@@ -486,7 +481,7 @@ export const CarRentalPage: React.FC = () => {
                   }`}
                 >
                   <Bike className="w-4 h-4" />
-                  <span>Self Drive Bikes</span>
+                  <span>Rental Bikes</span>
                 </button>
               </div>
 
@@ -544,7 +539,7 @@ export const CarRentalPage: React.FC = () => {
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base sm:text-lg font-black text-[#0F172A] tracking-tight">
-                  Available Self-Drive {rentalSubCategory === 'bike' ? 'Bikes' : 'Cars'}
+                  Available Rental {rentalSubCategory === 'bike' ? 'Bikes' : 'Cars'}
                 </h3>
                 <span className="text-xs font-bold text-slate-400">
                   {rentalVehicles.length} vehicles found
@@ -643,10 +638,10 @@ export const CarRentalPage: React.FC = () => {
                               {quote ? (
                                 <div>
                                   <div className="text-base sm:text-lg font-black text-indigo-600">
-                                    ₹{quote.totalPayableAtBooking.toLocaleString()}
+                                    ₹{(quote.totalPayableAtBooking ?? (quote as any)?.finalPayableAmount ?? veh.rentalPricing?.dailyRate ?? 1500).toLocaleString()}
                                   </div>
                                   <span className="text-[10px] font-bold text-slate-400 block -mt-0.5">
-                                    Total for {quote.durationHours} hrs ({quote.tierApplied.toUpperCase()})
+                                    Total for {quote.durationHours ?? 24} hrs ({String(quote.tierApplied || 'daily').toUpperCase()})
                                   </span>
                                 </div>
                               ) : (

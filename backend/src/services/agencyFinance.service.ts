@@ -18,10 +18,10 @@ export class AgencyFinanceService {
   /**
    * Auto-seed demo payments for agency if none exist
    */
-  private static async ensureInitialPayments(agencyId: string): Promise<void> {
-    const aid = new mongoose.Types.ObjectId(agencyId);
-    const count = await PaymentModel.countDocuments({ agencyId: aid, isDeleted: false });
-    if (count > 0) return;
+  private static async ensureInitialPayments(_agencyId: string): Promise<void> {
+    const aid = new mongoose.Types.ObjectId(_agencyId);
+    // Disabled to preserve strict account isolation
+    return;
 
     const agency = await AgencyModel.findById(aid);
     const agencyName = agency?.businessName || agency?.name || 'ApnaTrip Partner Agency';

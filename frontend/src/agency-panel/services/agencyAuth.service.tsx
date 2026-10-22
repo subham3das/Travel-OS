@@ -42,8 +42,37 @@ const loadFromStorage = (): AgencyAuthState & { businesses?: any[] } => {
 export const AgencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AgencyAuthState & { businesses?: any[] }>(loadFromStorage);
 
+  const clearAllAgencyStorage = useCallback(() => {
+    agencyApiClient.clearTokens();
+    const keysToRemove = [
+      AGENCY_AUTH_STORAGE_KEYS.AUTH_STATE,
+      AGENCY_AUTH_STORAGE_KEYS.ACCESS_TOKEN,
+      AGENCY_AUTH_STORAGE_KEYS.REFRESH_TOKEN,
+      'agencyAccessToken',
+      'agencyRefreshToken',
+      'agencyProfile',
+      'agencyRole',
+      'approvalStatus',
+      'onboardingStatus',
+      'agency_active_business',
+      'apnatrip_agency_dismiss_car_rental_expansion',
+      'apnatrip_agency_onboarding_draft',
+      'apnatrip_agency_app_id',
+      'apnatrip_agency_active_draft_id',
+    ];
+    keysToRemove.forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+        sessionStorage.removeItem(k);
+      } catch (_) {}
+    });
+  }, []);
+
   const loginAgency = useCallback(
     (user: AgencyUser, agency: Agency | null, token: string, refreshToken?: string, businesses?: any[]) => {
+      // Clear any previous agency account cache
+      clearAllAgencyStorage();
+
       const next = {
         isAuthenticated: true,
         agencyUser: user,
@@ -62,15 +91,8 @@ export const AgencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       localStorage.setItem('agencyRole', user?.role || 'AGENCY');
       localStorage.setItem('approvalStatus', String(agency?.verificationStatus || agency?.approvalStatus || 'APPROVED'));
       localStorage.setItem('onboardingStatus', String(agency?.onboardingStatus || 'APPROVED'));
-
-      console.log('[AgencyAuth] Session Stored Successfully:', {
-        agencyRole: user?.role || 'AGENCY',
-        approvalStatus: agency?.verificationStatus || agency?.approvalStatus || 'APPROVED',
-        onboardingStatus: agency?.onboardingStatus || 'APPROVED',
-        hasAccessToken: !!token,
-      });
     },
-    []
+    [clearAllAgencyStorage]
   );
 
   const setActiveAgency = useCallback((agency: Agency) => {
@@ -87,19 +109,8 @@ export const AgencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const logoutAgency = useCallback(() => {
     console.log('[AgencyAuth] Logging out agency partner. Clearing session storage.');
     setState({ isAuthenticated: false, agencyUser: null, agency: null, businesses: [], token: null });
-    agencyApiClient.clearTokens();
-    localStorage.removeItem(AGENCY_AUTH_STORAGE_KEYS.AUTH_STATE);
-    localStorage.removeItem(AGENCY_AUTH_STORAGE_KEYS.ACCESS_TOKEN);
-    localStorage.removeItem(AGENCY_AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-
-    // Clear Explicit Session Keys
-    localStorage.removeItem('agencyAccessToken');
-    localStorage.removeItem('agencyRefreshToken');
-    localStorage.removeItem('agencyProfile');
-    localStorage.removeItem('agencyRole');
-    localStorage.removeItem('approvalStatus');
-    localStorage.removeItem('onboardingStatus');
-  }, []);
+    clearAllAgencyStorage();
+  }, [clearAllAgencyStorage]);
 
   const refreshAgencyProfile = useCallback(async () => {
     const currentToken = agencyApiClient.getAccessToken() || localStorage.getItem('agencyAccessToken');
@@ -227,6 +238,25 @@ export const agencyAuthService = {
     website?: string;
     fleetSize?: number;
     supportedVehicleServices?: string[];
+    ownerName?: string;
+    phone?: string;
+    email?: string;
+    accountHolderName?: string;
+    bankName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+    branch?: string;
+    upiId?: string;
+    bankDetails?: {
+      accountHolderName?: string;
+      bankName?: string;
+      accountNumber?: string;
+      ifscCode?: string;
+      branch?: string;
+      upiId?: string;
+      accountType?: string;
+      payoutMethod?: string;
+    };
   }): Promise<AgencyApiResponse<{ business: Agency }>> => {
     return agencyApiClient.post('/agencies/businesses/create', data, { requiresAuth: true });
   },

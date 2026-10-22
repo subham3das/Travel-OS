@@ -87,51 +87,206 @@ export class SellerPaymentProfileService {
   }
 
   /**
-   * Get safe Seller Payment Profile for Frontend (Account Number Masked)
+   * Automatically ensure or auto-provision a SellerPaymentProfile for an Agency / Car Rental partner.
+   * Resolves bank details from:
+   * 1. Existing SellerPaymentProfile (under requested sellerType or alternate sellerType like 'Agency')
+   * 2. agency.carRentalProfile.bankDetails (for Car Rental) or agency.bankDetails
+   * 3. Sibling agency document under the same ownerId
    */
-  public async getProfile(sellerId: string | mongoose.Types.ObjectId, sellerType: SellerType = 'Agency') {
+  public async ensureProfileForAgency(
+    sellerId: string | mongoose.Types.ObjectId,
+    sellerType: SellerType = 'Agency'
+  ): Promise<any | null> {
     const sId = new mongoose.Types.ObjectId(sellerId.toString());
-    let profile = await SellerPaymentProfileModel.findOne({
+    let profile: any = await SellerPaymentProfileModel.findOne({
       sellerId: sId,
       sellerType,
       isDeleted: false,
     }).lean();
 
-    if (!profile) {
-      // Auto-initialize profile if agency has bank details stored in agency doc
-      if (sellerType === 'Agency') {
-        const agency: any = await AgencyModel.findById(sId).lean();
-        if (agency?.bankDetails?.accountNumber && agency?.bankDetails?.ifscCode) {
-          const rawAcc = String(agency.bankDetails.accountNumber).trim();
-          const ifsc = String(agency.bankDetails.ifscCode).toUpperCase().trim();
-          const bName = agency.businessInfo?.companyName || agency.name || 'Verified Travel Agency';
-          const bankName = agency.bankDetails.bankName || this.deriveBankNameFromIFSC(ifsc);
+    const agency: any = await AgencyModel.findById(sId).lean();
+    if (!agency) return profile || null;
 
+    const isPartnerApproved = sellerType === 'Car Rental'
+      ? (agency.carRentalVerificationStatus === 'APPROVED' || agency.verificationStatus === 'APPROVED')
+      : (agency.verificationStatus === 'APPROVED');
+
+    // If profile already exists, ensure its approval status reflects partner's approval status
+    if (profile) {
+      if (isPartnerApproved && profile.status !== 'APPROVED') {
+        await SellerPaymentProfileModel.updateOne(
+          { _id: profile._id },
+          {
+            $set: {
+              status: 'APPROVED',
+              kycStatus: 'APPROVED',
+              bankVerificationStatus: 'VERIFIED',
+              approvedAt: profile.approvedAt || new Date(),
+            },
+          }
+        );
+        profile = {
+          ...profile,
+          status: 'APPROVED',
+          kycStatus: 'APPROVED',
+          bankVerificationStatus: 'VERIFIED',
+          approvedAt: profile.approvedAt || new Date(),
+        };
+      }
+      return profile;
+    }
+
+    // Check if an existing profile exists under another sellerType (e.g., 'Agency' profile when requesting 'Car Rental')
+    const altProfile: any = await SellerPaymentProfileModel.findOne({
+      sellerId: sId,
+      isDeleted: false,
+    }).lean();
+
+    if (altProfile && altProfile.accountNumberEncrypted && altProfile.ifscCode) {
+      const created = await SellerPaymentProfileModel.create({
+        sellerId: sId,
+        sellerType,
+        businessName: altProfile.businessName,
+        businessType: altProfile.businessType || 'proprietorship',
+        businessEmail: altProfile.businessEmail || agency.email,
+        businessPhone: altProfile.businessPhone || agency.phone,
+        bankName: altProfile.bankName,
+        ifscCode: altProfile.ifscCode,
+        accountNumberEncrypted: altProfile.accountNumberEncrypted,
+        accountNumberMasked: altProfile.accountNumberMasked,
+        beneficiaryName: altProfile.beneficiaryName,
+        payoutMethod: altProfile.payoutMethod || 'bank',
+        upiId: altProfile.upiId,
+        status: isPartnerApproved || altProfile.status === 'APPROVED' ? 'APPROVED' : 'UNDER_REVIEW',
+        kycStatus: isPartnerApproved || altProfile.kycStatus === 'APPROVED' ? 'APPROVED' : 'PENDING',
+        bankVerificationStatus: 'VERIFIED',
+        routeEnabled: true,
+        settlementsEnabled: true,
+        currentStep: 5,
+        submittedAt: new Date(),
+        approvedAt: isPartnerApproved || altProfile.status === 'APPROVED' ? new Date() : undefined,
+      });
+      return created.toObject();
+    }
+
+    // Locate bank details from agency document
+    let bankSource: any = null;
+    if (sellerType === 'Car Rental') {
+      if (agency.carRentalProfile?.bankDetails?.accountNumber && agency.carRentalProfile?.bankDetails?.ifscCode) {
+        bankSource = agency.carRentalProfile.bankDetails;
+      } else if (agency.bankDetails?.accountNumber && agency.bankDetails?.ifscCode) {
+        bankSource = agency.bankDetails;
+      }
+    } else {
+      if (agency.bankDetails?.accountNumber && agency.bankDetails?.ifscCode) {
+        bankSource = agency.bankDetails;
+      } else if (agency.carRentalProfile?.bankDetails?.accountNumber && agency.carRentalProfile?.bankDetails?.ifscCode) {
+        bankSource = agency.carRentalProfile.bankDetails;
+      }
+    }
+
+    // Fallback: check sibling agency under same ownerId
+    if ((!bankSource || !bankSource.accountNumber) && agency.ownerId) {
+      const siblingAgency: any = await AgencyModel.findOne({
+        ownerId: agency.ownerId,
+        _id: { $ne: sId },
+        isDeleted: false,
+        $or: [
+          { 'carRentalProfile.bankDetails.accountNumber': { $exists: true, $ne: '' } },
+          { 'bankDetails.accountNumber': { $exists: true, $ne: '' } },
+        ],
+      }).lean();
+
+      if (siblingAgency) {
+        const siblingProfile: any = await SellerPaymentProfileModel.findOne({
+          sellerId: siblingAgency._id,
+          isDeleted: false,
+        }).lean();
+
+        if (siblingProfile && siblingProfile.accountNumberEncrypted && siblingProfile.ifscCode) {
           const created = await SellerPaymentProfileModel.create({
             sellerId: sId,
-            sellerType: 'Agency',
-            businessName: bName,
-            businessType: 'proprietorship',
-            businessEmail: agency.email,
-            businessPhone: agency.phone,
-            bankName,
-            ifscCode: ifsc,
-            accountNumberEncrypted: encryptSensitiveData(rawAcc),
-            accountNumberMasked: maskAccountNumber(rawAcc),
-            beneficiaryName: agency.bankDetails.accountHolderName || bName,
-            status: agency.verificationStatus === 'APPROVED' ? 'APPROVED' : 'UNDER_REVIEW',
-            kycStatus: agency.verificationStatus === 'APPROVED' ? 'APPROVED' : 'PENDING',
+            sellerType,
+            businessName: siblingProfile.businessName,
+            businessType: siblingProfile.businessType || 'proprietorship',
+            businessEmail: siblingProfile.businessEmail || agency.email,
+            businessPhone: siblingProfile.businessPhone || agency.phone,
+            bankName: siblingProfile.bankName,
+            ifscCode: siblingProfile.ifscCode,
+            accountNumberEncrypted: siblingProfile.accountNumberEncrypted,
+            accountNumberMasked: siblingProfile.accountNumberMasked,
+            beneficiaryName: siblingProfile.beneficiaryName,
+            payoutMethod: siblingProfile.payoutMethod || 'bank',
+            upiId: siblingProfile.upiId,
+            status: isPartnerApproved || siblingProfile.status === 'APPROVED' ? 'APPROVED' : 'UNDER_REVIEW',
+            kycStatus: isPartnerApproved || siblingProfile.kycStatus === 'APPROVED' ? 'APPROVED' : 'PENDING',
             bankVerificationStatus: 'VERIFIED',
             routeEnabled: true,
             settlementsEnabled: true,
             currentStep: 5,
             submittedAt: new Date(),
-            approvedAt: agency.verificationStatus === 'APPROVED' ? new Date() : undefined,
+            approvedAt: isPartnerApproved || siblingProfile.status === 'APPROVED' ? new Date() : undefined,
           });
-          profile = created.toObject();
+          return created.toObject();
+        }
+
+        if (sellerType === 'Car Rental') {
+          bankSource = (siblingAgency.carRentalProfile?.bankDetails?.accountNumber && siblingAgency.carRentalProfile?.bankDetails?.ifscCode)
+            ? siblingAgency.carRentalProfile.bankDetails
+            : siblingAgency.bankDetails;
+        } else {
+          bankSource = (siblingAgency.bankDetails?.accountNumber && siblingAgency.bankDetails?.ifscCode)
+            ? siblingAgency.bankDetails
+            : siblingAgency.carRentalProfile?.bankDetails;
         }
       }
     }
+
+    if (!bankSource || !bankSource.accountNumber || !bankSource.ifscCode) {
+      return null;
+    }
+
+    const rawAcc = String(bankSource.accountNumber).trim();
+    const ifsc = String(bankSource.ifscCode).toUpperCase().trim();
+    const bName = sellerType === 'Car Rental'
+      ? (agency.carRentalProfile?.businessName || agency.businessInfo?.companyName || agency.name || 'Verified Car Rental Partner')
+      : (agency.businessInfo?.companyName || agency.name || 'Verified Travel Agency');
+    const bankName = bankSource.bankName || this.deriveBankNameFromIFSC(ifsc);
+    const beneficiaryName = bankSource.accountHolderName || agency.carRentalProfile?.ownerName || agency.ownerName || bName;
+
+    const created = await SellerPaymentProfileModel.create({
+      sellerId: sId,
+      sellerType,
+      businessName: bName,
+      businessType: 'proprietorship',
+      businessEmail: agency.carRentalProfile?.email || agency.email,
+      businessPhone: agency.carRentalProfile?.phone || agency.phone,
+      bankName,
+      ifscCode: ifsc,
+      accountNumberEncrypted: encryptSensitiveData(rawAcc),
+      accountNumberMasked: maskAccountNumber(rawAcc),
+      beneficiaryName,
+      payoutMethod: bankSource.payoutMethod || 'bank',
+      upiId: bankSource.upiId || undefined,
+      status: isPartnerApproved ? 'APPROVED' : 'UNDER_REVIEW',
+      kycStatus: isPartnerApproved ? 'APPROVED' : 'PENDING',
+      bankVerificationStatus: 'VERIFIED',
+      routeEnabled: true,
+      settlementsEnabled: true,
+      currentStep: 5,
+      submittedAt: new Date(),
+      approvedAt: isPartnerApproved ? new Date() : undefined,
+    });
+
+    return created.toObject();
+  }
+
+  /**
+   * Get safe Seller Payment Profile for Frontend (Account Number Masked)
+   */
+  public async getProfile(sellerId: string | mongoose.Types.ObjectId, sellerType: SellerType = 'Agency') {
+    const sId = new mongoose.Types.ObjectId(sellerId.toString());
+    const profile = await this.ensureProfileForAgency(sId, sellerType);
 
     if (!profile) {
       return {
@@ -428,13 +583,20 @@ export class SellerPaymentProfileService {
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
-    // Sync back to agency document if agency
+    // Sync back to agency document
     if (sellerType === 'Agency') {
       await AgencyModel.findByIdAndUpdate(sId, {
         'bankDetails.bankName': resolvedBankName,
         'bankDetails.ifscCode': ifscUpper,
         'bankDetails.accountHolderName': beneficiaryName.trim(),
         'bankDetails.accountNumber': cleanAccount,
+      });
+    } else if (sellerType === 'Car Rental') {
+      await AgencyModel.findByIdAndUpdate(sId, {
+        'carRentalProfile.bankDetails.bankName': resolvedBankName,
+        'carRentalProfile.bankDetails.ifscCode': ifscUpper,
+        'carRentalProfile.bankDetails.accountHolderName': beneficiaryName.trim(),
+        'carRentalProfile.bankDetails.accountNumber': cleanAccount,
       });
     }
 
@@ -701,14 +863,21 @@ export class SellerPaymentProfileService {
     profile.payoutChangeRequest.reviewedBy = adminActor?.name || 'Super Admin';
     await profile.save();
 
-    // Sync to Agency doc if agency
+    // Sync to Agency doc
+    const rawNewAcc = decryptSensitiveData(req.newAccountNumberEncrypted);
     if (sellerType === 'Agency') {
-      const rawNewAcc = decryptSensitiveData(req.newAccountNumberEncrypted);
       await AgencyModel.findByIdAndUpdate(sId, {
         'bankDetails.bankName': req.newBankName,
         'bankDetails.ifscCode': req.newIfscCode,
         'bankDetails.accountHolderName': req.newBeneficiaryName,
         'bankDetails.accountNumber': rawNewAcc,
+      });
+    } else if (sellerType === 'Car Rental') {
+      await AgencyModel.findByIdAndUpdate(sId, {
+        'carRentalProfile.bankDetails.bankName': req.newBankName,
+        'carRentalProfile.bankDetails.ifscCode': req.newIfscCode,
+        'carRentalProfile.bankDetails.accountHolderName': req.newBeneficiaryName,
+        'carRentalProfile.bankDetails.accountNumber': rawNewAcc,
       });
     }
 
@@ -827,19 +996,54 @@ export class SellerPaymentProfileService {
     sellerType: SellerType = 'Agency'
   ): Promise<{ eligible: boolean; ready: boolean; reason?: string; profile?: any }> {
     const sId = new mongoose.Types.ObjectId(sellerId.toString());
-    const profile = await SellerPaymentProfileModel.findOne({
+    let profile: any = await SellerPaymentProfileModel.findOne({
       sellerId: sId,
       sellerType,
       isDeleted: false,
     }).lean();
 
     if (!profile) {
-      if (sellerType === 'Agency') {
-        const agency: any = await AgencyModel.findById(sId).lean();
-        if (agency?.bankDetails?.accountNumber && agency?.bankDetails?.ifscCode) {
-          return { eligible: true, ready: true };
-        }
+      profile = await this.ensureProfileForAgency(sId, sellerType);
+    }
+
+    if (!profile) {
+      const agency: any = await AgencyModel.findById(sId).lean();
+      if (!agency) {
+        return {
+          eligible: false,
+          ready: false,
+          reason: 'Partner account not found. Please log in with a valid partner account.',
+        };
       }
+
+      const bankSource = sellerType === 'Car Rental'
+        ? (agency.carRentalProfile?.bankDetails || agency.bankDetails)
+        : (agency.bankDetails || agency.carRentalProfile?.bankDetails);
+
+      if (!bankSource || (!bankSource.accountNumber && !bankSource.ifscCode)) {
+        return {
+          eligible: false,
+          ready: false,
+          reason: `Payout setup incomplete: No bank account details found for this ${sellerType === 'Car Rental' ? 'Car Rental' : 'Agency'} account. Please complete payout account setup before publishing.`,
+        };
+      }
+
+      if (!bankSource.accountNumber) {
+        return {
+          eligible: false,
+          ready: false,
+          reason: 'Payout setup incomplete: Bank account number is missing. Please update payout account details before publishing.',
+        };
+      }
+
+      if (!bankSource.ifscCode) {
+        return {
+          eligible: false,
+          ready: false,
+          reason: 'Payout setup incomplete: Bank IFSC code is missing. Please update payout account details before publishing.',
+        };
+      }
+
       return {
         eligible: false,
         ready: false,
@@ -857,15 +1061,46 @@ export class SellerPaymentProfileService {
           reason: 'Agency account is currently suspended. Payouts and publishing are blocked.',
         };
       }
+    } else if (sellerType === 'Car Rental') {
+      const agency: any = await AgencyModel.findById(sId).select('status carRentalVerificationStatus').lean();
+      if (agency && (agency.status === 'Suspended' || agency.carRentalVerificationStatus === 'SUSPENDED')) {
+        return {
+          eligible: false,
+          ready: false,
+          reason: 'Car Rental account is currently suspended. Vehicle registration and publishing are blocked.',
+        };
+      }
     }
 
     // 2. Profile and Bank Approval
     if (profile.status !== 'APPROVED') {
-      return {
-        eligible: false,
-        ready: false,
-        reason: `Payout account setup status is ${profile.status}. Approval is required before publishing or receiving payouts.`,
-      };
+      const agency: any = await AgencyModel.findById(sId).select('verificationStatus carRentalVerificationStatus').lean();
+      const isApproved = sellerType === 'Car Rental'
+        ? (agency?.carRentalVerificationStatus === 'APPROVED' || agency?.verificationStatus === 'APPROVED')
+        : (agency?.verificationStatus === 'APPROVED');
+
+      if (isApproved) {
+        await SellerPaymentProfileModel.updateOne(
+          { _id: profile._id },
+          {
+            $set: {
+              status: 'APPROVED',
+              kycStatus: 'APPROVED',
+              bankVerificationStatus: 'VERIFIED',
+              approvedAt: new Date(),
+            },
+          }
+        );
+        profile.status = 'APPROVED';
+        profile.kycStatus = 'APPROVED';
+        profile.bankVerificationStatus = 'VERIFIED';
+      } else {
+        return {
+          eligible: false,
+          ready: false,
+          reason: `Payout account setup status is ${profile.status}. Approval is required before publishing or receiving payouts.`,
+        };
+      }
     }
 
     if (!profile.bankVerificationStatus || profile.bankVerificationStatus === 'FAILED') {

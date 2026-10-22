@@ -10,6 +10,30 @@ import { userAuthService, UserAuthResponse } from '../user-panel/services/userAu
 
 import { apiClient, AUTH_STORAGE_KEYS } from '../services/apiClient';
 
+export const clearAllUserClientStorage = () => {
+  try {
+    const keysToRemove = [
+      'apnatrip_recent_searches',
+      'apnatrip_wishlist_packages',
+      'apnatrip_wishlist_destinations',
+      'apnatrip_favorite_vehicles',
+      'apnatrip_recent_vehicles',
+      'apnatrip_saved_travelers',
+      'apnatrip_settings_notifications',
+      'apnatrip_settings_privacy',
+    ];
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    Object.keys(localStorage).forEach((k) => {
+      if (k.startsWith('apnatrip_checkout_') || k.startsWith('apnatrip_pref_')) {
+        localStorage.removeItem(k);
+      }
+    });
+    sessionStorage.clear();
+  } catch (e) {
+    console.warn('Storage purge error:', e);
+  }
+};
+
 export interface AuthContextType extends OnboardingState {
   login: (userData: Partial<User> & { id?: string }) => void;
   signup: (userData: Partial<User> & { id?: string }) => void;
@@ -39,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Ignore network errors on logout
     }
+    clearAllUserClientStorage();
     clearOnboardingStorage();
     apiClient.clearTokens();
     setState({
@@ -86,26 +111,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshUser]);
 
   const setAuthenticatedUser = (user: UserAuthResponse) => {
-    setState({
-      isLoggedIn: true,
-      hasCompletedProfile: Boolean(user.profileCompleted),
-      hasCompletedPreferences: Boolean(user.preferenceCompleted),
-      hasSeenWelcome: Boolean(user.onboardingCompleted),
-      hasCompletedOnboarding: Boolean(user.onboardingCompleted),
-      user: {
-        id: user.id,
-        name: user.fullName || 'Traveler',
-        email: user.email,
-        phone: user.phone,
-        avatar: user.avatar || user.profileImage || '',
-        gender: user.gender,
-        preferredLanguage: user.preferredLanguage,
-        foodPreference: user.foodPreference,
-        accessibilityRequirements: user.accessibilityRequirements,
-        bio: user.bio,
-        homeCity: user.homeCity,
-        dateOfBirth: user.dateOfBirth,
-      },
+    setState((prev) => {
+      if (prev.user?.id && prev.user.id !== user.id) {
+        clearAllUserClientStorage();
+      }
+      return {
+        isLoggedIn: true,
+        hasCompletedProfile: Boolean(user.profileCompleted),
+        hasCompletedPreferences: Boolean(user.preferenceCompleted),
+        hasSeenWelcome: Boolean(user.onboardingCompleted),
+        hasCompletedOnboarding: Boolean(user.onboardingCompleted),
+        user: {
+          id: user.id,
+          name: user.fullName || 'Traveler',
+          email: user.email,
+          phone: user.phone,
+          avatar: user.avatar || user.profileImage || '',
+          gender: user.gender,
+          preferredLanguage: user.preferredLanguage,
+          foodPreference: user.foodPreference,
+          accessibilityRequirements: user.accessibilityRequirements,
+          bio: user.bio,
+          homeCity: user.homeCity,
+          dateOfBirth: user.dateOfBirth,
+        },
+      };
     });
   };
 

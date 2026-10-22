@@ -27,7 +27,7 @@ export const SearchTabs: React.FC<SearchTabsProps> = ({
     { id: 'packages', label: 'Packages', count: counts.packages },
     { id: 'destinations', label: 'Destinations', count: counts.destinations },
     { id: 'agencies', label: 'Agencies', count: counts.agencies },
-    { id: 'cars', label: 'Cars', count: counts.cars },
+    { id: 'cars', label: 'Car Booking', count: counts.cars },
     { id: 'travelers', label: 'Travelers', count: counts.travelers },
     { id: 'bookings', label: 'Bookings', count: counts.bookings },
     { id: 'trips', label: 'Trips', count: counts.trips },

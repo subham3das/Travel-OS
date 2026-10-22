@@ -3,6 +3,7 @@ import { CarModel, ICar, VehicleType, VehicleCategory } from '../models/car.mode
 import { CarReviewModel } from '../models/carReview.model.js';
 import { UserModel } from '../models/user.model.js';
 import { CarBookingModel } from '../models/carBooking.model.js';
+import { RentalBookingModel } from '../models/rentalBooking.model.js';
 import { rentalPricingService } from './rentalPricing.service.js';
 import { VehicleRouteModel } from '../models/vehicleRoute.model.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../utils/errors.util.js';
@@ -39,6 +40,9 @@ export class CarService {
     const filter: Record<string, any> = {
       isActive: true,
       isAvailable: true,
+      serviceType: { $in: ['ROUTE_BOOKING', 'driver_booking'] },
+      category: { $ne: 'self_drive' },
+      'specs.driverIncluded': true,
     };
 
     if (query.city && query.city.trim() !== '') {
@@ -418,12 +422,9 @@ export class CarService {
     const filter: Record<string, any> = {
       isActive: true,
       isAvailable: true,
-      serviceType: { $in: ['self_drive_car', 'self_drive_bike'] },
+      serviceType: { $in: ['self_drive_car', 'self_drive_bike', 'SELF_DRIVE_RENTAL'] },
+      'specs.driverIncluded': false,
     };
-
-    if (query.serviceType && query.serviceType !== 'all') {
-      filter.serviceType = query.serviceType;
-    }
 
     if (query.vehicleType && query.vehicleType !== 'all') {
       filter.vehicleSubCategory = query.vehicleType;
@@ -473,14 +474,25 @@ export class CarService {
 
       if (!isNaN(pickupDate.getTime()) && !isNaN(returnDate.getTime()) && returnDate > pickupDate) {
         // Find busy vehicles overlapping this time window
-        const busyBookings = await CarBookingModel.find({
-          bookingStatus: { $in: ['PENDING_PAYMENT', 'REQUESTED', 'ACCEPTED'] },
-          isDeleted: false,
-          startDate: { $lt: returnDate },
-          endDate: { $gt: pickupDate },
-        }).select('carId').lean();
+        const [busyBookings, busyRentals] = await Promise.all([
+          CarBookingModel.find({
+            bookingStatus: { $in: ['PENDING_PAYMENT', 'REQUESTED', 'ACCEPTED', 'READY_FOR_RIDE', 'ACTIVE'] },
+            isDeleted: false,
+            startDate: { $lt: returnDate },
+            endDate: { $gt: pickupDate },
+          }).select('carId').lean(),
+          RentalBookingModel.find({
+            bookingStatus: { $in: ['BOOKED', 'READY_FOR_PICKUP', 'ACTIVE', 'RETURN_PENDING'] },
+            isDeleted: false,
+            startDate: { $lt: returnDate },
+            endDate: { $gt: pickupDate },
+          }).select('carId').lean(),
+        ]);
 
-        const busyCarIds = busyBookings.map((b) => b.carId);
+        const busyCarIds = [
+          ...busyBookings.map((b) => b.carId),
+          ...busyRentals.map((r) => r.carId),
+        ];
         if (busyCarIds.length > 0) {
           filter._id = { $nin: busyCarIds };
         }

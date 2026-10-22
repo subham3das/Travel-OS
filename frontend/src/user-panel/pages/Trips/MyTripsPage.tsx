@@ -14,6 +14,7 @@ import {
   CreditCard,
   Phone,
   RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 
 import { AppHeader } from '../../components/home/AppHeader';
@@ -25,7 +26,9 @@ import {
   MasterTripStatus,
 } from '../../data/trips';
 import { tripService } from '../../services/trip.service';
+import { carRentalService } from '../../services/carRental.service';
 import { apiClient } from '../../../services/apiClient';
+import { openWhatsAppContact } from '../../utils/contact';
 
 const INITIAL_ZERO_STATS: TravelStats = {
   totalTrips: 0,
@@ -51,7 +54,7 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
   const [bookings, setBookings] = useState<UserBooking[]>([]);
   const [stats, setStats] = useState<TravelStats>(INITIAL_ZERO_STATS);
   const [loading, setLoading] = useState(true);
-  const [bookingFilter, setBookingFilter] = useState<'all' | 'cars' | 'packages'>('all');
+  const [bookingFilter, setBookingFilter] = useState<'all' | 'packages' | 'cars' | 'rentals'>('all');
 
   // Review Modal State
   const [reviewBooking, setReviewBooking] = useState<UserBooking | null>(null);
@@ -139,14 +142,74 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
-    tripService.getMyTrips().then((res) => {
-      if (isMounted) {
-        setBookings(res.bookings || []);
-        if (res.stats) {
-          setStats(res.stats);
+
+    Promise.allSettled([
+      tripService.getMyTrips(),
+      carRentalService.getMyRentals(),
+    ]).then(([tripsResult, rentalsResult]) => {
+      if (!isMounted) return;
+      let combinedBookings: any[] = [];
+      let loadedStats = INITIAL_ZERO_STATS;
+
+      if (tripsResult.status === 'fulfilled') {
+        combinedBookings = [...(tripsResult.value.bookings || [])];
+        if (tripsResult.value.stats) {
+          loadedStats = tripsResult.value.stats;
         }
-        setLoading(false);
       }
+
+      if (rentalsResult.status === 'fulfilled' && Array.isArray(rentalsResult.value)) {
+        const mappedRentals = rentalsResult.value.map((r: any) => ({
+          _id: r._id,
+          id: r.bookingId,
+          bookingType: 'SELF_DRIVE_RENTAL',
+          packageName: `${r.carId?.brand || ''} ${r.carId?.name || 'Self-Drive Vehicle'}`,
+          coverImage:
+            r.carId?.images?.[0] ||
+            r.carId?.thumbnail ||
+            'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80',
+          bookingStatus:
+            (r.bookingStatus === 'CANCELLED' && r.cancelledBy === 'OWNER')
+              ? 'CANCELLED BY OWNER'
+              : r.bookingStatus,
+          paymentStatus: r.paymentStatus,
+          cancelledBy: r.cancelledBy,
+          cancelledAt: r.cancelledAt,
+          cancellationReason: r.cancellationReason,
+          departureDate: new Date(r.startDate).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }),
+          pickupTime: new Date(r.startDate).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          pickupLocation: r.pickupLocation,
+          dropLocation: r.dropLocation,
+          totalAmount: r.totalAmount,
+          amountPaid: r.amountPaid,
+          pickupCode: r.pickupCode,
+          returnCode: r.returnCode,
+          rentalType: r.rentalType,
+          durationValue: r.durationValue,
+          agencyName: r.agencyId?.businessName || 'Verified Rental Agency',
+          countdownDays: Math.ceil(
+            (new Date(r.startDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+          ),
+        }));
+
+        const existingIds = new Set(combinedBookings.map((b) => b.id || b._id));
+        for (const mr of mappedRentals) {
+          if (!existingIds.has(mr.id) && !existingIds.has(mr._id)) {
+            combinedBookings.push(mr);
+          }
+        }
+      }
+
+      setBookings(combinedBookings);
+      setStats(loadedStats);
+      setLoading(false);
     }).catch((err) => {
       console.warn('Failed to fetch live trips:', err);
       if (isMounted) {
@@ -158,8 +221,12 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
     return () => { isMounted = false; };
   }, []);
 
-  const getStatusColor = (status: MasterTripStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
+      case 'CANCELLED BY OWNER':
+      case 'CANCELLED':
+      case 'Cancelled by Owner':
+        return 'bg-rose-100 text-rose-800 border-rose-300';
       case 'Trip Ready':
       case 'Booking Confirmed':
         return 'bg-emerald-100 text-emerald-800 border-emerald-200';
@@ -228,21 +295,23 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
           <>
             {/* TAB CONTENT: MY BOOKINGS */}
             {activeTab === 'bookings' && (() => {
+              const rentalCount = bookings.filter((b) => b.bookingType === 'SELF_DRIVE_RENTAL').length;
               const carCount = bookings.filter(
-                (b) =>
-                  b.bookingType === 'CAR_RENTAL' ||
-                  b.bookingType === 'ROUTE_BOOKING' ||
-                  b.bookingType === 'SELF_DRIVE_RENTAL'
+                (b) => b.bookingType === 'ROUTE_BOOKING' || b.bookingType === 'CAR_RENTAL'
               ).length;
-              const pkgCount = bookings.length - carCount;
+              const pkgCount = bookings.filter(
+                (b) =>
+                  b.bookingType !== 'SELF_DRIVE_RENTAL' &&
+                  b.bookingType !== 'ROUTE_BOOKING' &&
+                  b.bookingType !== 'CAR_RENTAL'
+              ).length;
 
               const filteredBookings = bookings.filter((b) => {
-                const isCar =
-                  b.bookingType === 'CAR_RENTAL' ||
-                  b.bookingType === 'ROUTE_BOOKING' ||
-                  b.bookingType === 'SELF_DRIVE_RENTAL';
-                if (bookingFilter === 'cars') return isCar;
-                if (bookingFilter === 'packages') return !isCar;
+                const isRental = b.bookingType === 'SELF_DRIVE_RENTAL';
+                const isRoute = b.bookingType === 'ROUTE_BOOKING' || b.bookingType === 'CAR_RENTAL';
+                if (bookingFilter === 'rentals') return isRental;
+                if (bookingFilter === 'cars') return isRoute;
+                if (bookingFilter === 'packages') return !isRental && !isRoute;
                 return true;
               });
 
@@ -254,7 +323,7 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
                       <button
                         type="button"
                         onClick={() => setBookingFilter('all')}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer ${
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer shrink-0 ${
                           bookingFilter === 'all'
                             ? 'bg-[#0F172A] text-white shadow-xs'
                             : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -264,20 +333,8 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
                       </button>
                       <button
                         type="button"
-                        onClick={() => setBookingFilter('cars')}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                          bookingFilter === 'cars'
-                            ? 'bg-[#FF4D6D] text-white shadow-xs'
-                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span>🚗 Cars &amp; Rentals</span>
-                        <span className="text-[10px] opacity-80">({carCount})</span>
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => setBookingFilter('packages')}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                           bookingFilter === 'packages'
                             ? 'bg-[#583BE8] text-white shadow-xs'
                             : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -285,6 +342,30 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
                       >
                         <span>🎒 Tour Packages</span>
                         <span className="text-[10px] opacity-80">({pkgCount})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBookingFilter('cars')}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                          bookingFilter === 'cars'
+                            ? 'bg-[#FF4D6D] text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>🚗 Car Bookings</span>
+                        <span className="text-[10px] opacity-80">({carCount})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBookingFilter('rentals')}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                          bookingFilter === 'rentals'
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>🔑 Rental Bookings</span>
+                        <span className="text-[10px] opacity-80">({rentalCount})</span>
                       </button>
                     </div>
                   )}
@@ -306,6 +387,12 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
                       const isRental = booking.bookingType === 'SELF_DRIVE_RENTAL';
                       const isRoute = booking.bookingType === 'ROUTE_BOOKING' || booking.bookingType === 'CAR_RENTAL';
                       const isCar = isRental || isRoute;
+                      const isCancelledByOwner =
+                        booking.bookingStatus === 'CANCELLED BY OWNER' ||
+                        booking.cancelledBy === 'OWNER';
+                      const isCancelled =
+                        isCancelledByOwner ||
+                        (booking.bookingStatus || '').toUpperCase() === 'CANCELLED';
 
                       return (
                         <motion.div
@@ -408,8 +495,26 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
                             </div>
                           </div>
 
+                          {/* Cancellation Notice Banner */}
+                          {isCancelled && (
+                            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 space-y-1.5 text-xs">
+                              <div className="flex items-center gap-2 text-rose-700 font-black">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                <span>{isCancelledByOwner ? 'Booking Cancelled by Owner' : 'Booking Cancelled'}</span>
+                              </div>
+                              {booking.cancellationReason && (
+                                <p className="text-[11px] text-rose-600 font-medium pl-6">
+                                  Reason: <span className="font-bold">{booking.cancellationReason}</span>
+                                </p>
+                              )}
+                              <p className="text-[10px] text-slate-500 pl-6">
+                                If you have already paid, our support team will process your refund according to the cancellation policy.
+                              </p>
+                            </div>
+                          )}
+
                           {/* Driver Assignment Banner (Phase 10) */}
-                          {booking.driverName && (
+                          {booking.driverName && !isCancelled && (
                             <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between gap-3 text-xs">
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <span className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
@@ -441,12 +546,112 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
                             </div>
                           )}
 
+                          {/* Rental Booking Lifecycle Codes */}
+                          {isRental && !isCancelled && (
+                            <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                                  🔑
+                                </span>
+                                <div>
+                                  <span className="text-[10px] font-black uppercase text-amber-700 block">
+                                    {booking.bookingStatus === 'ACTIVE'
+                                      ? 'Rental Active (Vehicle On Rent)'
+                                      : booking.bookingStatus === 'COMPLETED'
+                                      ? 'Rental Completed & Returned'
+                                      : 'Self-Drive Vehicle Ready for Pickup'}
+                                  </span>
+                                  <span className="text-xs font-semibold text-slate-700 block">
+                                    Duration: <strong>{(booking as any).durationValue || 1} {(booking as any).rentalType || 'Days'}</strong> • Hub: {booking.pickupLocation || 'Main Hub'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {booking.bookingStatus === 'ACTIVE' ? (
+                                  <div className="text-left sm:text-right">
+                                    <span className="text-[9px] font-extrabold uppercase text-indigo-600 block">
+                                      RETURN CODE (SHOW AT DROP)
+                                    </span>
+                                    <span className="text-sm font-black font-mono tracking-widest text-indigo-700 bg-indigo-100/80 px-2.5 py-1 rounded-lg border border-indigo-300">
+                                      {(booking as any).returnCode || '938210'}
+                                    </span>
+                                  </div>
+                                ) : booking.bookingStatus === 'COMPLETED' ? (
+                                  <span className="px-3 py-1 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    ✓ Vehicle Returned
+                                  </span>
+                                ) : (
+                                  <div className="text-left sm:text-right">
+                                    <span className="text-[9px] font-extrabold uppercase text-amber-800 block">
+                                      PICKUP CONFIRMATION CODE
+                                    </span>
+                                    <span className="text-sm font-black font-mono tracking-widest text-amber-900 bg-amber-200/80 px-2.5 py-1 rounded-lg border border-amber-300 select-all">
+                                      {(booking as any).pickupCode || (booking as any).bookingConfirmationCode || '------'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Car Route Booking Ride Codes */}
+                          {isRoute && !isCancelled && ((booking as any).startCode || (booking as any).closeCode || booking.bookingStatus === 'READY_FOR_RIDE' || booking.bookingStatus === 'ACTIVE') && (
+                            <div className="p-3.5 rounded-2xl bg-indigo-50/90 border border-indigo-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                                  🚗
+                                </span>
+                                <div>
+                                  <span className="text-[10px] font-black uppercase text-indigo-700 block">
+                                    {booking.bookingStatus === 'ACTIVE'
+                                      ? 'Ride In Progress'
+                                      : booking.bookingStatus === 'COMPLETED'
+                                      ? 'Ride Completed'
+                                      : 'Driver Assigned — Ready For Ride'}
+                                  </span>
+                                  <span className="text-xs font-semibold text-slate-700 block">
+                                    Route: {booking.pickupLocation || 'Pickup'} ➔ {booking.dropLocation || 'Destination'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {booking.bookingStatus === 'ACTIVE' ? (
+                                  <div className="text-left sm:text-right">
+                                    <span className="text-[9px] font-extrabold uppercase text-purple-600 block">
+                                      RIDE CLOSE CODE
+                                    </span>
+                                    <span className="text-sm font-black font-mono tracking-widest text-purple-700 bg-purple-100/80 px-2.5 py-1 rounded-lg border border-purple-300">
+                                      {(booking as any).closeCode || '987654'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="text-left sm:text-right">
+                                    <span className="text-[9px] font-extrabold uppercase text-indigo-700 block">
+                                      RIDE START CODE
+                                    </span>
+                                    <span className="text-sm font-black font-mono tracking-widest text-indigo-900 bg-indigo-200/80 px-2.5 py-1 rounded-lg border border-indigo-300 select-all">
+                                      {(booking as any).startCode || '123456'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
                           {/* Countdown & Payment Info */}
                           <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                             <div className="flex items-center gap-2">
                               <Clock className="w-4 h-4 text-[#583BE8]" />
                               <span className="font-extrabold text-[#0F172A]">
-                                {booking.countdownDays <= 0 ? 'Travel Begins Today / In Progress' : `Starts in ${booking.countdownDays} Days`}
+                                {isCancelled
+                                  ? isCancelledByOwner
+                                    ? 'Cancelled by Vehicle Owner'
+                                    : 'Booking Cancelled'
+                                  : booking.countdownDays <= 0
+                                  ? 'Travel Begins Today / In Progress'
+                                  : `Starts in ${booking.countdownDays} Days`}
                               </span>
                             </div>
 
@@ -490,10 +695,17 @@ export const MyTripsPage: React.FC<MyTripsPageProps> = ({ defaultTab = 'bookings
 
                             <button
                               type="button"
-                              onClick={() => navigate('/chat')}
-                              className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-extrabold transition-all cursor-pointer"
+                              onClick={() =>
+                                openWhatsAppContact({
+                                  phone: (booking as any).agencyPhone || (booking as any).providerPhone,
+                                  bookingId: booking.bookingId || booking.id,
+                                  userName: (booking as any).customerName,
+                                })
+                              }
+                              className="px-4 py-2.5 rounded-2xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5"
                             >
-                              Contact Support
+                              <span>💬</span>
+                              <span>Contact on WhatsApp</span>
                             </button>
 
                             <button

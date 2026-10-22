@@ -11,6 +11,7 @@ import { NotificationModel } from '../models/notification.model.js';
 import { NotificationDispatcher } from './notificationDispatcher.service.js';
 import { ApprovalRequestModel } from '../models/approvalRequest.model.js';
 import { PartnerUserModel } from '../models/partnerUser.model.js';
+import { sellerPaymentProfileService } from './sellerPaymentProfile.service.js';
 
 export interface AgencyRequestFiltersQuery {
   page?: number;
@@ -335,22 +336,10 @@ export class AdminAgencyRequestService {
         notes: act.metadata?.notes || act.description || '',
         status: act.status || 'Success',
       })),
-      bankDetails: agency.bankDetails
-        ? {
-            accountHolderName: agency.bankDetails.accountHolderName || agency.owner?.name || agency.ownerName || agency.name || '—',
-            bankName: agency.bankDetails.bankName || '—',
-            accountNumber: agency.bankDetails.accountNumber || '—',
-            ifscCode: agency.bankDetails.ifscCode || '—',
-            branch: agency.bankDetails.branch || '—',
-            upiId: agency.bankDetails.upiId || '—',
-            accountType: (agency.bankDetails as any).accountType || 'Current / Business Account',
-            payoutMethod: agency.bankDetails.payoutMethod || 'Bank Transfer',
-            verified: agency.bankDetails.verified === true,
-            status: agency.bankDetails.status || (agency.bankDetails.verified ? 'Verified' : 'Under Review'),
-            verifiedAt: agency.bankDetails.verifiedAt,
-            verifiedBy: agency.bankDetails.verifiedBy,
-          }
-        : {
+      bankDetails: (() => {
+        const sourceBank = agency.carRentalProfile?.bankDetails || agency.bankDetails;
+        if (!sourceBank || (!sourceBank.bankName && !sourceBank.accountNumber && !sourceBank.ifscCode)) {
+          return {
             accountHolderName: agency.owner?.name || agency.ownerName || agency.name || '—',
             bankName: '—',
             accountNumber: '—',
@@ -361,7 +350,23 @@ export class AdminAgencyRequestService {
             payoutMethod: 'Bank Transfer',
             verified: false,
             status: 'Under Review',
-          },
+          };
+        }
+        return {
+          accountHolderName: sourceBank.accountHolderName || agency.owner?.name || agency.ownerName || agency.name || '—',
+          bankName: sourceBank.bankName || '—',
+          accountNumber: sourceBank.accountNumber || '—',
+          ifscCode: sourceBank.ifscCode || '—',
+          branch: sourceBank.branch || agency.city || '—',
+          upiId: sourceBank.upiId || '—',
+          accountType: (sourceBank as any).accountType || (agency.bankDetails as any)?.accountType || 'Current / Business Account',
+          payoutMethod: sourceBank.payoutMethod || agency.bankDetails?.payoutMethod || 'Bank Transfer',
+          verified: sourceBank.verified === true || agency.bankDetails?.verified === true,
+          status: sourceBank.status || agency.bankDetails?.status || (sourceBank.verified ? 'Verified' : 'Under Review'),
+          verifiedAt: sourceBank.verifiedAt || agency.bankDetails?.verifiedAt,
+          verifiedBy: sourceBank.verifiedBy || agency.bankDetails?.verifiedBy,
+        };
+      })(),
       reviewNotes: latestNote,
       complianceScore: agency.complianceScore || 85,
       businessTypes: agency.businessTypes || ['agency'],
@@ -859,6 +864,13 @@ export class AdminAgencyRequestService {
 
     await agency.save();
 
+    // Ensure SellerPaymentProfile is provisioned and approved for Agency
+    try {
+      await sellerPaymentProfileService.ensureProfileForAgency(agency._id, 'Agency');
+    } catch (profErr: any) {
+      logger.warn('Failed to auto-ensure SellerPaymentProfile during Agency approval: %s', profErr?.message || profErr);
+    }
+
     // Synchronize ApprovalRequestModel in MongoDB
     try {
       await ApprovalRequestModel.updateMany(
@@ -972,6 +984,13 @@ export class AdminAgencyRequestService {
     }
 
     await agency.save();
+
+    // Ensure SellerPaymentProfile is provisioned and approved for Car Rental
+    try {
+      await sellerPaymentProfileService.ensureProfileForAgency(agency._id, 'Car Rental');
+    } catch (profErr: any) {
+      logger.warn('Failed to auto-ensure SellerPaymentProfile during Car Rental approval: %s', profErr?.message || profErr);
+    }
 
     // Log administrative audit trail
     await AuditLoggerService.log({

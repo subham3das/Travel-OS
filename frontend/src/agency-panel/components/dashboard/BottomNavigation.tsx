@@ -73,7 +73,7 @@ export const BottomNavigation: React.FC = () => {
   const handleLogout = () => {
     setShowMore(false);
     logoutAgency();
-    navigate('/agency/login');
+    window.location.href = '/agency/login';
   };
 
   /* ── Car Rental primary tabs (5 items) ── */

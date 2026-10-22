@@ -63,6 +63,36 @@ export class SubscriptionController {
   }
 
   /**
+   * GET /api/subscriptions/fee-status
+   * Check whether partner has already paid the ₹1,000 one-time registration fee
+   */
+  public async checkFeeStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const agency = req.agency;
+      const agencyUser = req.agencyUser;
+      const businessType = ((req.query.businessType as string) || 'agency') as 'agency' | 'car_rental';
+
+      const email = (req.query.email as string) || agency?.loginEmail || agencyUser?.email || agency?.email || '';
+      const phone = (req.query.phone as string) || agencyUser?.phone || agency?.phone || '';
+      const agencyId = (req.query.agencyId as string) || agency?._id?.toString();
+      const ownerId = agency?.ownerId?.toString() || agencyUser?.userId;
+
+      const feeStatus = await subscriptionService.getFeeStatus({
+        ownerId,
+        agencyId,
+        email,
+        phone,
+        businessType,
+      });
+
+      ResponseUtil.success(res, feeStatus, feeStatus.message, HTTP_STATUS.OK);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+
+  /**
    * POST /api/subscriptions/verify-payment
    * Verify Razorpay signature & activate partner subscription
    */

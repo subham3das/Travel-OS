@@ -20,6 +20,9 @@ import {
   TrendingUp,
   Clock,
   Layers,
+  Car,
+  Loader2,
+  ShieldCheck,
 } from 'lucide-react';
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader';
 import { DesktopSidebar } from '../../components/dashboard/DesktopSidebar';
@@ -30,6 +33,7 @@ import {
   DepartureTravelerItem,
   agencyDepartureService,
 } from '../../services/agencyDeparture.service';
+import { agencyCarRentalService } from '../../services/agencyCarRental.service';
 import { ViewTravelersModal } from '../../components/bookings/ViewTravelersModal';
 import { ScheduleDepartureModal } from '../../components/bookings/ScheduleDepartureModal';
 import { RescheduleDepartureModal } from '../../components/bookings/RescheduleDepartureModal';
@@ -363,9 +367,70 @@ export const AgencyBookingsPage: React.FC = () => {
   // Toast Notification
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
+  // Vertical Tab & Vehicle Bookings State
+  const [mainTab, setMainTab] = useState<'departures' | 'vehicles'>('departures');
+  const [vehicleBookings, setVehicleBookings] = useState<any[]>([]);
+  const [isVehicleLoading, setIsVehicleLoading] = useState(false);
+  const [cancellingVehicleBooking, setCancellingVehicleBooking] = useState<any | null>(null);
+  const [cancellationReasonInput, setCancellationReasonInput] = useState<string>('');
+  const [isCancellingVehicle, setIsCancellingVehicle] = useState(false);
+
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  const fetchVehicleBookings = useCallback(async () => {
+    try {
+      setIsVehicleLoading(true);
+      const data = await agencyCarRentalService.getBookings();
+      setVehicleBookings(data || []);
+    } catch (err: any) {
+      console.warn('Failed to load vehicle bookings for agency:', err);
+    } finally {
+      setIsVehicleLoading(false);
+    }
+  }, []);
+
+  const handleCancelVehicleSubmit = async () => {
+    if (!cancellingVehicleBooking) return;
+    const bId = cancellingVehicleBooking.bookingId || cancellingVehicleBooking._id;
+    const isRental = Boolean(
+      cancellingVehicleBooking.isRental ||
+      cancellingVehicleBooking.bookingProduct === 'RENTAL' ||
+      cancellingVehicleBooking.rentalType ||
+      cancellingVehicleBooking.serviceType === 'SELF_DRIVE_RENTAL'
+    );
+    setIsCancellingVehicle(true);
+    try {
+      await agencyCarRentalService.cancelBookingAsOwner(
+        bId,
+        isRental,
+        cancellationReasonInput.trim() || undefined
+      );
+      showToast('Booking cancelled by owner. Vehicle is now available.');
+      setVehicleBookings((prev) =>
+        prev.map((b) =>
+          b._id === cancellingVehicleBooking._id || b.bookingId === cancellingVehicleBooking.bookingId
+            ? {
+                ...b,
+                bookingStatus: 'CANCELLED',
+                cancelledBy: 'OWNER',
+                cancellationReason: cancellationReasonInput.trim(),
+              }
+            : b
+        )
+      );
+      setCancellingVehicleBooking(null);
+      setCancellationReasonInput('');
+      await fetchVehicleBookings();
+    } catch (err: any) {
+      const errMsg =
+        err.response?.data?.message || err.message || 'This booking can no longer be cancelled.';
+      showToast(errMsg);
+    } finally {
+      setIsCancellingVehicle(false);
+    }
   };
 
   const fetchDepartures = useCallback(async () => {
@@ -572,25 +637,56 @@ export const AgencyBookingsPage: React.FC = () => {
         <DashboardHeader />
 
         <main className="flex-1 px-4 py-6 sm:px-8 sm:py-8 max-w-[1500px] mx-auto w-full space-y-6">
-          {/* Page Top Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
-                Package Departures
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                Departure-based bookings, real-time manifests, and fleet operations.
-              </p>
-            </div>
-
+          {/* Vertical Navigation Tabs */}
+          <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl w-fit">
             <button
-              onClick={() => setIsScheduleOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#583BE8] text-white text-xs sm:text-sm font-black shadow-md shadow-[#583BE8]/20 hover:bg-[#472ec4] transition-all cursor-pointer"
+              type="button"
+              onClick={() => setMainTab('departures')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                mainTab === 'departures'
+                  ? 'bg-white text-[#0F172A] shadow-xs'
+                  : 'text-slate-500 hover:text-[#0F172A]'
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              Schedule New Departure
+              🎒 Package Departures
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMainTab('vehicles');
+                fetchVehicleBookings();
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                mainTab === 'vehicles'
+                  ? 'bg-white text-[#0F172A] shadow-xs'
+                  : 'text-slate-500 hover:text-[#0F172A]'
+              }`}
+            >
+              🚗 Car &amp; Rental Bookings
             </button>
           </div>
+
+          {mainTab === 'departures' ? (
+            <>
+              {/* Page Top Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
+                    Package Departures
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Departure-based bookings, real-time manifests, and fleet operations.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setIsScheduleOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#583BE8] text-white text-xs sm:text-sm font-black shadow-md shadow-[#583BE8]/20 hover:bg-[#472ec4] transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  Schedule New Departure
+                </button>
+              </div>
 
           {/* Quick Summary Top Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -746,10 +842,235 @@ export const AgencyBookingsPage: React.FC = () => {
               ))}
             </div>
           )}
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
+                    Car &amp; Rental Bookings
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Manage self-drive rentals and car bookings, verify trips, and cancel bookings.
+                  </p>
+                </div>
+              </div>
+
+              {isVehicleLoading ? (
+                <div className="py-20 flex flex-col items-center justify-center gap-2 bg-white rounded-3xl border border-slate-100">
+                  <Loader2 className="w-6 h-6 text-[#583BE8] animate-spin" />
+                  <span className="text-xs font-bold text-slate-400">Loading vehicle reservations...</span>
+                </div>
+              ) : vehicleBookings.length === 0 ? (
+                <div className="py-16 text-center space-y-2 bg-white rounded-3xl border border-slate-100">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center mx-auto">
+                    <Car className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-sm font-black text-[#0F172A]">No vehicle bookings found</h3>
+                  <p className="text-xs font-medium text-slate-400">
+                    No active or scheduled car rentals for your agency fleet yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-2xs overflow-hidden">
+                  <div className="overflow-x-auto scrollbar-none">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50/60 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          <th className="py-3.5 px-4">Booking ID &amp; Vehicle</th>
+                          <th className="py-3.5 px-4">Traveler Details</th>
+                          <th className="py-3.5 px-4">Pickup / Route</th>
+                          <th className="py-3.5 px-4">Dates</th>
+                          <th className="py-3.5 px-4 text-center">Status</th>
+                          <th className="py-3.5 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs">
+                        {vehicleBookings.map((b) => {
+                          const bStatus = (b.bookingStatus || '').toUpperCase();
+                          const canCancel =
+                            bStatus === 'BOOKED' ||
+                            bStatus === 'READY_FOR_PICKUP' ||
+                            bStatus === 'READY_FOR_RIDE';
+                          const isCancelled = bStatus === 'CANCELLED';
+
+                          return (
+                            <tr key={b._id || b.bookingId} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                                    {b.carId?.thumbnail || b.carId?.images?.[0] ? (
+                                      <img
+                                        src={b.carId.thumbnail || b.carId.images[0]}
+                                        alt="Car"
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <Car className="w-4 h-4 text-slate-400" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <span className="font-extrabold text-[#0F172A] block leading-tight">
+                                      {b.carId?.brand} {b.carId?.name || b.vehicleModel || 'Vehicle'}
+                                    </span>
+                                    <span className="text-[10px] font-mono text-[#583BE8] font-bold block mt-0.5">
+                                      #{b.bookingId || b._id?.slice(-8).toUpperCase()}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="py-3.5 px-4">
+                                <span className="font-extrabold text-[#0F172A] block">{b.customerName || 'Customer'}</span>
+                                <span className="text-[10px] text-slate-500 font-mono block">{b.customerPhone || '—'}</span>
+                              </td>
+
+                              <td className="py-3.5 px-4 max-w-[180px]">
+                                <div className="space-y-0.5 text-xs truncate">
+                                  <div className="font-bold text-[#0F172A] truncate">
+                                    📍 {b.pickupLocation || 'Pickup location'}
+                                  </div>
+                                  {b.dropLocation && (
+                                    <div className="text-[11px] text-slate-500 truncate">
+                                      🏁 {b.dropLocation}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <span className="font-bold text-[#0F172A] block">
+                                  {b.startDate
+                                    ? new Date(b.startDate).toLocaleDateString('en-IN', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric',
+                                      })
+                                    : '—'}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 px-4 text-center">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                                    isCancelled
+                                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                      : bStatus === 'COMPLETED'
+                                      ? 'bg-purple-50 text-[#583BE8] border-purple-200'
+                                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  }`}
+                                >
+                                  {bStatus}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                {isCancelled ? (
+                                  <span className="px-2.5 py-1 rounded-xl bg-rose-100 text-rose-800 text-[11px] font-black border border-rose-300">
+                                    Cancelled
+                                  </span>
+                                ) : (
+                                  canCancel && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setCancellingVehicleBooking(b);
+                                        setCancellationReasonInput('');
+                                      }}
+                                      title="Cancel Booking"
+                                      className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-bold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                    >
+                                      <Ban className="w-3.5 h-3.5" />
+                                      <span>Cancel Booking</span>
+                                    </button>
+                                  )
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </main>
       </div>
 
       <BottomNavigation />
+
+      {/* Confirmation Dialog: Cancel Booking */}
+      <AnimatePresence>
+        {cancellingVehicleBooking && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                  <Ban className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[#0F172A]">Cancel this booking?</h3>
+                  <p className="text-xs font-mono text-slate-400">
+                    #{cancellingVehicleBooking.bookingId || cancellingVehicleBooking._id}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                This booking will be cancelled and the customer will be notified. The reserved vehicle will become available for new bookings.
+              </p>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 mb-1 block">
+                  Cancellation Reason (Optional)
+                </label>
+                <textarea
+                  value={cancellationReasonInput}
+                  onChange={(e) => setCancellationReasonInput(e.target.value)}
+                  placeholder="e.g., Vehicle maintenance required, unavailable..."
+                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-[#0F172A] focus:outline-none focus:bg-white focus:border-[#583BE8] transition-colors resize-none h-20"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={isCancellingVehicle}
+                  onClick={() => {
+                    setCancellingVehicleBooking(null);
+                    setCancellationReasonInput('');
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-black text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Keep Booking
+                </button>
+                <button
+                  type="button"
+                  disabled={isCancellingVehicle}
+                  onClick={handleCancelVehicleSubmit}
+                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                >
+                  {isCancellingVehicle ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Cancelling...</span>
+                    </>
+                  ) : (
+                    <span>Cancel Booking</span>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Side Drawer for Travelers Manifest */}
       <ViewTravelersModal

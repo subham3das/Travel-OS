@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { carBookingService } from '../services/carBooking.service.js';
+import { BadRequestError } from '../utils/errors.util.js';
 
 export class CarBookingController {
   public async createBooking(req: Request, res: Response): Promise<void> {
@@ -123,6 +124,61 @@ export class CarBookingController {
       success: true,
       data: { booking },
     });
+  }
+
+  public async verifyRideStart(req: Request, res: Response): Promise<void> {
+    const agencyId = (req as any).agency?._id || (req as any).user?.agencyId || (req as any).user?.userId;
+    const { code } = req.body;
+    const result = await carBookingService.verifyRideStartCode(String(agencyId), String(req.params.id), String(code));
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  }
+
+  public async verifyRideClose(req: Request, res: Response): Promise<void> {
+    const agencyId = (req as any).agency?._id || (req as any).user?.agencyId || (req as any).user?.userId;
+    const { code } = req.body;
+    const result = await carBookingService.verifyRideCloseCode(String(agencyId), String(req.params.id), String(code));
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  }
+
+  /**
+   * POST /api/car-bookings/owner/cancel
+   * Dedicated owner cancellation endpoint
+   */
+  public async ownerCancel(req: Request, res: Response): Promise<void> {
+    try {
+      const agencyDoc = (req as any).agency;
+      const agencyId = agencyDoc?._id || agencyDoc?.agencyId || (req as any).user?.agencyId || (req as any).user?.userId || '';
+      const bookingId = req.body.bookingId || req.body.id || req.params?.id;
+      const reason = req.body.reason || req.body.cancellationReason;
+
+      if (!bookingId) {
+        throw new BadRequestError('bookingId is required.');
+      }
+
+      const booking = await carBookingService.ownerCancelBooking(
+        agencyId ? agencyId.toString() : '',
+        bookingId.toString(),
+        reason
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Car booking cancelled successfully by owner. Vehicle is now available.',
+        data: booking,
+      });
+    } catch (err: any) {
+      const statusCode = err.statusCode || (err.name === 'BadRequestError' ? 400 : 500);
+      res.status(statusCode).json({
+        success: false,
+        message: err.message || 'This booking can no longer be cancelled.',
+      });
+    }
   }
 }
 

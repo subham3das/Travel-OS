@@ -115,6 +115,9 @@ export interface UserBooking {
   timeline?: any[];
   actualBookingStatus?: string;
   hasReviewed?: boolean;
+  cancelledBy?: string;
+  cancelledAt?: string;
+  cancellationReason?: string;
 }
 
 

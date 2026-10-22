@@ -34,7 +34,7 @@ export const DesktopSidebar: React.FC = () => {
 
   const handleLogout = () => {
     logoutAgency();
-    navigate('/agency/login');
+    window.location.href = '/agency/login';
   };
 
   const agencyNavItems = [

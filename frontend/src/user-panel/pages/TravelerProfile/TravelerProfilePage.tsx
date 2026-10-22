@@ -97,15 +97,6 @@ export const TravelerProfilePage: React.FC = () => {
             </p>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => navigate('/chat')}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#6356E5] hover:bg-[#5245d6] text-white text-xs font-black transition-colors cursor-pointer shadow-xs"
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          <span>Message</span>
-        </button>
       </header>
 
       {/* Main Container */}

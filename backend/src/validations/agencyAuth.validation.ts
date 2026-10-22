@@ -106,5 +106,26 @@ export const PartnerCreateBusinessSchema = z.object({
   website: z.string().trim().optional(),
   fleetSize: z.number().optional(),
   supportedVehicleServices: z.array(z.string()).optional(),
+  ownerName: z.string().trim().optional(),
+  phone: z.string().trim().optional(),
+  email: z.string().trim().optional(),
+  accountHolderName: z.string().trim().optional(),
+  bankName: z.string().trim().optional(),
+  accountNumber: z.string().trim().optional(),
+  ifscCode: z.string().trim().optional(),
+  branch: z.string().trim().optional(),
+  upiId: z.string().trim().optional(),
+  bankDetails: z
+    .object({
+      accountHolderName: z.string().optional(),
+      bankName: z.string().optional(),
+      accountNumber: z.string().optional(),
+      ifscCode: z.string().optional(),
+      branch: z.string().optional(),
+      upiId: z.string().optional(),
+      accountType: z.string().optional(),
+      payoutMethod: z.string().optional(),
+    })
+    .optional(),
 });
 

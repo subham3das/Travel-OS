@@ -113,6 +113,8 @@ class AgencyApiClient {
       }
     }
 
+
+
     let response: Response;
     try {
       response = await fetch(url, {
@@ -120,20 +122,25 @@ class AgencyApiClient {
         headers,
       });
     } catch (networkError: any) {
-      const err: any = new Error('Unable to connect to ApnaTrip server. Please check your internet connection.');
-      err.status = 0;
-      err.isNetworkError = true;
-      throw err;
-    }
-
-    if (response.status === 401 && requiresAuth) {
-      this.clearTokens();
-      if (this.onUnauthorizedCallback) {
-        this.onUnauthorizedCallback();
+      if (url.startsWith('http://localhost:5000/api')) {
+        try {
+          const fallbackUrl = url.replace('http://localhost:5000/api', '/api');
+          response = await fetch(fallbackUrl, {
+            ...customConfig,
+            headers,
+          });
+        } catch {
+          const err: any = new Error('Unable to connect to ApnaTrip server. Please check your internet connection.');
+          err.status = 0;
+          err.isNetworkError = true;
+          throw err;
+        }
+      } else {
+        const err: any = new Error('Unable to connect to ApnaTrip server. Please check your internet connection.');
+        err.status = 0;
+        err.isNetworkError = true;
+        throw err;
       }
-      const authErr: any = new Error('Your agency partner session has expired. Please log in again.');
-      authErr.status = 401;
-      throw authErr;
     }
 
     let jsonResult: AgencyApiResponse<T>;
@@ -144,6 +151,26 @@ class AgencyApiClient {
         success: response.ok,
         message: response.statusText || (response.ok ? 'Success' : 'Server error occurred'),
       };
+    }
+
+    if (response.status === 401 && requiresAuth) {
+      const backendMessage = jsonResult?.message || 'Authentication required. Please log in again.';
+      const isTokenExpired =
+        backendMessage.toLowerCase().includes('expired') ||
+        backendMessage.toLowerCase().includes('invalid or expired') ||
+        backendMessage.toLowerCase().includes('malformed');
+
+      if (isTokenExpired) {
+        this.clearTokens();
+        if (this.onUnauthorizedCallback) {
+          this.onUnauthorizedCallback();
+        }
+      }
+      const authErr: any = new Error(backendMessage);
+      authErr.status = 401;
+      authErr.data = jsonResult.data;
+      authErr.errors = jsonResult.errors;
+      throw authErr;
     }
 
     if (!response.ok) {

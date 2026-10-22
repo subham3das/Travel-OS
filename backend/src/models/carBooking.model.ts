@@ -9,6 +9,8 @@ export type CarBookingStatus =
   | 'PENDING_PAYMENT'
   | 'REQUESTED'
   | 'ACCEPTED'
+  | 'READY_FOR_RIDE'
+  | 'ACTIVE'
   | 'REJECTED'
   | 'COMPLETED'
   | 'CANCELLED';
@@ -74,6 +76,8 @@ export interface ICarBooking extends Document {
   rejectionReason?: string;
   completedAt?: Date;
   cancelledAt?: Date;
+  cancelledBy?: string;
+  cancellationReason?: string;
   driverId?: mongoose.Types.ObjectId;
   driverName?: string;
   driverPhone?: string;
@@ -120,6 +124,8 @@ export interface ICarBooking extends Document {
     status: 'completed' | 'current' | 'upcoming';
     iconType?: string;
   }>;
+  rideStartCode?: string;
+  rideCloseCode?: string;
   isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -220,10 +226,12 @@ const CarBookingSchema = new Schema<ICarBooking>(
     },
     bookingStatus: {
       type: String,
-      enum: ['PENDING', 'CONFIRMED', 'PENDING_PAYMENT', 'REQUESTED', 'ACCEPTED', 'REJECTED', 'COMPLETED', 'CANCELLED'],
+      enum: ['PENDING', 'CONFIRMED', 'PENDING_PAYMENT', 'REQUESTED', 'ACCEPTED', 'READY_FOR_RIDE', 'ACTIVE', 'REJECTED', 'COMPLETED', 'CANCELLED'],
       default: 'PENDING',
       index: true,
     },
+    rideStartCode: { type: String, trim: true },
+    rideCloseCode: { type: String, trim: true },
     conversationId: {
       type: Schema.Types.ObjectId,
       ref: 'Conversation',
@@ -232,6 +240,8 @@ const CarBookingSchema = new Schema<ICarBooking>(
     rejectionReason: { type: String },
     completedAt: { type: Date },
     cancelledAt: { type: Date },
+    cancelledBy: { type: String, trim: true, default: null },
+    cancellationReason: { type: String, trim: true },
     driverId: {
       type: Schema.Types.ObjectId,
       ref: 'Driver',

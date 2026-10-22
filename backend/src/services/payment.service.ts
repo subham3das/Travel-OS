@@ -6,6 +6,8 @@ import { logger } from '../config/logger.config.js';
 import { PaymentModel, IPayment } from '../models/payment.model.js';
 import { BookingModel } from '../models/booking.model.js';
 import { CarBookingModel } from '../models/carBooking.model.js';
+import { RentalBookingModel } from '../models/rentalBooking.model.js';
+import { rentalBookingService } from './rentalBooking.service.js';
 import { CarModel } from '../models/car.model.js';
 import { InvoiceModel } from '../models/invoice.model.js';
 import { DepartureModel } from '../models/departure.model.js';
@@ -99,6 +101,16 @@ export class PaymentService {
       }).populate('carId').populate('agencyId');
 
       if (!carBooking) {
+        const rentalBooking = await RentalBookingModel.findOne({
+          bookingId,
+          customerId: new mongoose.Types.ObjectId(userId),
+          isDeleted: false,
+        });
+
+        if (rentalBooking) {
+          return rentalBookingService.createPaymentOrder(userId, bookingId);
+        }
+
         throw new NotFoundError(`Booking "${bookingId}" not found or unauthorized.`);
       }
 
@@ -409,6 +421,21 @@ export class PaymentService {
       }).populate('carId').populate('agencyId');
 
       if (!carBooking) {
+        const rentalBooking = await RentalBookingModel.findOne({
+          bookingId,
+          customerId: new mongoose.Types.ObjectId(userId),
+          isDeleted: false,
+        });
+
+        if (rentalBooking) {
+          return rentalBookingService.verifyPayment(userId, {
+            bookingId,
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+          });
+        }
+
         throw new NotFoundError(`Booking "${bookingId}" not found or unauthorized.`);
       }
 
@@ -435,7 +462,10 @@ export class PaymentService {
         : carBooking.totalAmount;
 
       carBooking.paymentStatus = carBooking.paymentType === 'full' ? 'FULL_PAID' : 'DEPOSIT_PAID';
-      carBooking.bookingStatus = 'CONFIRMED';
+      carBooking.bookingStatus = 'READY_FOR_RIDE';
+      if (!carBooking.rideStartCode) {
+        carBooking.rideStartCode = Math.floor(100000 + Math.random() * 900000).toString();
+      }
       carBooking.transactionId = razorpay_payment_id;
       carBooking.confirmedAt = new Date();
       carBooking.timeline = [

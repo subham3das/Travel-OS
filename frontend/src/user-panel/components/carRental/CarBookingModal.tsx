@@ -468,29 +468,13 @@ export const CarBookingModal: React.FC<CarBookingModalProps> = ({
                     </motion.div>
                   )}
 
-                  {/* Trip Type Selector */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Trip Type</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['one_way', 'round_trip'] as TripType[]).map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setTripType(t)}
-                          className={`py-2 px-3 rounded-xl text-xs font-extrabold border transition-all cursor-pointer ${
-                            tripType === t
-                              ? 'bg-rose-50 dark:bg-rose-950/40 border-[#FF4D6D] text-[#FF4D6D]'
-                              : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                          }`}
-                        >
-                          {t === 'one_way' ? 'One Way' : 'Round Trip'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Pickup & Drop Inputs */}
+                  {/* 1. Where are you travelling? */}
                   <div className="space-y-3">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Where are you travelling?
+                    </h4>
+
+                    {/* Pickup Location */}
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
                         Pickup Location <span className="text-rose-500">*</span>
@@ -510,6 +494,12 @@ export const CarBookingModal: React.FC<CarBookingModalProps> = ({
                       </div>
                     </div>
 
+                    {/* Down Arrow Divider */}
+                    <div className="flex items-center justify-center -my-1 text-slate-400">
+                      <span className="text-base font-black">↓</span>
+                    </div>
+
+                    {/* Drop Location */}
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
                         Drop Location <span className="text-rose-500">*</span>
@@ -527,6 +517,49 @@ export const CarBookingModal: React.FC<CarBookingModalProps> = ({
                           className="w-full bg-transparent text-xs font-bold text-[#0F172A] dark:text-white focus:outline-none"
                         />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Trip Type Selector */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Trip Type</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['one_way', 'round_trip'] as TripType[]).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setTripType(t)}
+                          className={`py-2.5 px-3 rounded-xl text-xs font-extrabold border transition-all cursor-pointer ${
+                            tripType === t
+                              ? 'bg-rose-50 dark:bg-rose-950/40 border-[#FF4D6D] text-[#FF4D6D]'
+                              : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          {t === 'one_way' ? 'One Way' : 'Round Trip'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 3. If Round Trip selected -> Show Return to Pickup */}
+                  {tripType === 'round_trip' && (
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900 text-[#583BE8] dark:text-purple-300 text-xs font-bold">
+                      <span className="text-base">↩️</span>
+                      <span>Return to Pickup: <strong className="font-black">{pickup || 'Pickup Location'}</strong></span>
+                    </div>
+                  )}
+
+                  {/* 4. Automatically Calculated Fare (Existing Pricing Engine) */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10">
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-400 block uppercase">Calculated Fare</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
+                        {tripType === 'round_trip' ? 'Round Trip Fare' : 'One Way Fare'}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-black text-[#FF4D6D]">₹{totalAmount.toLocaleString()}</span>
+                      <span className="text-[10px] font-bold text-slate-400 block -mt-0.5">Fixed Price</span>
                     </div>
                   </div>
 
@@ -593,44 +626,9 @@ export const CarBookingModal: React.FC<CarBookingModalProps> = ({
                 </div>
               )}
 
-              {/* STEP 2: Traveller Details (With Phase 6 One-Click Auto-Fill) */}
+              {/* STEP 2: Traveller Details (Streamlined & Clean) */}
               {step === 2 && (
                 <div className="space-y-4">
-                  {/* Phase 6: Verified Travel Profile Quick Banner */}
-                  {profileData && (
-                    <div className="p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                          <BadgeCheck className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-black text-indigo-950 dark:text-indigo-200">
-                              One-Click Booking
-                            </span>
-                            {isProfileVerified && (
-                              <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded-full">
-                                Verified Profile
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                            Autofilled from your saved profile credentials
-                          </p>
-                        </div>
-                      </div>
-                      <label className="flex items-center gap-2 cursor-pointer shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={useProfileDetails}
-                          onChange={(e) => setUseProfileDetails(e.target.checked)}
-                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="text-xs font-bold text-indigo-900 dark:text-indigo-300">Use Profile</span>
-                      </label>
-                    </div>
-                  )}
-
                   {/* Inline Error Alert */}
                   {errorStep2 && (
                     <motion.div
@@ -699,33 +697,6 @@ export const CarBookingModal: React.FC<CarBookingModalProps> = ({
                           className="w-full bg-transparent text-xs font-bold text-[#0F172A] dark:text-white focus:outline-none"
                         />
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Optional Emergency Contact Pre-populated */}
-                  {emergencyContact?.phone && (
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-white/10 text-xs">
-                      <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                        Emergency Contact
-                      </span>
-                      <p className="font-semibold text-slate-700 dark:text-slate-300">
-                        {emergencyContact.name || 'Primary Contact'} • {emergencyContact.phone}
-                        {emergencyContact.relationship ? ` (${emergencyContact.relationship})` : ''}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Special Instructions / Remarks</label>
-                    <div className="flex items-start gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 border border-slate-100 dark:border-white/10 focus-within:border-[#FF4D6D] focus-within:bg-white dark:focus-within:bg-slate-800 transition-all">
-                      <FileText className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                      <textarea
-                        rows={2}
-                        value={specialRequests}
-                        onChange={(e) => setSpecialRequests(e.target.value)}
-                        placeholder="e.g. Extra luggage carrier, English-speaking driver, child seat"
-                        className="w-full bg-transparent text-xs font-semibold text-[#0F172A] dark:text-white focus:outline-none resize-none"
-                      />
                     </div>
                   </div>
 

@@ -92,6 +92,10 @@ export class CarBookingService {
       throw new NotFoundError('Car not found');
     }
 
+    if (car.serviceType === 'SELF_DRIVE_RENTAL' || car.category === 'self_drive' || car.specs?.driverIncluded === false) {
+      throw new BadRequestError('This vehicle is registered for self-drive rental, not driver-based car booking');
+    }
+
     const start = new Date(data.startDate);
     const end = (data.tripType === 'multi_day' || data.tripType === 'round_trip') ? new Date(data.endDate) : new Date(data.startDate);
 
@@ -511,10 +515,12 @@ export class CarBookingService {
 
     const validTransitions: Record<string, CarBookingStatus[]> = {
       PENDING: ['CONFIRMED', 'ACCEPTED', 'REJECTED', 'CANCELLED'],
-      CONFIRMED: ['COMPLETED', 'CANCELLED'],
+      CONFIRMED: ['ACCEPTED', 'READY_FOR_RIDE', 'ACTIVE', 'COMPLETED', 'CANCELLED'],
       REQUESTED: ['CONFIRMED', 'ACCEPTED', 'REJECTED', 'CANCELLED'],
       PENDING_PAYMENT: ['CONFIRMED', 'ACCEPTED', 'REJECTED', 'CANCELLED'],
-      ACCEPTED: ['CONFIRMED', 'COMPLETED', 'CANCELLED'],
+      ACCEPTED: ['CONFIRMED', 'READY_FOR_RIDE', 'ACTIVE', 'COMPLETED', 'CANCELLED'],
+      READY_FOR_RIDE: ['ACTIVE', 'CANCELLED'],
+      ACTIVE: ['COMPLETED', 'CANCELLED'],
     };
 
     const allowed = validTransitions[booking.bookingStatus];
@@ -526,8 +532,11 @@ export class CarBookingService {
     if (status === 'REJECTED') {
       booking.rejectionReason = rejectionReason || 'Unavailable for requested dates';
       booking.paymentStatus = 'REFUNDED';
+    } else if (status === 'ACTIVE') {
+      await CarModel.findByIdAndUpdate(booking.carId, { isAvailable: false, status: 'booked' });
     } else if (status === 'COMPLETED') {
       booking.completedAt = new Date();
+      await CarModel.findByIdAndUpdate(booking.carId, { isAvailable: true, status: 'available' });
     }
 
     await booking.save();
@@ -557,6 +566,98 @@ export class CarBookingService {
     }
 
     return booking;
+  }
+
+  /**
+   * 6.1 Verify Ride Start Code (Driver/Owner enters code -> ACTIVE)
+   */
+  public async verifyRideStartCode(agencyId: string, bookingIdOrDocId: string, code: string) {
+    if (!code || !code.trim()) {
+      throw new BadRequestError('Ride start code is required');
+    }
+
+    const agencyFilter = (agencyId && mongoose.Types.ObjectId.isValid(agencyId) && agencyId.length === 24)
+      ? { agencyId: new mongoose.Types.ObjectId(agencyId) }
+      : {};
+
+    let booking = await CarBookingModel.findOne(
+      getBookingFilter(bookingIdOrDocId, agencyFilter)
+    );
+
+    if (!booking && code) {
+      booking = await CarBookingModel.findOne({ rideStartCode: code.trim(), isDeleted: { $ne: true } });
+    }
+
+    if (!booking) {
+      throw new BadRequestError('Invalid ride start code');
+    }
+
+    if (booking.bookingStatus === 'ACTIVE') {
+      return { success: true, booking, message: 'Ride is already active.' };
+    }
+
+    if (booking.rideStartCode && booking.rideStartCode !== code.trim()) {
+      throw new BadRequestError('Invalid ride start code');
+    }
+
+    const rideCloseCode = Math.floor(100000 + Math.random() * 900000).toString();
+    booking.bookingStatus = 'ACTIVE';
+    booking.rideCloseCode = rideCloseCode;
+    await booking.save();
+
+    await CarModel.findByIdAndUpdate(booking.carId, { isAvailable: false, status: 'booked' });
+
+    return {
+      success: true,
+      booking,
+      rideCloseCode,
+      message: 'Ride start code verified! Ride is now ACTIVE.',
+    };
+  }
+
+  /**
+   * 6.2 Verify Ride Close Code (Driver/Owner enters code -> COMPLETED)
+   */
+  public async verifyRideCloseCode(agencyId: string, bookingIdOrDocId: string, code: string) {
+    if (!code || !code.trim()) {
+      throw new BadRequestError('Ride close code is required');
+    }
+
+    const agencyFilter = (agencyId && mongoose.Types.ObjectId.isValid(agencyId) && agencyId.length === 24)
+      ? { agencyId: new mongoose.Types.ObjectId(agencyId) }
+      : {};
+
+    let booking = await CarBookingModel.findOne(
+      getBookingFilter(bookingIdOrDocId, agencyFilter)
+    );
+
+    if (!booking && code) {
+      booking = await CarBookingModel.findOne({ rideCloseCode: code.trim(), isDeleted: { $ne: true } });
+    }
+
+    if (!booking) {
+      throw new BadRequestError('Invalid ride close code');
+    }
+
+    if (booking.bookingStatus === 'COMPLETED') {
+      return { success: true, booking, message: 'Ride is already completed.' };
+    }
+
+    if (booking.rideCloseCode && booking.rideCloseCode !== code.trim()) {
+      throw new BadRequestError('Invalid ride close code');
+    }
+
+    booking.bookingStatus = 'COMPLETED';
+    booking.completedAt = new Date();
+    await booking.save();
+
+    await CarModel.findByIdAndUpdate(booking.carId, { isAvailable: true, status: 'available' });
+
+    return {
+      success: true,
+      booking,
+      message: 'Ride close code verified! Ride is now COMPLETED.',
+    };
   }
 
   /**
@@ -596,6 +697,147 @@ export class CarBookingService {
     } catch (err) {
       logger.error('Failed to notify agency of cancellation', err);
     }
+
+    return booking;
+  }
+
+  /**
+   * 7b. Dedicated Owner Cancellation for Car Booking (POST /api/car-bookings/owner/cancel)
+   */
+  public async ownerCancelBooking(
+    agencyId: string,
+    bookingIdOrDocId: string,
+    cancellationReason?: string
+  ) {
+    const filter = getBookingFilter(
+      bookingIdOrDocId,
+      agencyId && mongoose.Types.ObjectId.isValid(agencyId)
+        ? { agencyId: new mongoose.Types.ObjectId(agencyId) }
+        : {}
+    );
+
+    const booking = await CarBookingModel.findOne(filter);
+    if (!booking) {
+      throw new NotFoundError('Booking not found or unauthorized');
+    }
+
+    const statusUpper = (booking.bookingStatus || '').toUpperCase();
+
+    // 4. Validation: Only allow BOOKED, READY_FOR_PICKUP, READY_FOR_RIDE
+    const allowedStatuses = ['BOOKED', 'READY_FOR_PICKUP', 'READY_FOR_RIDE'];
+    if (!allowedStatuses.includes(statusUpper)) {
+      throw new BadRequestError('This booking can no longer be cancelled.');
+    }
+
+    // 5. Database: Update booking
+    booking.bookingStatus = 'CANCELLED';
+    booking.cancelledBy = 'OWNER';
+    booking.cancelledAt = new Date();
+    if (cancellationReason && cancellationReason.trim()) {
+      booking.cancellationReason = cancellationReason.trim();
+    }
+    booking.paymentStatus = 'REFUNDED';
+
+    // 10. Booking Timeline: Booking Created -> Payment Successful -> Booking Cancelled by Owner
+    const currentTimeline = booking.timeline || [];
+    const createdStep = currentTimeline.find((t: any) =>
+      t.title?.toLowerCase().includes('create') || t.title?.toLowerCase().includes('reserv')
+    ) || {
+      id: `step-created-${booking.bookingId}`,
+      title: 'Booking Created',
+      subtitle: `Reference: #${booking.bookingId}`,
+      timestamp: new Date(booking.createdAt || Date.now()).toLocaleString('en-IN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
+      status: 'completed',
+      iconType: 'calendar',
+    };
+    createdStep.status = 'completed';
+
+    const paidStep = currentTimeline.find((t: any) =>
+      t.title?.toLowerCase().includes('pay')
+    ) || {
+      id: `step-paid-${booking.bookingId}`,
+      title: 'Payment Successful',
+      subtitle: booking.depositPaid ? `Deposit: ₹${booking.depositPaid}` : 'Payment Verified',
+      timestamp: new Date(booking.confirmedAt || booking.updatedAt || Date.now()).toLocaleString('en-IN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
+      status: 'completed',
+      iconType: 'credit-card',
+    };
+    paidStep.status = 'completed';
+
+    const cancelledStep = {
+      id: `step-cancelled-owner-${Date.now()}`,
+      title: 'Booking Cancelled by Owner',
+      subtitle: cancellationReason?.trim()
+        ? `Reason: ${cancellationReason.trim()}`
+        : 'Cancelled by vehicle owner',
+      timestamp: new Date().toLocaleString('en-IN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
+      status: 'completed' as const,
+      iconType: 'x-circle',
+    };
+
+    booking.timeline = [createdStep, paidStep, cancelledStep];
+    await booking.save();
+
+    // 6. Vehicle Availability: Automatically restore vehicle.isAvailable = true
+    if (booking.carId) {
+      await CarModel.findByIdAndUpdate(booking.carId, {
+        isAvailable: true,
+        status: 'available',
+        $pull: { bookedSlots: { bookingId: booking.bookingId } },
+      });
+    }
+
+    // 7. Customer Notification
+    const notifReason = cancellationReason?.trim() || 'No reason provided';
+    const notifDesc = `Your booking has been cancelled by the vehicle owner.
+
+Booking ID:
+${booking.bookingId}
+
+Reason:
+${notifReason}
+
+If you have already paid, our support team will process your refund according to the cancellation policy.`;
+
+    try {
+      await NotificationModel.create({
+        recipientType: 'USER',
+        recipientId: booking.customerId,
+        category: 'Bookings',
+        title: 'Booking Cancelled by Owner',
+        description: notifDesc,
+        priority: 'HIGH',
+        status: 'UNREAD',
+        isUnread: true,
+        targetRoute: '/my-bookings',
+        relatedEntityType: 'CarBooking',
+        relatedEntityId: booking.bookingId,
+      });
+
+      socketService.emitToUser(booking.customerId.toString(), 'booking_cancelled_by_owner', {
+        bookingId: booking.bookingId,
+        reason: notifReason,
+        message: notifDesc,
+      });
+      socketService.emitToUser(booking.customerId.toString(), 'booking_status_updated', {
+        bookingId: booking.bookingId,
+        status: 'CANCELLED',
+        cancelledBy: 'OWNER',
+      });
+    } catch (err) {
+      logger.error('Failed to dispatch customer notification for owner car cancellation:', err);
+    }
+
+    logger.info('🚫 Car booking %s cancelled by owner. Vehicle %s released to available.', booking.bookingId, booking.carId);
 
     return booking;
   }

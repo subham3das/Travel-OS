@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import { subscriptionController } from '../controllers/subscription.controller.js';
 import { authenticateAdmin } from '../middlewares/adminAuth.middleware.js';
-import { authenticateAgency } from '../middlewares/agencyAuth.middleware.js';
+import { authenticateAgency, optionalAuthenticateAgency } from '../middlewares/agencyAuth.middleware.js';
 
 const router = Router();
 
 // Partner Subscription Checkout Flow
+// Fee Status Check: Checks if the one-time registration fee has already been paid
+router.get('/fee-status', optionalAuthenticateAgency, subscriptionController.checkFeeStatus.bind(subscriptionController));
+
 // Authenticated: partner is logged in after registration
 router.post('/create-order', authenticateAgency, subscriptionController.createAuthenticatedOrder.bind(subscriptionController));
 router.post('/create', authenticateAgency, subscriptionController.createAuthenticatedOrder.bind(subscriptionController));

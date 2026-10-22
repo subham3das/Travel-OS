@@ -15,10 +15,10 @@ export class AgencyReviewService {
   /**
    * Auto-seed demo reviews for agency if none exist
    */
-  private static async ensureInitialReviews(agencyId: string): Promise<void> {
-    const aid = new mongoose.Types.ObjectId(agencyId);
-    const existing = await ReviewModel.countDocuments({ agencyId: aid, isDeleted: false });
-    if (existing > 0) return;
+  private static async ensureInitialReviews(_agencyId: string): Promise<void> {
+    const aid = new mongoose.Types.ObjectId(_agencyId);
+    // Disabled to preserve strict account isolation
+    return;
 
     const agencyPackages = await PackageModel.find({ agencyId: aid, isDeleted: false }).limit(3);
     const pkg1 = agencyPackages[0];

@@ -5,6 +5,7 @@ import { SubscriptionPaymentModel } from '../models/subscriptionPayment.model.js
 import { InvoiceModel } from '../models/invoice.model.js';
 import { AgencyModel } from '../models/agency.model.js';
 import { RegistrationDraftModel } from '../models/registrationDraft.model.js';
+import { PartnerUserModel } from '../models/partnerUser.model.js';
 import { registrationService } from './registration.service.js';
 import { couponService } from './coupon.service.js';
 import { envConfig } from '../config/env.config.js';
@@ -35,7 +36,226 @@ export class SubscriptionService {
   private readonly BASE_REGISTRATION_FEE = 1000;
 
   /**
+   * Determine whether a partner has already paid the ₹1,000 one-time registration fee.
+   * Checks across all shared account records:
+   * 1. PartnerSubscriptionModel with status: 'active'
+   * 2. SubscriptionPaymentModel with status: 'paid'
+   * 3. AgencyModel with paymentStatus: 'PAID'
+   * Identifies partner by ownerId, agencyId(s), email, or phone.
+   */
+  public async hasPartnerPaidRegistrationFee(params: {
+    ownerId?: string | mongoose.Types.ObjectId;
+    agencyId?: string | mongoose.Types.ObjectId;
+    email?: string;
+    phone?: string;
+  }): Promise<{
+    paid: boolean;
+    reason?: string;
+    priorSubscription?: any;
+    priorPayment?: any;
+    priorAgency?: any;
+  }> {
+    const cleanEmail = (params.email || '').trim().toLowerCase();
+    const cleanPhone = (params.phone || '').trim();
+
+    const ownerIds: mongoose.Types.ObjectId[] = [];
+    const agencyIds: mongoose.Types.ObjectId[] = [];
+    const emails = new Set<string>();
+    const phones = new Set<string>();
+
+    if (cleanEmail) emails.add(cleanEmail);
+    if (cleanPhone) phones.add(cleanPhone);
+
+    if (params.ownerId && mongoose.Types.ObjectId.isValid(String(params.ownerId))) {
+      ownerIds.push(new mongoose.Types.ObjectId(String(params.ownerId)));
+    }
+
+    if (params.agencyId && mongoose.Types.ObjectId.isValid(String(params.agencyId))) {
+      const targetAgencyId = new mongoose.Types.ObjectId(String(params.agencyId));
+      agencyIds.push(targetAgencyId);
+      const agency = await AgencyModel.findById(targetAgencyId).lean();
+      if (agency) {
+        if (agency.ownerId && mongoose.Types.ObjectId.isValid(String(agency.ownerId))) {
+          ownerIds.push(new mongoose.Types.ObjectId(String(agency.ownerId)));
+        }
+        if (agency.email) emails.add(agency.email.trim().toLowerCase());
+        if (agency.loginEmail) emails.add(agency.loginEmail.trim().toLowerCase());
+        if (agency.owner?.email) emails.add(agency.owner.email.trim().toLowerCase());
+        if (agency.phone) phones.add(agency.phone.trim());
+        if (agency.owner?.phone) phones.add(agency.owner.phone.trim());
+      }
+    }
+
+    // If email or phone is present, look up matching PartnerUser to get ownerId
+    if (cleanEmail || cleanPhone) {
+      const matchedUser = await PartnerUserModel.findOne({
+        $or: [
+          ...(cleanEmail ? [{ email: cleanEmail }] : []),
+          ...(cleanPhone ? [{ phone: cleanPhone }] : []),
+        ],
+      }).lean();
+      if (matchedUser && matchedUser._id) {
+        ownerIds.push(matchedUser._id as mongoose.Types.ObjectId);
+        if (matchedUser.email) emails.add(matchedUser.email.trim().toLowerCase());
+        if (matchedUser.phone) phones.add(matchedUser.phone.trim());
+      }
+    }
+
+    // If ownerId is known, find all sibling agencies owned by this partner
+    if (ownerIds.length > 0) {
+      const siblingAgencies = await AgencyModel.find({
+        ownerId: { $in: ownerIds },
+        isDeleted: false,
+      }).lean();
+      for (const sib of siblingAgencies) {
+        agencyIds.push(sib._id as mongoose.Types.ObjectId);
+        if (sib.email) emails.add(sib.email.trim().toLowerCase());
+        if (sib.loginEmail) emails.add(sib.loginEmail.trim().toLowerCase());
+        if (sib.owner?.email) emails.add(sib.owner.email.trim().toLowerCase());
+        if (sib.phone) phones.add(sib.phone.trim());
+      }
+    }
+
+    // Find all agencies matching resolved emails or phones
+    const emailList = Array.from(emails).filter(Boolean);
+    const phoneList = Array.from(phones).filter(Boolean);
+
+    if (emailList.length > 0 || phoneList.length > 0) {
+      const matchedAgencies = await AgencyModel.find({
+        $or: [
+          ...(emailList.length > 0
+            ? [
+                { email: { $in: emailList } },
+                { loginEmail: { $in: emailList } },
+                { 'owner.email': { $in: emailList } },
+              ]
+            : []),
+          ...(phoneList.length > 0
+            ? [
+                { phone: { $in: phoneList } },
+                { 'owner.phone': { $in: phoneList } },
+              ]
+            : []),
+        ],
+        isDeleted: false,
+      }).lean();
+      for (const ag of matchedAgencies) {
+        agencyIds.push(ag._id as mongoose.Types.ObjectId);
+        if (ag.ownerId && mongoose.Types.ObjectId.isValid(String(ag.ownerId))) {
+          ownerIds.push(new mongoose.Types.ObjectId(String(ag.ownerId)));
+        }
+      }
+    }
+
+    // 1. Check for Active Partner Subscription (status: 'active' strictly)
+    const activeSub = await PartnerSubscriptionModel.findOne({
+      status: 'active',
+      $or: [
+        ...(agencyIds.length > 0
+          ? [{ agencyId: { $in: agencyIds } }, { partnerId: { $in: agencyIds } }]
+          : []),
+        ...(emailList.length > 0 ? [{ email: { $in: emailList } }] : []),
+        ...(phoneList.length > 0 ? [{ phone: { $in: phoneList } }] : []),
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (activeSub) {
+      return {
+        paid: true,
+        reason: `Active subscription verified (${activeSub.businessType}, ID: ${activeSub._id})`,
+        priorSubscription: activeSub,
+      };
+    }
+
+    // 2. Check for Verified Subscription Payment (status: 'paid' strictly)
+    const verifiedPayment = await SubscriptionPaymentModel.findOne({
+      status: 'paid',
+      $or: [
+        ...(emailList.length > 0 ? [{ email: { $in: emailList } }] : []),
+        ...(phoneList.length > 0 ? [{ phone: { $in: phoneList } }] : []),
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (verifiedPayment) {
+      return {
+        paid: true,
+        reason: `Verified gateway payment found (Payment ID: ${verifiedPayment.paymentId}, Business: ${verifiedPayment.businessType})`,
+        priorPayment: verifiedPayment,
+      };
+    }
+
+    // 3. Check for Verified Paid Agency (paymentStatus: 'PAID' strictly)
+    const paidAgency = await AgencyModel.findOne({
+      paymentStatus: 'PAID',
+      $or: [
+        ...(ownerIds.length > 0 ? [{ ownerId: { $in: ownerIds } }] : []),
+        ...(agencyIds.length > 0 ? [{ _id: { $in: agencyIds } }] : []),
+        ...(emailList.length > 0
+          ? [{ email: { $in: emailList } }, { loginEmail: { $in: emailList } }]
+          : []),
+        ...(phoneList.length > 0 ? [{ phone: { $in: phoneList } }] : []),
+      ],
+      isDeleted: false,
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (paidAgency) {
+      return {
+        paid: true,
+        reason: `Verified paid partner account found (Business: "${paidAgency.name}", ID: ${paidAgency._id})`,
+        priorAgency: paidAgency,
+      };
+    }
+
+    return { paid: false };
+  }
+
+  /**
+   * Get registration fee status for a partner / business type
+   */
+  public async getFeeStatus(query: {
+    ownerId?: string | mongoose.Types.ObjectId;
+    agencyId?: string | mongoose.Types.ObjectId;
+    email?: string;
+    phone?: string;
+    businessType?: 'agency' | 'car_rental';
+  }) {
+    const feeCheck = await this.hasPartnerPaidRegistrationFee(query);
+    return {
+      feeWaived: feeCheck.paid,
+      alreadyPaid: feeCheck.paid,
+      baseFee: this.BASE_REGISTRATION_FEE,
+      amountDue: feeCheck.paid ? 0 : this.BASE_REGISTRATION_FEE,
+      discount: feeCheck.paid ? this.BASE_REGISTRATION_FEE : 0,
+      reason: feeCheck.reason || null,
+      priorPayment: feeCheck.priorPayment
+        ? {
+            paymentId: feeCheck.priorPayment.paymentId,
+            paidAt: feeCheck.priorPayment.paidAt,
+            businessType: feeCheck.priorPayment.businessType,
+          }
+        : feeCheck.priorSubscription
+        ? {
+            paymentId: feeCheck.priorSubscription.paymentId,
+            paidAt: feeCheck.priorSubscription.startedAt || feeCheck.priorSubscription.createdAt,
+            businessType: feeCheck.priorSubscription.businessType,
+          }
+        : null,
+      message: feeCheck.paid
+        ? 'Registration fee waived: partner has previously paid ₹1,000 on the ApnaTrip Partner Network.'
+        : 'One-time registration fee of ₹1,000 applies.',
+    };
+  }
+
+  /**
    * Create Razorpay Order for Partner Subscription Checkout
+   * If partner has already paid the ₹1,000 one-time fee on any vertical,
+   * waives fee (₹0 charge) and auto-activates subscription for admin review.
    */
   public async createSubscriptionOrder(input: CreateSubscriptionOrderInput) {
     const businessType = input.businessType === 'car_rental' ? 'car_rental' : 'agency';
@@ -53,19 +273,206 @@ export class SubscriptionService {
       throw new AppError('Contact phone number is required', HTTP_STATUS.BAD_REQUEST);
     }
 
-    // Guard against repeated payments for already paid business
-    if (input.agencyId && mongoose.Types.ObjectId.isValid(input.agencyId)) {
-      const existingAgency = await AgencyModel.findById(input.agencyId).lean();
-      if (existingAgency && (existingAgency.paymentStatus === 'PAID' || existingAgency.onboardingStatus === 'APPROVED' || existingAgency.onboardingStatus === 'UNDER_REVIEW')) {
-        throw new AppError('Registration fee has already been paid for this business.', HTTP_STATUS.BAD_REQUEST);
-      }
-      const existingActiveSub = await PartnerSubscriptionModel.findOne({
-        agencyId: new mongoose.Types.ObjectId(input.agencyId),
+    // ── ONE-TIME REGISTRATION FEE CHECK ──
+    const feeStatus = await this.hasPartnerPaidRegistrationFee({
+      ownerId: input.agencyId
+        ? (await AgencyModel.findById(input.agencyId).select('ownerId').lean())?.ownerId
+        : undefined,
+      agencyId: input.agencyId,
+      email,
+      phone,
+    });
+
+    // If partner has already paid the ₹1,000 fee on either panel, waive fee completely
+    if (feeStatus.paid) {
+      logger.info(
+        '🎉 One-Time Registration Fee Rule: Partner already paid (%s). Waiving ₹1,000 fee for businessType=%s, email=%s',
+        feeStatus.reason,
+        businessType,
+        email
+      );
+
+      const now = new Date();
+      const oneYearLater = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+      const invoiceNum = `INV-${now.getFullYear()}-WAIVED-${Math.floor(10000 + Math.random() * 90000)}`;
+      const waivedOrderId = `order_waived_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const waivedPaymentId =
+        feeStatus.priorPayment?.paymentId ||
+        feeStatus.priorSubscription?.paymentId ||
+        `pay_waived_${Date.now()}`;
+
+      // 1. Generate Official Tax Invoice with 100% network waiver
+      const invoice = await InvoiceModel.create({
+        invoiceNumber: invoiceNum,
+        businessType,
+        partnerName,
+        userEmail: email,
+        userPhone: phone,
+        paymentId: waivedPaymentId,
+        subtotal: this.BASE_REGISTRATION_FEE,
+        discount: this.BASE_REGISTRATION_FEE,
+        tax: 0,
+        total: 0,
+        currency: 'INR',
+        status: 'paid',
+        issuedAt: now,
+      });
+
+      // 2. Create Active Subscription Record with zero charge
+      const subDoc: any = {
+        businessType,
+        partnerName,
+        email,
+        phone,
+        plan: 'one_time_registration',
+        amount: this.BASE_REGISTRATION_FEE,
+        discount: this.BASE_REGISTRATION_FEE,
+        amountPaid: 0,
+        orderId: waivedOrderId,
+        paymentId: waivedPaymentId,
         status: 'active',
-      }).lean();
-      if (existingActiveSub) {
-        throw new AppError('An active subscription already exists for this business.', HTTP_STATUS.BAD_REQUEST);
+        startedAt: now,
+        expiresAt: oneYearLater,
+        invoiceId: invoice._id,
+        invoiceNumber: invoiceNum,
+        notes: `Registration fee waived: partner previously paid one-time fee on ApnaTrip Partner Network (${feeStatus.reason}).`,
+      };
+
+      if (input.draftId) {
+        subDoc.draftId = input.draftId.trim();
       }
+
+      if (input.agencyId && mongoose.Types.ObjectId.isValid(input.agencyId)) {
+        subDoc.agencyId = new mongoose.Types.ObjectId(input.agencyId);
+      }
+
+      const subscription = await PartnerSubscriptionModel.create(subDoc);
+
+      // 3. Record in SubscriptionPaymentModel as paid (amount: 0)
+      await SubscriptionPaymentModel.create({
+        orderId: waivedOrderId,
+        paymentId: waivedPaymentId,
+        subscriptionId: subscription._id,
+        businessType,
+        amount: 0,
+        currency: 'INR',
+        status: 'paid',
+        method: 'One-Time Fee Network Waiver',
+        gateway: 'Internal',
+        email,
+        phone,
+        discountAmount: this.BASE_REGISTRATION_FEE,
+        paidAt: now,
+      });
+
+      // 4. Auto submit registration draft if incomplete draft exists
+      let targetDraft = null;
+      if (input.draftId) {
+        targetDraft = await RegistrationDraftModel.findOne({
+          draftId: input.draftId.trim(),
+          isCompleted: false,
+        });
+      }
+      if (!targetDraft && input.agencyId) {
+        targetDraft = await RegistrationDraftModel.findOne({
+          $or: [{ userId: input.agencyId }, { 'businessDetails.agencyId': input.agencyId }],
+          isCompleted: false,
+        }).sort({ updatedAt: -1 });
+      }
+      if (!targetDraft && email) {
+        targetDraft = await RegistrationDraftModel.findOne({
+          $or: [{ 'businessDetails.email': email }, { 'businessDetails.loginEmail': email }],
+          isCompleted: false,
+        }).sort({ updatedAt: -1 });
+      }
+
+      if (targetDraft) {
+        try {
+          await registrationService.submitRegistration({
+            draftId: targetDraft.draftId,
+            subscriptionId: subscription._id.toString(),
+            paymentId: waivedPaymentId,
+            orderId: waivedOrderId,
+          });
+        } catch (submitErr: any) {
+          logger.warn(
+            'Auto submitRegistration for waived subscription encountered: %s',
+            submitErr?.message || submitErr
+          );
+        }
+      }
+
+      // 5. Update agency record (paymentStatus = PAID, but preserve PENDING admin approval)
+      const targetAgencyId = (subscription as any).agencyId || input.agencyId;
+      let agency = null;
+      if (targetAgencyId && mongoose.Types.ObjectId.isValid(String(targetAgencyId))) {
+        agency = await AgencyModel.findOne({ _id: targetAgencyId, isDeleted: false });
+      }
+      if (!agency && email) {
+        agency = await AgencyModel.findOne({
+          $or: [{ email }, { loginEmail: email }, { 'owner.email': email }],
+          isDeleted: false,
+        });
+      }
+
+      if (agency) {
+        agency.paymentStatus = 'PAID';
+        if (agency.onboardingStatus === 'PAYMENT_PENDING' || !agency.onboardingStatus) {
+          agency.onboardingStatus = 'UNDER_REVIEW';
+        }
+        if (businessType === 'car_rental') {
+          if (
+            !agency.carRentalVerificationStatus ||
+            agency.carRentalVerificationStatus === 'NOT_REGISTERED' ||
+            agency.carRentalVerificationStatus === 'PENDING'
+          ) {
+            agency.carRentalVerificationStatus = 'PENDING';
+          }
+        } else {
+          if (
+            agency.verificationStatus === 'PENDING' ||
+            (agency.verificationStatus as any) === 'MISSING_DOCS'
+          ) {
+            agency.verificationStatus = 'UNDER_REVIEW';
+          }
+        }
+        // Approval status MUST remain PENDING for admin review
+        if (!agency.approvalStatus || agency.approvalStatus !== 'APPROVED') {
+          agency.approvalStatus = 'PENDING';
+        }
+        agency.timeline.push({
+          id: `t-waive-${Date.now()}`,
+          title: 'Registration Fee Waived & Application Submitted',
+          timestamp: new Date().toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }),
+          completed: true,
+          desc: `One-time registration fee waived (Partner previously paid on network: ${feeStatus.reason}). Application queued for Super Admin review.`,
+        });
+        await agency.save();
+      }
+
+      return {
+        feeWaived: true,
+        alreadyPaid: true,
+        subscriptionId: subscription._id.toString(),
+        orderId: waivedOrderId,
+        paymentId: waivedPaymentId,
+        amount: 0,
+        originalAmount: this.BASE_REGISTRATION_FEE,
+        discount: this.BASE_REGISTRATION_FEE,
+        currency: 'INR',
+        partnerName,
+        email,
+        phone,
+        businessType,
+        invoiceNumber: invoiceNum,
+        invoiceId: invoice._id.toString(),
+        message:
+          'One-time registration fee waived: ₹1,000 previously paid on ApnaTrip Partner Network.',
+      };
     }
 
     let discount = 0;

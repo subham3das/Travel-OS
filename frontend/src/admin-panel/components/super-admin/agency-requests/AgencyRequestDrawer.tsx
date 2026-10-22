@@ -284,16 +284,16 @@ export const AgencyRequestDrawer: React.FC<AgencyRequestDrawerProps> = ({
                 <>
                   {/* Agency & Owner Info Grid (2 Columns) */}
                   <div className="grid grid-cols-2 gap-3">
-                    {/* Agency Info */}
+                    {/* Business Info */}
                     <div className="bg-white rounded-2xl p-4 border border-slate-100/90 shadow-2xs space-y-2.5">
                       <h4 className="text-[11px] font-black text-[#0F172A] uppercase tracking-wider">
-                        Agency Information
+                        Business Information
                       </h4>
                       <div className="space-y-1.5 text-xs font-semibold">
                         <div>
-                          <span className="text-[10px] text-slate-400 block font-bold">Agency Name</span>
+                          <span className="text-[10px] text-slate-400 block font-bold">Business Name</span>
                           <span className="text-[#0F172A] font-extrabold text-[11px] leading-tight block truncate">
-                            {activeData.agencyName}
+                            {activeData.carRentalProfile?.businessName || activeData.agencyName}
                           </span>
                         </div>
                         <div>
@@ -375,42 +375,49 @@ export const AgencyRequestDrawer: React.FC<AgencyRequestDrawerProps> = ({
 
                     <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 space-y-2">
                       <div className="grid grid-cols-2 gap-2.5 text-xs font-semibold">
-                        <div>
-                          <span className="text-[10px] text-slate-400 block font-bold">Account Holder</span>
-                          <span className="text-[#0F172A] font-extrabold text-[11px] leading-tight block truncate">
-                            {activeData.bankDetails?.accountHolderName || activeData.ownerName || '—'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 block font-bold">Bank Name</span>
-                          <span className="text-[#0F172A] font-bold text-[11px] leading-tight block truncate">
-                            {activeData.bankDetails?.bankName || '—'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 block font-bold">Account Number</span>
-                          <span className="text-[#0F172A] font-bold text-[11px] leading-tight block font-mono">
-                            {activeData.bankDetails?.accountNumber || '—'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 block font-bold">IFSC Code</span>
-                          <span className="text-[#6356E5] font-extrabold text-[11px] leading-tight block font-mono">
-                            {activeData.bankDetails?.ifscCode || '—'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 block font-bold">Account / Payout Type</span>
-                          <span className="text-[#0F172A] font-bold text-[11px] leading-tight block">
-                            {activeData.bankDetails?.accountType || activeData.bankDetails?.payoutMethod || 'Current Account'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 block font-bold">Branch / UPI ID</span>
-                          <span className="text-[#0F172A] font-bold text-[11px] leading-tight block truncate">
-                            {activeData.bankDetails?.branch || activeData.bankDetails?.upiId || '—'}
-                          </span>
-                        </div>
+                        {(() => {
+                          const payoutBank = activeData.carRentalProfile?.bankDetails || activeData.bankDetails;
+                          return (
+                            <>
+                              <div>
+                                <span className="text-[10px] text-slate-400 block font-bold">Account Holder</span>
+                                <span className="text-[#0F172A] font-extrabold text-[11px] leading-tight block truncate">
+                                  {payoutBank?.accountHolderName || activeData.carRentalProfile?.ownerName || activeData.ownerName || '—'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-slate-400 block font-bold">Bank Name</span>
+                                <span className="text-[#0F172A] font-bold text-[11px] leading-tight block truncate">
+                                  {payoutBank?.bankName || '—'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-slate-400 block font-bold">Account Number</span>
+                                <span className="text-[#0F172A] font-bold text-[11px] leading-tight block font-mono">
+                                  {payoutBank?.accountNumber || '—'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-slate-400 block font-bold">IFSC Code</span>
+                                <span className="text-[#6356E5] font-extrabold text-[11px] leading-tight block font-mono">
+                                  {payoutBank?.ifscCode || '—'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-slate-400 block font-bold">Account / Payout Type</span>
+                                <span className="text-[#0F172A] font-bold text-[11px] leading-tight block">
+                                  {payoutBank?.accountType || payoutBank?.payoutMethod || 'Current Account'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-slate-400 block font-bold">Branch / UPI ID</span>
+                                <span className="text-[#0F172A] font-bold text-[11px] leading-tight block truncate">
+                                  {payoutBank?.branch || payoutBank?.upiId || '—'}
+                                </span>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 

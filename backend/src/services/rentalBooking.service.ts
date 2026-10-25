@@ -10,6 +10,7 @@ import { logger } from '../config/logger.config.js';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../utils/errors.util.js';
 import { NotificationModel } from '../models/notification.model.js';
 import { socketService } from './socket.service.js';
+import { vehicleHoldService } from './vehicleHold.service.js';
 
 export interface CreateRentalBookingDTO {
   carId: string;
@@ -143,65 +144,85 @@ export class RentalBookingService {
       }
     }
 
-    const booking = await RentalBookingModel.create({
-      bookingId,
+    // Step 1: Atomically acquire vehicle reservation hold (10 min expiry)
+    await vehicleHoldService.acquireHold({
       carId: car._id,
-      agencyId: car.agencyId,
-      customerId: new mongoose.Types.ObjectId(customerId),
-      rentalType,
-      durationValue: duration,
-      startDate,
-      endDate,
-      pickupLocation: data.pickupLocation || car.pickupLocation || car.city || 'Main Hub',
-      returnLocation: data.returnLocation || data.pickupLocation || car.pickupLocation || car.city || 'Main Hub',
-      customerName: data.customerName,
-      customerEmail: data.customerEmail,
-      customerPhone: data.customerPhone,
-      specialNotes: data.specialNotes,
-      emergencyContact: data.emergencyContact,
-      address: data.address,
-      gender: data.gender,
-      age: data.age,
-      rateApplied: rate,
-      baseAmount,
-      taxesAmount,
-      securityDeposit,
-      totalAmount,
-      paymentType,
-      depositPaid,
-      remainingAmount,
-      paymentStatus: 'PENDING',
-      status: 'BOOKED',
-      bookingStatus: 'BOOKED',
-      bookingConfirmationCode: pickupCode,
-      pickupCode,
-      timeline: [
-        {
-          id: `step-booked-${Date.now()}`,
-          title: 'Booking Reserved',
-          subtitle: `Reference: #${bookingId}`,
-          timestamp: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
-          status: 'completed',
-          iconType: 'calendar',
-        },
-        {
-          id: `step-pickup-${Date.now()}`,
-          title: 'Collect Vehicle',
-          subtitle: `Pickup Code: ${pickupCode}`,
-          timestamp: 'Ready For Pickup',
-          status: 'upcoming',
-          iconType: 'key',
-        },
-        {
-          id: `step-return-${Date.now()}`,
-          title: 'Return Vehicle',
-          subtitle: 'Verify 6-digit return code with owner',
-          timestamp: 'Scheduled',
-          status: 'upcoming',
-          iconType: 'check-circle',
-        },
-      ],
+      customerId,
+      bookingId,
+      durationMinutes: 10,
     });
+
+    let booking: IRentalBooking;
+    try {
+      booking = await RentalBookingModel.create({
+        bookingId,
+        carId: car._id,
+        agencyId: car.agencyId,
+        customerId: new mongoose.Types.ObjectId(customerId),
+        rentalType,
+        durationValue: duration,
+        startDate,
+        endDate,
+        pickupLocation: data.pickupLocation || car.pickupLocation || car.city || 'Main Hub',
+        returnLocation: data.returnLocation || data.pickupLocation || car.pickupLocation || car.city || 'Main Hub',
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        customerPhone: data.customerPhone,
+        specialNotes: data.specialNotes,
+        emergencyContact: data.emergencyContact,
+        address: data.address,
+        gender: data.gender,
+        age: data.age,
+        rateApplied: rate,
+        baseAmount,
+        taxesAmount,
+        securityDeposit,
+        totalAmount,
+        paymentType,
+        depositPaid,
+        remainingAmount,
+        paymentStatus: 'PENDING',
+        status: 'BOOKED',
+        bookingStatus: 'BOOKED',
+        bookingConfirmationCode: pickupCode,
+        pickupCode,
+        timeline: [
+          {
+            id: `step-booked-${Date.now()}`,
+            title: 'Booking Reserved',
+            subtitle: `Reference: #${bookingId}`,
+            timestamp: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+            status: 'completed',
+            iconType: 'calendar',
+          },
+          {
+            id: `step-pickup-${Date.now()}`,
+            title: 'Collect Vehicle',
+            subtitle: `Pickup Code: ${pickupCode}`,
+            timestamp: 'Ready For Pickup',
+            status: 'upcoming',
+            iconType: 'key',
+          },
+          {
+            id: `step-return-${Date.now()}`,
+            title: 'Return Vehicle',
+            subtitle: 'Verify 6-digit return code with owner',
+            timestamp: 'Scheduled',
+            status: 'upcoming',
+            iconType: 'check-circle',
+          },
+        ],
+      });
+    } catch (createErr) {
+      // Step 5 rollback: release the acquired hold if booking persistence failed
+      await vehicleHoldService.releaseHold({
+        carId: car._id,
+        bookingId,
+        customerId,
+        reason: 'Rental booking persistence failed',
+      });
+      throw createErr;
+    }
 
     return booking;
   }
@@ -223,6 +244,13 @@ export class RentalBookingService {
     if (booking.bookingStatus !== 'BOOKED' && booking.paymentStatus === 'FULL_PAID') {
       throw new BadRequestError('This rental booking is already paid.');
     }
+
+    // Step 3: Validate that vehicle hold is still actively owned by this customer
+    await vehicleHoldService.validateHoldForPayment({
+      carId: (booking.carId as any)._id || booking.carId,
+      customerId: userId,
+      bookingId: booking.bookingId,
+    });
 
     const payableAmount = booking.paymentType === 'deposit' ? booking.depositPaid : booking.totalAmount;
     const amountInPaise = Math.round(payableAmount * 100);
@@ -284,6 +312,24 @@ export class RentalBookingService {
       crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
 
     if (!isMatch) {
+      // Step 5: On payment failure, release the vehicle hold immediately
+      const failedBooking = await RentalBookingModel.findOne({ bookingId }).select('carId customerId');
+      if (failedBooking?.carId) {
+        await vehicleHoldService.releaseHold({
+          carId: failedBooking.carId,
+          bookingId,
+          customerId: userId,
+          reason: 'Cryptographic HMAC signature verification failed',
+        });
+        await vehicleHoldService.logAudit({
+          action: 'Payment Failed',
+          carId: failedBooking.carId.toString(),
+          bookingId,
+          customerId: userId,
+          paymentId: razorpay_payment_id,
+          reason: 'Cryptographic HMAC signature verification failed',
+        });
+      }
       throw new BadRequestError('Payment signature verification failed.');
     }
 
@@ -326,6 +372,16 @@ export class RentalBookingService {
     }
 
     await booking.save();
+
+    // Step 4: Atomically update vehicle status HELD -> BOOKED and attach booking details
+    if (booking.carId) {
+      await vehicleHoldService.confirmHoldAsBooked({
+        carId: (booking.carId as any)._id || booking.carId,
+        bookingId: booking.bookingId,
+        customerId: userId,
+        paymentId: razorpay_payment_id,
+      });
+    }
 
     // Create PaymentModel record for accounting
     try {
@@ -593,10 +649,13 @@ export class RentalBookingService {
     await booking.save();
 
     // Set Vehicle AVAILABLE again
-    await CarModel.findByIdAndUpdate(booking.carId, {
-      isAvailable: true,
-      status: 'available',
-    });
+    if (booking.carId) {
+      await vehicleHoldService.releaseHold({
+        carId: booking.carId,
+        bookingId: booking.bookingId,
+        reason: 'Rental completed and vehicle returned via OTP verification',
+      });
+    }
 
     logger.info('🏁 Rental %s returned. Vehicle %s is now AVAILABLE again.', booking.bookingId, booking.carId);
 
@@ -702,10 +761,19 @@ export class RentalBookingService {
     await booking.save();
 
     // Revert car availability to available
-    await CarModel.findByIdAndUpdate(booking.carId, {
-      isAvailable: true,
-      status: 'available',
-    });
+    if (booking.carId) {
+      await vehicleHoldService.releaseHold({
+        carId: booking.carId,
+        bookingId: booking.bookingId,
+        reason: 'Rental booking cancelled by user/agency',
+      });
+      await vehicleHoldService.logAudit({
+        action: 'Payment Cancelled',
+        carId: (booking.carId as any).toString(),
+        bookingId: booking.bookingId,
+        reason: 'Rental booking cancelled by user/agency',
+      });
+    }
 
     logger.info('🚫 Rental booking %s cancelled. Vehicle %s released to available.', booking.bookingId, booking.carId);
 
@@ -812,9 +880,18 @@ export class RentalBookingService {
 
     // 6. Vehicle Availability: Automatically restore vehicle.isAvailable = true
     if (booking.carId) {
+      await vehicleHoldService.releaseHold({
+        carId: booking.carId,
+        bookingId: booking.bookingId,
+        reason: 'Rental booking cancelled by owner',
+      });
+      await vehicleHoldService.logAudit({
+        action: 'Payment Cancelled',
+        carId: (booking.carId as any).toString(),
+        bookingId: booking.bookingId,
+        reason: 'Rental booking cancelled by owner',
+      });
       await CarModel.findByIdAndUpdate(booking.carId, {
-        isAvailable: true,
-        status: 'available',
         $pull: { bookedSlots: { bookingId: booking.bookingId } },
       });
     }

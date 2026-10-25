@@ -12,7 +12,7 @@ const destinations = [
     weather: '18°C · Pleasant',
     bestSeason: 'Oct – May',
     highlights: 'Double Decker Living Root Bridges, Dawki crystal river, Cherrapunji waterfalls',
-    operators: '34 Verified Agencies',
+    network: 'Verified Partner Network',
   },
   {
     id: 'ladakh',
@@ -23,7 +23,7 @@ const destinations = [
     weather: '12°C · Crisp Sky',
     bestSeason: 'May – Sep',
     highlights: 'Pangong Tso, Khardung La Pass, Nubra Valley sand dunes & monasteries',
-    operators: '28 Verified Agencies',
+    network: 'Verified Partner Network',
   },
   {
     id: 'kerala',
@@ -34,7 +34,7 @@ const destinations = [
     weather: '27°C · Tropical',
     bestSeason: 'Sep – Mar',
     highlights: 'Alleppey private houseboats, Munnar tea gardens, Varkala cliff beach',
-    operators: '42 Verified Agencies',
+    network: 'Verified Partner Network',
   },
   {
     id: 'assam',
@@ -45,7 +45,7 @@ const destinations = [
     weather: '22°C · Mild Breeze',
     bestSeason: 'Nov – Apr',
     highlights: 'One-horned rhino safari, Brahmaputra river island, ancient Satras',
-    operators: '21 Verified Agencies',
+    network: 'Verified Partner Network',
   },
   {
     id: 'spiti-valley',
@@ -56,7 +56,7 @@ const destinations = [
     weather: '8°C · Mountain Chill',
     bestSeason: 'Jun – Oct',
     highlights: 'Key Monastery, Chandratal Lake, highest post office in Hikkim',
-    operators: '19 Verified Agencies',
+    network: 'Verified Partner Network',
   },
   {
     id: 'goa',
@@ -67,7 +67,7 @@ const destinations = [
     weather: '29°C · Sunny',
     bestSeason: 'Nov – Feb',
     highlights: 'Palolem serene bay, Cabo de Rama fort, spice plantations, quiet shores',
-    operators: '36 Verified Agencies',
+    network: 'Verified Partner Network',
   },
 ];
 
@@ -138,7 +138,7 @@ export default function DestinationsShowcase() {
                       {dest.category}
                     </span>
                     <span className="px-3 py-1 rounded-lg bg-blue-600/90 backdrop-blur-md text-white text-xs font-semibold">
-                      {dest.operators}
+                      {dest.network}
                     </span>
                   </div>
 
@@ -174,7 +174,7 @@ export default function DestinationsShowcase() {
                   to={`/destinations?region=${dest.id}`}
                   className="w-full py-2.5 rounded-xl border border-blue-600/30 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200 group-hover:bg-blue-600 group-hover:text-white"
                 >
-                  <span>Explore Verified Packages</span>
+                  <span>View Destination</span>
                   <ArrowRight size={15} />
                 </Link>
               </div>
@@ -188,7 +188,7 @@ export default function DestinationsShowcase() {
             to="/destinations"
             className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
           >
-            <span>View All 200+ Indian Destinations</span>
+            <span>Explore Destination Showcase</span>
             <ArrowRight size={16} />
           </Link>
         </div>

@@ -10,6 +10,7 @@ import { socketService } from './socket.service.js';
 import { rentalPricingService } from './rentalPricing.service.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../utils/errors.util.js';
 import { logger } from '../config/logger.config.js';
+import { vehicleHoldService } from './vehicleHold.service.js';
 
 export interface CreateBookingDTO {
   carId: string;
@@ -201,83 +202,103 @@ export class CarBookingService {
       }
     }
 
-    const booking = await CarBookingModel.create({
-      bookingId,
+    // Step 1: Atomically acquire vehicle reservation hold (10 min expiry)
+    await vehicleHoldService.acquireHold({
       carId: car._id,
-      agencyId: car.agencyId,
-      customerId: new mongoose.Types.ObjectId(customerId),
-      routeId: matchedRouteId,
-      tripType: data.tripType,
-      startDate: start,
-      endDate: end,
-      totalDays: 1,
-      pickupLocation: data.pickupLocation,
-      dropLocation: data.dropLocation,
-      pickupTime: data.pickupTime || '10:00 AM',
-      passengersCount: Number(data.passengersCount) || 4,
-      specialNotes: data.specialNotes || '',
-      customerName: cName || 'Traveler',
-      customerEmail: cEmail || 'traveler@apnatrip.in',
-      customerPhone: cPhone || '+91 99999 99999',
-      dailyRate: priceToCharge,
-      fixedPrice: priceToCharge,
-      baseAmount,
-      taxesAmount,
-      totalAmount,
-      serviceType: 'ROUTE_BOOKING',
-      emergencyContact: data.emergencyContact,
-      address: data.address,
-      gender: data.gender,
-      age: data.age,
-      isDeleted: false,
-      timeline: [
-        {
-          id: `step-created-${Date.now()}`,
-          title: 'Booking Created',
-          subtitle: `Booking Reference #${bookingId}`,
-          timestamp: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
-          status: 'completed',
-          iconType: 'calendar',
-        },
-        {
-          id: `step-paid-${Date.now()}`,
-          title: 'Payment',
-          subtitle: data.paymentType === 'deposit' ? `₹${depositPaid} Advance Deposit` : `₹${totalAmount} Full Payment`,
-          timestamp: 'Pending',
-          status: 'current',
-          iconType: 'credit-card',
-        },
-        {
-          id: `step-confirmed-${Date.now()}`,
-          title: 'Agency Confirmation',
-          subtitle: 'Awaiting agency driver assignment',
-          timestamp: 'Upcoming',
-          status: 'upcoming',
-          iconType: 'check-circle',
-        },
-        {
-          id: `step-driver-${Date.now()}`,
-          title: 'Driver Assignment',
-          subtitle: 'Driver details dispatch',
-          timestamp: 'Upcoming',
-          status: 'upcoming',
-          iconType: 'car',
-        },
-        {
-          id: `step-trip-${Date.now()}`,
-          title: 'Trip Completed',
-          subtitle: 'Destination arrival',
-          timestamp: 'Scheduled',
-          status: 'upcoming',
-          iconType: 'flag',
-        },
-      ],
-      paymentType: data.paymentType,
-      depositPaid,
-      remainingAmount,
-      paymentStatus: 'PENDING',
-      bookingStatus: 'PENDING_PAYMENT',
+      customerId,
+      bookingId,
+      durationMinutes: 10,
     });
+
+    let booking: any;
+    try {
+      booking = await CarBookingModel.create({
+        bookingId,
+        carId: car._id,
+        agencyId: car.agencyId,
+        customerId: new mongoose.Types.ObjectId(customerId),
+        routeId: matchedRouteId,
+        tripType: data.tripType,
+        startDate: start,
+        endDate: end,
+        totalDays: 1,
+        pickupLocation: data.pickupLocation,
+        dropLocation: data.dropLocation,
+        pickupTime: data.pickupTime || '10:00 AM',
+        passengersCount: Number(data.passengersCount) || 4,
+        specialNotes: data.specialNotes || '',
+        customerName: cName || 'Traveler',
+        customerEmail: cEmail || 'traveler@apnatrip.in',
+        customerPhone: cPhone || '+91 99999 99999',
+        dailyRate: priceToCharge,
+        fixedPrice: priceToCharge,
+        baseAmount,
+        taxesAmount,
+        totalAmount,
+        serviceType: 'ROUTE_BOOKING',
+        emergencyContact: data.emergencyContact,
+        address: data.address,
+        gender: data.gender,
+        age: data.age,
+        isDeleted: false,
+        timeline: [
+          {
+            id: `step-created-${Date.now()}`,
+            title: 'Booking Created',
+            subtitle: `Booking Reference #${bookingId}`,
+            timestamp: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+            status: 'completed',
+            iconType: 'calendar',
+          },
+          {
+            id: `step-paid-${Date.now()}`,
+            title: 'Payment',
+            subtitle: data.paymentType === 'deposit' ? `₹${depositPaid} Advance Deposit` : `₹${totalAmount} Full Payment`,
+            timestamp: 'Pending',
+            status: 'current',
+            iconType: 'credit-card',
+          },
+          {
+            id: `step-confirmed-${Date.now()}`,
+            title: 'Agency Confirmation',
+            subtitle: 'Awaiting agency driver assignment',
+            timestamp: 'Upcoming',
+            status: 'upcoming',
+            iconType: 'check-circle',
+          },
+          {
+            id: `step-driver-${Date.now()}`,
+            title: 'Driver Assignment',
+            subtitle: 'Driver details dispatch',
+            timestamp: 'Upcoming',
+            status: 'upcoming',
+            iconType: 'car',
+          },
+          {
+            id: `step-trip-${Date.now()}`,
+            title: 'Trip Completed',
+            subtitle: 'Destination arrival',
+            timestamp: 'Scheduled',
+            status: 'upcoming',
+            iconType: 'flag',
+          },
+        ],
+        paymentType: data.paymentType,
+        depositPaid,
+        remainingAmount,
+        paymentStatus: 'PENDING',
+        bookingStatus: 'PENDING_PAYMENT',
+      });
+    } catch (createErr) {
+      // Step 5 rollback: release the acquired hold if booking persistence failed
+      await vehicleHoldService.releaseHold({
+        carId: car._id,
+        bookingId,
+        customerId,
+        reason: 'Car booking persistence failed',
+      });
+      throw createErr;
+    }
 
     return booking;
   }
@@ -361,6 +382,16 @@ export class CarBookingService {
     }
 
     await booking.save();
+
+    // Step 4: Confirm vehicle hold as BOOKED
+    if (booking.carId) {
+      await vehicleHoldService.confirmHoldAsBooked({
+        carId: booking.carId,
+        bookingId: booking.bookingId,
+        customerId,
+        paymentId: booking.transactionId,
+      });
+    }
 
     // ── Create Backend Notification for Car Owner / Agency ──
     try {
@@ -651,7 +682,13 @@ export class CarBookingService {
     booking.completedAt = new Date();
     await booking.save();
 
-    await CarModel.findByIdAndUpdate(booking.carId, { isAvailable: true, status: 'available' });
+    if (booking.carId) {
+      await vehicleHoldService.releaseHold({
+        carId: booking.carId,
+        bookingId: booking.bookingId,
+        reason: 'Ride completed and verified',
+      });
+    }
 
     return {
       success: true,
@@ -680,6 +717,22 @@ export class CarBookingService {
     booking.cancelledAt = new Date();
     booking.paymentStatus = 'REFUNDED';
     await booking.save();
+
+    // Release vehicle hold and log audit
+    if (booking.carId) {
+      await vehicleHoldService.releaseHold({
+        carId: booking.carId,
+        bookingId: booking.bookingId,
+        reason: 'Car booking cancelled by customer',
+      });
+      await vehicleHoldService.logAudit({
+        action: 'Payment Cancelled',
+        carId: booking.carId.toString(),
+        bookingId: booking.bookingId,
+        customerId,
+        reason: 'Car booking cancelled by customer',
+      });
+    }
 
     // Notify Agency
     try {
@@ -789,9 +842,18 @@ export class CarBookingService {
 
     // 6. Vehicle Availability: Automatically restore vehicle.isAvailable = true
     if (booking.carId) {
+      await vehicleHoldService.releaseHold({
+        carId: booking.carId,
+        bookingId: booking.bookingId,
+        reason: 'Car booking cancelled by owner',
+      });
+      await vehicleHoldService.logAudit({
+        action: 'Payment Cancelled',
+        carId: booking.carId.toString(),
+        bookingId: booking.bookingId,
+        reason: 'Car booking cancelled by owner',
+      });
       await CarModel.findByIdAndUpdate(booking.carId, {
-        isAvailable: true,
-        status: 'available',
         $pull: { bookedSlots: { bookingId: booking.bookingId } },
       });
     }
@@ -1007,8 +1069,18 @@ If you have already paid, our support team will process your refund according to
       remainingAmount = 0;
     }
 
-    const booking = await CarBookingModel.create({
+    // Step 1: Atomically acquire vehicle reservation hold (10 min expiry)
+    await vehicleHoldService.acquireHold({
+      carId: car._id,
+      customerId,
       bookingId,
+      durationMinutes: 10,
+    });
+
+    let booking: any;
+    try {
+      booking = await CarBookingModel.create({
+        bookingId,
       carId: car._id,
       agencyId: car.agencyId,
       customerId: new mongoose.Types.ObjectId(customerId),
@@ -1090,6 +1162,15 @@ If you have already paid, our support team will process your refund according to
       paymentStatus: 'PENDING',
       bookingStatus: 'PENDING_PAYMENT',
     });
+    } catch (createErr) {
+      await vehicleHoldService.releaseHold({
+        carId: car._id,
+        bookingId,
+        customerId,
+        reason: 'Rental booking persistence failed',
+      });
+      throw createErr;
+    }
 
     // Add to vehicle bookedSlots
     try {

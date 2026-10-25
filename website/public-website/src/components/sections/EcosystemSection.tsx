@@ -31,7 +31,7 @@ const NODES: Node[] = [
     size: 52,
     color: '#2563EB',
     glowColor: 'rgba(37,99,235,0.35)',
-    tooltip: { title: 'Verified Traveler', stats: ['50K+ Active Users', 'One-time KYC', 'Reward Points', 'Community Profile'] },
+    tooltip: { title: 'Verified Traveler', stats: ['One-time Digital KYC', 'Safe Community', 'Reward Points', 'Direct Partner Chat'] },
   },
   {
     id: 'agency',
@@ -41,7 +41,7 @@ const NODES: Node[] = [
     size: 48,
     color: '#0891B2',
     glowColor: 'rgba(8,145,178,0.35)',
-    tooltip: { title: 'Verified Agencies', stats: ['200+ Partners', 'Package Builder', 'Live Bookings', 'Settlement Dashboard'] },
+    tooltip: { title: 'Verified Agencies', stats: ['Audited Operators', 'Package Builder', 'Lead Management', 'Settlement Dashboard'] },
   },
   {
     id: 'car',
@@ -338,7 +338,7 @@ export default function EcosystemSection() {
           {/* Journey bar */}
           {journeyActive && !hovered && (
             <div className="eco-journey" aria-hidden="true">
-              <span className="eco-journey-label">Booking journey</span>
+              <span className="eco-journey-label">Ecosystem Flow</span>
               <div className="eco-journey-dots">
                 {JOURNEY.map((id, i) => (
                   <div key={id} className={`eco-journey-dot${i === journeyStep ? ' eco-dot-active' : ''}`} />
@@ -377,8 +377,8 @@ export default function EcosystemSection() {
 }
 
 const SUPPORT_CARDS = [
-  { icon: '🏢', iconBg: 'rgba(8,145,178,0.1)', stat: '200+', title: 'Verified Agencies', desc: 'Licensed travel operators across India with package builder access.' },
-  { icon: '👥', iconBg: 'rgba(37,99,235,0.1)', stat: '50K+', title: 'Trusted Travelers', desc: 'Verified profiles. Safe community. Trusted bookings nationwide.' },
-  { icon: '🚗', iconBg: 'rgba(124,58,237,0.1)', stat: '4 Types', title: 'Vehicle Partners', desc: 'Cars, bikes, self-drive, and airport transfers. Always on demand.' },
-  { icon: '🛡️', iconBg: 'rgba(220,38,38,0.1)', stat: '100%', title: 'Secure Platform', desc: 'KYC, escrow payments, and real-time booking verification on every transaction.' },
+  { icon: '🏢', iconBg: 'rgba(8,145,178,0.1)', stat: 'Verified', title: 'Agency Network', desc: 'Licensed travel operators across India with package builder access.' },
+  { icon: '👥', iconBg: 'rgba(37,99,235,0.1)', stat: 'Trusted', title: 'Traveler Community', desc: 'Verified digital profiles, official WhatsApp communities, and authentic journeys.' },
+  { icon: '🚗', iconBg: 'rgba(124,58,237,0.1)', stat: 'Fleet', title: 'Vehicle Mobility', desc: 'Fixed route travel, self-drive rentals, and professional driver services.' },
+  { icon: '🛡️', iconBg: 'rgba(220,38,38,0.1)', stat: '100%', title: 'Escrow Security', desc: 'Milestone escrow releases funds only after verified trip check-ins.' },
 ];

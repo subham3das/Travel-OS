@@ -352,19 +352,21 @@ export class AdminAgencyRequestService {
             status: 'Under Review',
           };
         }
+        const sb = sourceBank as any;
+        const ab = (agency.bankDetails || {}) as any;
         return {
-          accountHolderName: sourceBank.accountHolderName || agency.owner?.name || agency.ownerName || agency.name || '—',
-          bankName: sourceBank.bankName || '—',
-          accountNumber: sourceBank.accountNumber || '—',
-          ifscCode: sourceBank.ifscCode || '—',
-          branch: sourceBank.branch || agency.city || '—',
-          upiId: sourceBank.upiId || '—',
-          accountType: (sourceBank as any).accountType || (agency.bankDetails as any)?.accountType || 'Current / Business Account',
-          payoutMethod: sourceBank.payoutMethod || agency.bankDetails?.payoutMethod || 'Bank Transfer',
-          verified: sourceBank.verified === true || agency.bankDetails?.verified === true,
-          status: sourceBank.status || agency.bankDetails?.status || (sourceBank.verified ? 'Verified' : 'Under Review'),
-          verifiedAt: sourceBank.verifiedAt || agency.bankDetails?.verifiedAt,
-          verifiedBy: sourceBank.verifiedBy || agency.bankDetails?.verifiedBy,
+          accountHolderName: sb.accountHolderName || agency.owner?.name || agency.ownerName || agency.name || '—',
+          bankName: sb.bankName || '—',
+          accountNumber: sb.accountNumber || '—',
+          ifscCode: sb.ifscCode || '—',
+          branch: sb.branch || agency.city || '—',
+          upiId: sb.upiId || '—',
+          accountType: sb.accountType || ab.accountType || 'Current / Business Account',
+          payoutMethod: sb.payoutMethod || ab.payoutMethod || 'Bank Transfer',
+          verified: sb.verified === true || ab.verified === true,
+          status: sb.status || ab.status || (sb.verified ? 'Verified' : 'Under Review'),
+          verifiedAt: sb.verifiedAt || ab.verifiedAt,
+          verifiedBy: sb.verifiedBy || ab.verifiedBy,
         };
       })(),
       reviewNotes: latestNote,

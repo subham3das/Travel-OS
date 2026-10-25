@@ -4,7 +4,6 @@ import TrustedByIndia from '../components/sections/TrustedByIndia';
 import PlatformOverview from '../components/sections/PlatformOverview';
 import EcosystemSection from '../components/sections/EcosystemSection';
 import WhyApnaTrip from '../components/sections/WhyApnaTrip';
-import DestinationsShowcase from '../components/sections/DestinationsShowcase';
 import PartnerNetworkMarquee from '../components/sections/PartnerNetworkMarquee';
 import PartnerPromotionSection from '../components/sections/PartnerPromotionSection';
 import CommunitySection from '../components/sections/CommunitySection';
@@ -18,10 +17,10 @@ export default function HomePage() {
   return (
     <>
       <Helmet>
-        <title>ApnaTrip — India's Trusted Travel Ecosystem</title>
+        <title>ApnaTrip — India's Trusted Travel Technology Platform</title>
         <meta
           name="description"
-          content="Discover India's hidden gems. Connect with verified local travel agencies, book verified routes, self-drive rentals, and travel with total confidence."
+          content="Discover India's hidden gems. Connect with verified local travel agencies, explore verified routes, self-drive rentals, and travel with total confidence."
         />
         <link rel="canonical" href="https://apnatrip.in/" />
         {/* Schema.org Organization & TravelAgency Structured Data */}
@@ -62,10 +61,6 @@ export default function HomePage() {
 
         {/* Section 4: Why ApnaTrip */}
         <WhyApnaTrip />
-
-
-        {/* Section 4: Featured Indian Destinations */}
-        <DestinationsShowcase />
 
         {/* Section 5: Growing Partner Network Ticker */}
         <PartnerNetworkMarquee />

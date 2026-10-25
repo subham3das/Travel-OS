@@ -1,33 +1,29 @@
-import { TrendingUp, Award, Users, Car, Building2 } from 'lucide-react';
+import { TrendingUp, Award, Users, Building2 } from 'lucide-react';
 
 const stats = [
   {
     icon: Building2,
-    number: '31',
-    metric: 'Agencies Joined',
-    period: 'This Month',
-    desc: 'Strictly audited for GST, safety, and tour licenses',
+    badge: 'Integrity',
+    title: 'Verified Partner Network',
+    desc: 'Pre-screened travel agencies and licensed operators audited for safety, GST compliance, and tourism credentials.',
   },
   {
-    icon: Car,
-    number: '18',
-    metric: 'Vehicle Owners',
-    period: 'This Week',
-    desc: 'Providing inspected self-drive cars and route cabs',
+    icon: TrendingUp,
+    badge: 'Expansion',
+    title: 'Growing Across India',
+    desc: 'Expanding technology footprint connecting regional tourist circuits, mountain corridors, and transit hubs.',
   },
   {
     icon: Users,
-    number: '4,200+',
-    metric: 'New Travelers',
-    period: 'Past 30 Days',
-    desc: 'Planning custom holidays and intercity transit',
+    badge: 'Coverage',
+    title: 'Expanding Destination Network',
+    desc: 'Connecting authentic travelers with verified local experts, cultural tours, and customized travel itineraries.',
   },
   {
     icon: Award,
-    number: '95%',
-    metric: 'Repeat Travelers',
-    period: 'Platform Retention',
-    desc: 'Returning for trusted agency quality and zero-hassle bookings',
+    badge: 'Security',
+    title: 'Trusted Technology Platform',
+    desc: 'Bank-grade milestone escrow protection, digital KYC identity, and end-to-end partner operations management.',
   },
 ];
 
@@ -42,13 +38,13 @@ export default function GrowthStatsSection() {
         <div className="text-center max-w-2xl mx-auto mb-14">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-700/60 border border-blue-400/30 text-white text-xs font-semibold mb-3">
             <TrendingUp size={14} className="text-teal-300" />
-            <span>Real Organic Growth</span>
+            <span>Built on Trust & Technology</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Growing Every Week Across India
+            Connecting India's Travel Ecosystem
           </h2>
           <p className="mt-3 text-blue-100 text-sm md:text-base">
-            Transparent metrics tracking our expanding ecosystem of verified operators and travelers.
+            Standardizing trust, safety, and operational excellence for agencies, vehicle partners, and explorers nationwide.
           </p>
         </div>
 
@@ -58,25 +54,22 @@ export default function GrowthStatsSection() {
             return (
               <div
                 key={idx}
-                className="p-6 rounded-2xl bg-blue-700/40 border border-blue-400/20 backdrop-blur-xs flex flex-col justify-between"
+                className="p-6 rounded-2xl bg-blue-700/40 border border-blue-400/20 backdrop-blur-xs flex flex-col justify-between hover:bg-blue-700/60 transition-colors"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <span className="w-10 h-10 rounded-xl bg-blue-800/80 flex items-center justify-center text-teal-300">
                       <Icon size={20} />
                     </span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-800/60 text-blue-200">
-                      {s.period}
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-800/60 text-teal-200">
+                      {s.badge}
                     </span>
                   </div>
-                  <div className="text-3xl md:text-4xl font-black tracking-tight text-white">
-                    {s.number}
-                  </div>
-                  <div className="mt-1 font-bold text-base text-blue-100">
-                    {s.metric}
+                  <div className="text-lg md:text-xl font-bold tracking-tight text-white leading-snug">
+                    {s.title}
                   </div>
                 </div>
-                <p className="mt-3 text-xs text-blue-200/90 leading-relaxed border-t border-blue-500/30 pt-3">
+                <p className="mt-4 text-xs text-blue-100/90 leading-relaxed border-t border-blue-500/30 pt-3">
                   {s.desc}
                 </p>
               </div>

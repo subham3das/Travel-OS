@@ -16,18 +16,18 @@ import { Building2, ShieldCheck, Clock, Sparkles } from 'lucide-react';
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const AGENCIES = [
-  { name: 'Highland Travels',      city: 'Shillong, Meghalaya',     joined: 'Joined Today',       trips: '140+' },
-  { name: 'NorthEast Trails',      city: 'Guwahati, Assam',         joined: 'Joined Yesterday',   trips: '310+' },
-  { name: 'Royal Assam Tours',     city: 'Dibrugarh, Assam',        joined: 'Joined 2 Days Ago',  trips: '95+'  },
-  { name: 'Explore Meghalaya',     city: 'Shillong, Meghalaya',     joined: 'Joined Today',       trips: '220+' },
-  { name: 'Himalayan Expedition',  city: 'Gangtok, Sikkim',         joined: 'Joined 3 Days Ago',  trips: '185+' },
-  { name: 'Adventure NorthEast',   city: 'Itanagar, Arunachal',     joined: 'Joined Yesterday',   trips: '110+' },
-  { name: 'Kaziranga Safari Hub',  city: 'Golaghat, Assam',         joined: 'Joined Today',       trips: '260+' },
-  { name: 'Nilgiri Wanderers',     city: 'Ooty, Tamil Nadu',        joined: 'Joined 4 Days Ago',  trips: '150+' },
-  { name: 'Malabar Journeys',      city: 'Kozhikode, Kerala',       joined: 'Joined 2 Days Ago',  trips: '190+' },
-  { name: 'Ladakh High Passes',    city: 'Leh, Ladakh',             joined: 'Joined Today',       trips: '210+' },
-  { name: 'Spiti Valley Treks',    city: 'Kaza, Himachal Pradesh',  joined: 'Joined This Week',   trips: '80+'  },
-  { name: 'Coorg Trails',          city: 'Madikeri, Karnataka',     joined: 'Joined Yesterday',   trips: '130+' },
+  { name: 'Highland Travels',      city: 'Shillong, Meghalaya',     joined: 'Verified Agency',   trips: 'Hill Expeditions' },
+  { name: 'NorthEast Trails',      city: 'Guwahati, Assam',         joined: 'Verified Agency',   trips: 'Wildlife Circuits' },
+  { name: 'Royal Assam Tours',     city: 'Dibrugarh, Assam',        joined: 'Verified Agency',   trips: 'Tea Estate Tours'  },
+  { name: 'Explore Meghalaya',     city: 'Shillong, Meghalaya',     joined: 'Verified Agency',   trips: 'Living Root Trails' },
+  { name: 'Himalayan Expedition',  city: 'Gangtok, Sikkim',         joined: 'Verified Agency',   trips: 'High Altitude Treks' },
+  { name: 'Adventure NorthEast',   city: 'Itanagar, Arunachal',     joined: 'Verified Agency',   trips: 'Cultural Expeditions' },
+  { name: 'Kaziranga Safari Hub',  city: 'Golaghat, Assam',         joined: 'Verified Agency',   trips: 'National Park Safaris' },
+  { name: 'Nilgiri Wanderers',     city: 'Ooty, Tamil Nadu',        joined: 'Verified Agency',   trips: 'Mountain Trails' },
+  { name: 'Malabar Journeys',      city: 'Kozhikode, Kerala',       joined: 'Verified Agency',   trips: 'Backwater Circuits' },
+  { name: 'Ladakh High Passes',    city: 'Leh, Ladakh',             joined: 'Verified Agency',   trips: 'Trans-Himalayan' },
+  { name: 'Spiti Valley Treks',    city: 'Kaza, Himachal Pradesh',  joined: 'Verified Agency',   trips: 'Valley Expeditions'  },
+  { name: 'Coorg Trails',          city: 'Madikeri, Karnataka',     joined: 'Verified Agency',   trips: 'Coffee Country Tours' },
 ];
 
 // Avatar colors — deterministic per name initial
@@ -124,7 +124,7 @@ function AgencyCard({ name, city, joined, trips, pulse }: AgencyCardProps) {
             {joined}
           </span>
           <span className="marquee-dot">•</span>
-          <span className="marquee-trips">{trips} Trips</span>
+          <span className="marquee-trips">{trips}</span>
         </div>
       </div>
     </div>

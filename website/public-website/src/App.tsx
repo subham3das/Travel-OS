@@ -10,7 +10,10 @@ import DestinationsPage from './pages/DestinationsPage'
 import PackagesPage from './pages/PackagesPage'
 import CarBookingPage from './pages/CarBookingPage'
 import PartnerPage from './pages/PartnerPage'
+import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
+import SafetyPage from './pages/SafetyPage'
+import CareersPage from './pages/CareersPage'
 import ContactPage from './pages/ContactPage'
 import LegalCenterPage from './pages/legal/LegalCenterPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -45,7 +48,11 @@ function AnimatedRoutes() {
           <Route path="/packages" element={<PackagesPage />} />
           <Route path="/car-booking" element={<CarBookingPage />} />
           <Route path="/partner" element={<PartnerPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/safety" element={<SafetyPage />} />
+          <Route path="/verification-safety" element={<SafetyPage />} />
+          <Route path="/careers" element={<CareersPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/legal" element={<LegalCenterPage />} />
           <Route path="/legal/:slug" element={<LegalCenterPage />} />

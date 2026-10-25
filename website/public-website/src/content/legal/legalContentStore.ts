@@ -638,5 +638,203 @@ Statutory Acknowledgment Window: Within 24 hours. Resolution Target: Within 15 w
         content: `Travelers can activate an emergency SOS directly from the mobile app during any active booking. This immediately alerts the nearest regional support coordinator, sends vehicle GPS telemetry to registered emergency contacts, and initiates rapid response protocols.`
       }
     ]
+  },
+
+  // ── 13. PARTNER VERIFICATION POLICY ───────────────────────────────────────
+  {
+    id: 'partner-verification-policy',
+    slug: 'partner-verification-policy',
+    title: 'Partner Verification Policy',
+    summary: 'Comprehensive operational guidelines, document requirements, KYC audits, vehicle standards, and compliance rules governing travel agencies and vehicle rental partners on ApnaTrip.',
+    version: '1.0.0',
+    effectiveDate: LEGAL_CONFIG.effectiveDate,
+    lastUpdated: LEGAL_CONFIG.lastUpdated,
+    readingTimeMinutes: 12,
+    category: 'Safety & Compliance',
+    tags: ['verification', 'kyc', 'agencies', 'rentals', 'compliance', 'drivers', 'audit', 'fleet', 'safety'],
+    status: 'Published',
+    reviewedBy: 'Compliance & Verification Board',
+    changelog: [
+      {
+        version: '1.0.0',
+        publishedDate: 'October 24, 2026',
+        summary: 'Official release of the unified Partner Verification Policy for travel agencies, vehicle rental fleets, and commercial drivers.',
+        reviewedBy: 'Chief Compliance Officer',
+      },
+    ],
+    sections: [
+      {
+        id: 'purpose-of-verification',
+        title: '1. Purpose of Verification',
+        content: `The ApnaTrip Partner Verification Policy sets the benchmark for trust, safety, consumer protection, and statutory compliance across our marketplace ecosystem. 
+
+In India's fragmented travel industry, travelers frequently encounter unverified middlemen, non-commercial private vehicle rentals, fake booking confirmations, and arbitrary advance payment losses. This verification framework is engineered to:
+• Ensure every travel agency, tour operator, and vehicle rental business operating on ApnaTrip possesses legitimate government registration and commercial credentials.
+• Safeguard travelers and their funds through verified identity, validated business physical addresses, and milestone escrow security.
+• Protect genuine, licensed local operators against dishonest competitors and fly-by-night operators.
+• Enforce strict conformity with the Motor Vehicles Act (1988/2019), Central Motor Vehicles Rules (CMVR), Consumer Protection (E-Commerce) Rules (2020), and regional Ministry of Tourism licensing mandates.`
+      },
+      {
+        id: 'who-needs-verification',
+        title: '2. Who Needs Verification',
+        content: `Verification is mandatory prior to listing or accepting bookings for any commercial entity, individual, or provider on ApnaTrip:
+• Travel Agencies & Tour Operators: Inbound, outbound, adventure, cultural, trekking, and customized regional itinerary organizers.
+• Vehicle Rental Partners & Fleet Owners: Self-drive car rental providers, cab & outstation fleet operators, tempo traveler services, and luxury bus operators.
+• Individual Commercial Drivers: Chauffeurs and drivers assigned to execute verified customer rides or multi-day itinerary transits.
+• Regional Coordinators & Sub-Agents: Any ground partner authorized to deliver services, manage guest check-ins, or coordinate localized logistics on behalf of a registered operator.`
+      },
+      {
+        id: 'required-documents',
+        title: '3. Required Documents',
+        content: `Partners must submit high-resolution, unedited digital copies of all mandatory statutory documents during onboarding:
+• Travel Agencies & Corporate Entities:
+  1. Certificate of Incorporation, Partnership Deed, or Udyam MSME Registration Certificate.
+  2. Entity Permanent Account Number (PAN) Card.
+  3. Goods and Services Tax Identification Number (GSTIN) Registration Certificate.
+  4. State Tourism Department License, Ministry of Tourism (MoT) Accreditation, or IATA/TAAI/ADTOI membership (where applicable).
+  5. Proof of Physical Place of Business (recent electricity bill, property tax receipt, or registered commercial lease deed).
+  6. Bank Account Proof (cancelled cheque or bank statement showing legal business name and IFSC code matching PAN).
+
+• Vehicle Rental & Fleet Partners:
+  1. Business GSTIN & entity PAN (or Individual Commercial PAN for sole proprietors).
+  2. Commercial Vehicle Registration Certificate (RC – Form 23) carrying valid commercial registration (yellow plate).
+  3. Comprehensive Commercial Vehicle Insurance Policy (including mandatory third-party liability and passenger cover).
+  4. All-India Tourist Permit (AITP) or State Tourist Taxi Permit.
+  5. Valid Certificate of Fitness (FC) issued by the relevant Regional Transport Office (RTO).
+  6. Pollution Under Control (PUC) Certificate.`
+      },
+      {
+        id: 'identity-verification',
+        title: '4. Identity Verification',
+        content: `The identity of authorized representatives, partners, and company directors is rigorously verified to prevent identity fraud and unauthorized representation:
+• Authorized Signatory KYC: Submission of Government Photo ID (Aadhaar, Passport, or Voter ID) with automated Aadhaar OTP verification or Digilocker verification.
+• Liveness & Facial Biometrics: Authorized signatories must complete an automated biometric liveness detection check via the ApnaTrip Partner Onboarding Portal to confirm physical presence.
+• Sanctions & Background Check: Automated screening against national financial enforcement databases, Interpol notices, and civil litigation registries.
+• Board Resolution / Authority Letter: Required for Private Limited and Limited Liability Partnership (LLP) entities authorizing the primary user to bind the organization to ApnaTrip platform terms.`
+      },
+      {
+        id: 'business-verification',
+        title: '5. Business Verification',
+        content: `We establish the financial and commercial authenticity of every registered business entity:
+• MCA & GSTN Live API Verification: Direct integration with Ministry of Corporate Affairs and GSTN APIs to verify active filing status, business vintage, and registered trade names.
+• Penny-Drop Bank Verification: An automated micro-deposit (penny test) is transferred to the partner’s specified bank account to verify that the beneficiary name matches the legal entity name with 100% accuracy.
+• Geo-Tagging Physical Location: Partners must submit geo-tagged photographic evidence of their operational office, reception signage, and vehicle parking facilities.
+• Domain & Brand Ownership: Verification of official corporate email domains and registered trademarks to prevent brand impersonation.`
+      },
+      {
+        id: 'vehicle-verification-rental-partners',
+        title: '6. Vehicle Verification (Rental Partners)',
+        content: `Commercial safety and consumer protection are paramount in ground transportation:
+• Zero Private Vehicle Policy: Vehicles registered under private registration (white board) are strictly prohibited from listing on ApnaTrip. Any attempt to supply private vehicles for commercial rentals results in permanent debarment.
+• 6-Angle Photographic Audit: Rental partners must upload dated, clear photographs of every vehicle showing exterior body condition, license plates, interior upholstery, spare tire, and emergency kit.
+• Speed Governors & Telematics: Commercial vehicles must adhere to mandatory RTO speed governor limits. Self-drive and outstation fleets must feature active GPS telematics hardware.
+• Inspection Protocols: Every vehicle must undergo a mandatory 24-point safety checklist before each rental deployment, including tire tread depth, brake pad wear, headlamps, seat belts, and air conditioning functionality.`
+      },
+      {
+        id: 'agency-verification-travel-partners',
+        title: '7. Agency Verification (Travel Partners)',
+        content: `Travel agency partners are audited on operational competency, itinerary viability, and passenger safety preparedness:
+• Itinerary Feasibility Audit: ApnaTrip logistics specialists review tour itineraries to ensure realistic transit timings, verified hotel partner selections, and legitimate ground coordination.
+• High-Altitude & Adventure Certifications: Operators offering mountaineering, river rafting, trekking, or paragliding must provide:
+  - Certified guide accreditations from recognized institutes (e.g., NIM, HMI, ABVIMAS).
+  - Safety and wilderness first-responder certifications.
+  - Emergency evacuation contingency arrangements and oxygen supply protocols for high-altitude trans-Himalayan circuits.
+• Zero Ghost-Operator Policy: Agencies acting solely as commission resellers without ground operational control or verified local vendor contracts are ineligible for verification.`
+      },
+      {
+        id: 'driver-verification',
+        title: '8. Driver Verification (where applicable)',
+        content: `Professional chauffeurs assigned to traveler trips represent the frontline of passenger security:
+• Commercial License Badge: Drivers must hold a valid commercial driving license with appropriate public service vehicle (PSV) or commercial badge endorsement.
+• Experience Threshold: Minimum of three (3) years of verifiable commercial passenger driving experience.
+• Police Clearance & Background Affirmation: Submission of a recent Police Clearance Certificate (PCC) or authorized background verification report confirming zero convictions for reckless driving, passenger endangerment, or violent offenses.
+• Terrain Competency: Drivers operating mountain corridor trips (e.g., Ladakh, Spiti, Sikkim, Arunachal Pradesh) must demonstrate verifiable high-altitude driving experience and snow/monsoon safety knowledge.
+• Passenger Conduct & Non-Discrimination: All drivers must sign and adhere to the ApnaTrip Driver Code of Conduct, ensuring polite communication, non-intoxication, zero smoking inside vehicles, and passenger privacy.`
+      },
+      {
+        id: 'verification-review-process',
+        title: '9. Verification Review Process',
+        content: `Every partner onboarding application proceeds through a structured, multi-tier evaluation workflow:
+1. Stage 1 — Automated Document Ingestion (Hours 0 to 4):
+   OCR scanning, digital signature validation, and live API cross-checks against government registries (GSTN, VAHAN, MCA, UIDAI).
+2. Stage 2 — Manual Trust & Safety Audit (Hours 4 to 48):
+   Specialized compliance officers review uploaded documents, verify banking penny-drop results, check photographic evidence, and cross-reference public reviews.
+3. Stage 3 — Virtual or Ground Verification (Hours 48 to 72):
+   A 15-minute video interview or local ground coordinator visit to inspect the partner's premises, verify fleet availability, and review operational readiness.
+4. Stage 4 — Final Status Notification:
+   Partners receive an official confirmation via dashboard notification and email with their verification outcome and assigned onboarding credentials.`
+      },
+      {
+        id: 'approval-rejection-criteria',
+        title: '10. Approval & Rejection Criteria',
+        content: `Applications are evaluated against objective, standardized compliance criteria:
+
+• Criteria for Full Approval:
+  - All submitted documents are valid, unexpired, and authentic.
+  - Complete identity and business name consistency across PAN, GST, and bank accounts.
+  - Zero history of unresolved consumer complaints, fraudulent chargebacks, or transport safety violations.
+  - Full execution of the ApnaTrip Master Partner Agreement and Escrow Settlement Protocol.
+
+• Causes for Immediate Rejection:
+  - Submission of expired, forged, digitally manipulated, or tampered documents.
+  - Registration of private (white plate) vehicles for commercial rental services.
+  - Mismatch between bank account beneficiary and registered business entity.
+  - Business entities or directors blacklisted by state tourism boards, consumer courts, or regulatory authorities.
+  - Negative ground verification report or failure to produce physical office documentation.`
+      },
+      {
+        id: 're-submission-process',
+        title: '11. Re-submission Process',
+        content: `If an application cannot be approved in its initial state:
+• Defect Notice: Partners receive a precise checklist detailing why specific documents were declined (e.g., blurry image, incomplete insurance endorsement, expired fitness certificate).
+• 14-Day Remediation Window: Partners are granted fourteen (14) calendar days to correct deficiencies and re-upload compliant documentation through their onboarding dashboard.
+• Two Re-submission Opportunity: Up to two (2) re-submissions are permitted per onboarding application. If an application is rejected three times for substantial non-compliance, a mandatory 90-day cooldown period applies before a new application can be initiated.
+• Formal Appeals: If a partner believes an application was declined erroneously, a formal written appeal may be submitted to subhamdas26e@gmail.com accompanied by certified statutory proofs.`
+      },
+      {
+        id: 'ongoing-compliance',
+        title: '12. Ongoing Compliance & Periodic Audits',
+        content: `Verification is a continuous commitment, not a one-time onboarding clearance:
+• Automated Document Expiry Tracking: The ApnaTrip platform continuously monitors statutory validity dates. Partners receive automated reminder notifications at 30, 15, and 7 days prior to document expirations (insurance, permits, fitness certificates, driver licenses).
+• Automatic Listing Pause: If a required statutory document reaches expiration without verified renewal documentation, the affected vehicle or tour package is automatically paused from marketplace search results until updated proof is verified.
+• 90-Day Operational Audits: ApnaTrip conducts quarterly spot-checks evaluating trip completion rates, cancellation frequencies, traveler safety scores, and vehicle maintenance logs.
+• Mandatory Annual Re-Verification: Every partner completes an annual compliance re-certification confirming active business status and updated insurance documentation.`
+      },
+      {
+        id: 'suspension-removal',
+        title: '13. Suspension & Removal Protocols',
+        content: `ApnaTrip maintains zero tolerance for conduct that endangers traveler safety or platform trust. Partner verification status and platform access will be suspended or permanently revoked upon:
+• Attempting to solicit direct off-platform payments (UPI, cash, personal bank accounts) from platform travelers.
+• Supplying an unverified substitute vehicle or assigning an unvetted driver without prior platform authorization.
+• Operating a vehicle involved in severe safety infractions, rash driving, or driving under the influence.
+• Receiving repeated verified traveler complaints regarding hygiene, safety, or substantial itinerary deviations.
+• Document fraud, tax registration cancellation, or insolvency proceedings.
+• Refusal to honor confirmed booking reservations or breach of milestone escrow refund obligations.
+
+Suspended partners must undergo comprehensive re-audit and resolve all open traveler disputes prior to any reinstatement consideration.`
+      },
+      {
+        id: 'fraud-prevention',
+        title: '14. Fraud Prevention & Legal Enforcement',
+        content: `ApnaTrip employs cutting-edge risk mitigation technologies and legal enforcement mechanisms to eradicate marketplace deception:
+• Device Fingerprinting & Anomaly Detection: Advanced behavioral algorithms identify duplicate partner accounts, coordinated fake reviews, synthetic identities, and suspicious pricing manipulations.
+• Zero Financial Compromise: All booking transactions are protected through Razorpay Escrow. Partners have zero access to traveler payment card details or direct UPI payment transfers.
+• Law Enforcement Cooperation: In instances of deliberate document forgery, vehicle theft, traveler extortion, or financial embezzlement, ApnaTrip immediately files formal First Information Reports (FIR) with regional cybercrime cells and law enforcement authorities under the Information Technology Act (2000) and Bharatiya Nyaya Sanhita (BNS).`
+      },
+      {
+        id: 'contact-verification-support',
+        title: '15. Contact for Verification Support',
+        content: `Our dedicated Partner Verification and Compliance Support team is available to assist onboarding applicants with document preparation, status inquiries, and re-submissions:
+
+• Compliance & Verification Email: subhamdas26e@gmail.com
+• Partner Onboarding Escalation Desk: subhamdas26e@gmail.com
+• Phone Hotline: +91 9954060000 (Monday to Saturday, 9:00 AM – 8:00 PM IST)
+• Official Corporate Address:
+  ApnaTrip Technologies Private Limited
+  Trust, Governance & Partner Compliance Division
+  Dibrugarh, Assam 786001, India
+  Corporate Website: https://apnatrip.in`
+      }
+    ]
   }
 ];

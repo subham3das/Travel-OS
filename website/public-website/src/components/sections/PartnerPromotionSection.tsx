@@ -70,7 +70,7 @@ export default function PartnerPromotionSection() {
                 to="/partner"
                 className="btn-primary w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2"
               >
-                <span>Join as Vehicle Partner</span>
+                <span>Register as a Rental Partner</span>
                 <ArrowRight size={17} />
               </Link>
             </div>
@@ -90,7 +90,7 @@ export default function PartnerPromotionSection() {
                 Own a Travel Agency?
               </h3>
               <p className="mt-3 text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-                Join 200+ trusted agencies scaling their business with ApnaTrip. Replace spreadsheets and manual bank transfers with our end-to-end Agency Portal.
+                Join India's growing verified partner network scaling their business with ApnaTrip. Replace spreadsheets and manual bank transfers with our end-to-end Agency Portal.
               </p>
 
               <div className="mt-6 space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -114,7 +114,7 @@ export default function PartnerPromotionSection() {
                 to="/partner"
                 className="btn-primary w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2"
               >
-                <span>Join 200+ Trusted Agencies</span>
+                <span>Register as an Agency Partner</span>
                 <ArrowRight size={17} />
               </Link>
             </div>

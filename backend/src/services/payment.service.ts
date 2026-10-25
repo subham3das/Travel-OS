@@ -20,6 +20,7 @@ import { TransferModel } from '../models/transfer.model.js';
 import { SettlementModel } from '../models/settlement.model.js';
 import { SellerPaymentProfileModel } from '../models/sellerPaymentProfile.model.js';
 import { webhookQueueService } from './webhookQueue.service.js';
+import { vehicleHoldService } from './vehicleHold.service.js';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../utils/errors.util.js';
 
 export interface CreateOrderInput {
@@ -126,6 +127,13 @@ export class PaymentService {
       if (!car) {
         throw new BadRequestError('Vehicle is currently inactive or unavailable.');
       }
+
+      // Step 3: Validate that vehicle hold is still actively owned by this customer
+      await vehicleHoldService.validateHoldForPayment({
+        carId: carBooking.carId?._id || carBooking.carId,
+        customerId: userId,
+        bookingId: carBooking.bookingId,
+      });
 
       const payableAmount = carBooking.paymentType === 'deposit'
         ? (carBooking.depositPaid || 300)
@@ -401,6 +409,43 @@ export class PaymentService {
         }
       );
 
+      // Step 5: On payment failure, release the vehicle hold immediately
+      const pendingCar = await CarBookingModel.findOne({ bookingId }).select('carId customerId');
+      if (pendingCar?.carId) {
+        await vehicleHoldService.releaseHold({
+          carId: pendingCar.carId,
+          bookingId,
+          customerId: userId,
+          reason: 'Cryptographic HMAC signature verification failed',
+        });
+        await vehicleHoldService.logAudit({
+          action: 'Payment Failed',
+          carId: pendingCar.carId.toString(),
+          bookingId,
+          customerId: userId,
+          paymentId: razorpay_payment_id,
+          reason: 'Cryptographic HMAC signature verification failed',
+        });
+      } else {
+        const pendingRental = await RentalBookingModel.findOne({ bookingId }).select('carId customerId');
+        if (pendingRental?.carId) {
+          await vehicleHoldService.releaseHold({
+            carId: pendingRental.carId,
+            bookingId,
+            customerId: userId,
+            reason: 'Cryptographic HMAC signature verification failed',
+          });
+          await vehicleHoldService.logAudit({
+            action: 'Payment Failed',
+            carId: pendingRental.carId.toString(),
+            bookingId,
+            customerId: userId,
+            paymentId: razorpay_payment_id,
+            reason: 'Cryptographic HMAC signature verification failed',
+          });
+        }
+      }
+
       throw new BadRequestError('Payment signature verification failed. Untrusted transaction.');
     }
 
@@ -511,6 +556,16 @@ export class PaymentService {
         },
       ];
       await carBooking.save();
+
+      // Step 4: Atomically update vehicle status HELD -> BOOKED and attach booking details
+      if (carBooking.carId) {
+        await vehicleHoldService.confirmHoldAsBooked({
+          carId: carBooking.carId?._id || carBooking.carId,
+          bookingId: carBooking.bookingId,
+          customerId: userId,
+          paymentId: razorpay_payment_id,
+        });
+      }
 
       // Process marketplace settlement
       const agencyObj = carBooking.agencyId as any;

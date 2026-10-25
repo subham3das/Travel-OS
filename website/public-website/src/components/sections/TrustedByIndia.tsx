@@ -1,31 +1,31 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { Building2, Car, Users, CheckCircle, Shield } from 'lucide-react';
+import { Building2, Car, Users, Shield } from 'lucide-react';
 
-const stats = [
+const pillars = [
   {
     icon: Building2,
-    count: '200+',
-    label: 'Verified Travel Agencies',
-    subtext: 'Directly registered & audited across 18 states',
+    badge: 'Audited Partners',
+    title: 'Verified Partner Network',
+    subtext: 'Strict document verification, GST compliance, and tourism license vetting for every agency.',
   },
   {
     icon: Car,
-    count: '120+',
-    label: 'Vehicle Partners',
-    subtext: 'Inspected self-drive & route transport providers',
+    badge: 'Pan-India Footprint',
+    title: 'Growing Across India',
+    subtext: 'Expanding footprint across major airport circuits, mountain routes, and cultural corridors.',
   },
   {
     icon: Users,
-    count: '50,000+',
-    label: 'Travelers',
-    subtext: 'Exploring India safely with verified operators',
+    badge: 'Curated Trails',
+    title: 'Expanding Destination Network',
+    subtext: 'Authentic local itineraries crafted by native specialists with transparent direct coordination.',
   },
   {
-    icon: CheckCircle,
-    count: '10,000+',
-    label: 'Successful Trips',
-    subtext: 'Seamless journeys delivered with 4.9★ satisfaction',
+    icon: Shield,
+    badge: 'Financial Safety',
+    title: 'Trusted Technology Platform',
+    subtext: '100% milestone escrow fund protection, digital KYC identity, and 24×7 incident assistance.',
   },
 ];
 
@@ -46,33 +46,37 @@ export default function TrustedByIndia() {
             Trusted Across India
           </h2>
           <p className="mt-3 text-slate-600 dark:text-slate-400 text-base md:text-lg">
-            Real partners, real verified credentials, and real travelers exploring the subcontinent.
+            A verified ecosystem connecting travelers with authentic local operators, safe routes, and secure technology.
           </p>
         </div>
 
-        {/* 4 Trust Metrics */}
+        {/* 4 Trust Pillars */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, i) => {
-            const Icon = stat.icon;
+          {pillars.map((pillar, i) => {
+            const Icon = pillar.icon;
             return (
               <motion.div
-                key={stat.label}
+                key={pillar.title}
                 initial={{ opacity: 0, y: 30 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.5, delay: i * 0.12 }}
-                className="group relative p-6 rounded-2xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300"
+                className="group relative p-6 rounded-2xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300 flex flex-col justify-between"
               >
-                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                  <Icon size={24} />
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                      <Icon size={24} />
+                    </div>
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
+                      {pillar.badge}
+                    </span>
+                  </div>
+                  <div className="font-bold text-slate-900 dark:text-white text-lg tracking-tight">
+                    {pillar.title}
+                  </div>
                 </div>
-                <div className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  {stat.count}
-                </div>
-                <div className="mt-1 font-semibold text-slate-800 dark:text-slate-200 text-base">
-                  {stat.label}
-                </div>
-                <p className="mt-2 text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  {stat.subtext}
+                <p className="mt-3 text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
+                  {pillar.subtext}
                 </p>
               </motion.div>
             );

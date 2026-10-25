@@ -6,11 +6,11 @@ import { ArrowRight, CheckCircle2, ShieldCheck, UserCheck, Compass, Car, Sparkle
 const MountainValleyCanvas = lazy(() => import('../three/MountainValleyCanvas'));
 
 const trustBadges = [
-  { icon: ShieldCheck, title: 'Verified Agency', desc: 'Direct, licensed local operators' },
-  { icon: CheckCircle2, title: 'Secure Payments', desc: '100% escrow protected milestones' },
-  { icon: UserCheck, title: 'KYC Verified Travelers', desc: 'Safe & trusted community' },
-  { icon: Compass, title: 'Route Booking', desc: 'Fixed & shared intercity routes' },
-  { icon: Car, title: 'Self Drive Rentals', desc: 'Cars & bikes with zero deposit' },
+  { icon: ShieldCheck, title: 'Verified Agencies', desc: 'Direct, licensed local operators' },
+  { icon: CheckCircle2, title: 'Secure Escrow', desc: 'Milestone-based fund protection' },
+  { icon: UserCheck, title: 'Digital KYC', desc: 'Safe & trusted community profile' },
+  { icon: Compass, title: 'Route Mobility', desc: 'Pre-scheduled intercity routes' },
+  { icon: Car, title: 'Vehicle Network', desc: 'Verified rentals & fleet partners' },
 ];
 
 export default function Hero() {
@@ -34,7 +34,7 @@ export default function Hero() {
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200/70 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 text-xs md:text-sm font-semibold mb-6 shadow-xs"
         >
           <Sparkles size={14} className="text-blue-600 dark:text-blue-400" />
-          <span>Trusted Travel Platform for India</span>
+          <span>India's Travel Technology Platform</span>
         </motion.div>
 
         {/* Headline */}
@@ -44,11 +44,9 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.15]"
         >
-          Discover destinations.
+          India's Trusted
           <br />
-          <span className="text-blue-600 dark:text-blue-400">Connect with verified agencies.</span>
-          <br />
-          Travel with confidence.
+          <span className="text-blue-600 dark:text-blue-400">Travel Technology Platform</span>
         </motion.h1>
 
         {/* Subtitle */}
@@ -58,7 +56,7 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mt-6 text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed"
         >
-          India's unified travel ecosystem bringing together authentic travelers, verified tour operators, route transport, and vehicle partners under one secure umbrella.
+          Verified Travel Experiences Powered by Trusted Partners. Connecting travelers with licensed local tour operators, route transport, and vehicle rental partners under one secure umbrella.
         </motion.p>
 
         {/* Action Buttons */}
@@ -66,13 +64,21 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5"
         >
-          <Link to="/destinations" className="btn-primary w-full sm:w-auto px-7 py-3.5 text-base">
-            <span>Explore Destinations</span>
+          <a
+            href="https://app.apnatrip.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary w-full sm:w-auto px-7 py-3.5 text-base"
+          >
+            <span>View Site</span>
             <ArrowRight size={17} />
+          </a>
+          <Link to="/destinations" className="btn-secondary w-full sm:w-auto px-6 py-3.5 text-base">
+            <span>Explore Destinations</span>
           </Link>
-          <Link to="/partner" className="btn-secondary w-full sm:w-auto px-7 py-3.5 text-base">
+          <Link to="/partner" className="btn-secondary w-full sm:w-auto px-6 py-3.5 text-base">
             <span>Become a Partner</span>
           </Link>
         </motion.div>

@@ -80,8 +80,8 @@ const ecosystemNodes = [
 const workflowSteps = [
   { num: '01', title: 'Discover', desc: 'Browse verified destinations, authentic reviews & curated itineraries.' },
   { num: '02', title: 'Choose Destination', desc: 'Filter transparent fixed routes, local stays, and verified operators.' },
-  { num: '03', title: 'Book Agency / Vehicle', desc: 'Instant confirmation with transparent package pricing.' },
-  { num: '04', title: 'Secure Escrow Payment', desc: 'Funds safely held until trip milestones and check-in are verified.' },
+  { num: '03', title: 'Connect With Verified Partners', desc: 'Review licensed operator credentials, direct chat, and clear itineraries.' },
+  { num: '04', title: 'Secure Escrow Protection', desc: 'Funds safely held in nodal escrow until milestones and check-in are verified.' },
   { num: '05', title: 'Unified KYC Profile', desc: 'One-time encrypted profile shared safely with assigned partners.' },
   { num: '06', title: 'Live Journey & SOS', desc: 'GPS vehicle tracking, 24×7 support desk, and emergency assistance.' },
   { num: '07', title: 'WhatsApp Community & Review', desc: 'Join the official ApnaTrip WhatsApp Community and share genuine travel tips with fellow explorers.' },
@@ -206,10 +206,13 @@ export default function AboutPage() {
           '@type': 'Person',
           name: 'Subham Das',
           jobTitle: 'Founder & Developer',
+          email: 'subhamdas26e@gmail.com',
+          telephone: '+919954060000',
           address: {
             '@type': 'PostalAddress',
             addressLocality: 'Dibrugarh',
             addressRegion: 'Assam',
+            postalCode: '786001',
             addressCountry: 'India',
           },
         },
@@ -217,6 +220,7 @@ export default function AboutPage() {
           '@type': 'PostalAddress',
           addressLocality: 'Dibrugarh',
           addressRegion: 'Assam',
+          postalCode: '786001',
           addressCountry: 'India',
         },
       },
@@ -304,9 +308,9 @@ export default function AboutPage() {
                 <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl p-3">
                   <div className="aspect-[4/5] rounded-2xl overflow-hidden relative bg-slate-950">
                     <img
-                      src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=900&q=80"
+                      src="/images/founder.png"
                       alt="Subham Das - Founder of ApnaTrip"
-                      className="w-full h-full object-cover object-center"
+                      className="w-full h-full object-cover object-top"
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent flex items-end p-6">
@@ -424,7 +428,7 @@ export default function AboutPage() {
             </div>
 
             {/* Interactive Connected Nodes Visualization */}
-            <div className="p-8 sm:p-12 rounded-3xl bg-slate-900 text-white relative overflow-hidden border border-slate-800 shadow-2xl">
+            <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white relative overflow-hidden border border-slate-200/90 dark:border-slate-800 shadow-xl">
               <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 relative z-10">
                 {ecosystemNodes.map((node, i) => (
@@ -434,12 +438,12 @@ export default function AboutPage() {
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.06 }}
-                    className="p-4 rounded-xl bg-slate-800/70 border border-slate-700/80 text-center flex flex-col items-center justify-center space-y-2 hover:border-blue-500/80 transition-colors"
+                    className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 text-center flex flex-col items-center justify-center space-y-2 hover:border-blue-500/80 transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold">
                       {i + 1}
                     </div>
-                    <div className="text-xs sm:text-sm font-bold text-slate-100">{node}</div>
+                    <div className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">{node}</div>
                   </motion.div>
                 ))}
               </div>
@@ -564,19 +568,19 @@ export default function AboutPage() {
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 <div className="p-4 rounded-xl bg-white/10 backdrop-blur-xs">
-                  <div className="text-2xl sm:text-3xl font-extrabold">200+</div>
-                  <div className="text-xs text-blue-100 mt-1">Verified Agencies</div>
+                  <div className="text-xl sm:text-2xl font-extrabold">Verified</div>
+                  <div className="text-xs text-blue-100 mt-1">Partner Network</div>
                 </div>
                 <div className="p-4 rounded-xl bg-white/10 backdrop-blur-xs">
-                  <div className="text-2xl sm:text-3xl font-extrabold">45+</div>
-                  <div className="text-xs text-blue-100 mt-1">Active Intercity Routes</div>
+                  <div className="text-xl sm:text-2xl font-extrabold">Growing</div>
+                  <div className="text-xs text-blue-100 mt-1">Across India</div>
                 </div>
                 <div className="p-4 rounded-xl bg-white/10 backdrop-blur-xs">
-                  <div className="text-2xl sm:text-3xl font-extrabold">120+</div>
-                  <div className="text-xs text-blue-100 mt-1">Fleet Vehicle Hubs</div>
+                  <div className="text-xl sm:text-2xl font-extrabold">Expanding</div>
+                  <div className="text-xs text-blue-100 mt-1">Destination Network</div>
                 </div>
                 <div className="p-4 rounded-xl bg-white/10 backdrop-blur-xs">
-                  <div className="text-2xl sm:text-3xl font-extrabold">100%</div>
+                  <div className="text-xl sm:text-2xl font-extrabold">100%</div>
                   <div className="text-xs text-blue-100 mt-1">Milestone Escrow</div>
                 </div>
               </div>
@@ -600,9 +604,9 @@ export default function AboutPage() {
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 border-2 border-blue-500 shadow-md">
                   <img
-                    src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&q=80"
+                    src="/images/founder.png"
                     alt="Subham Das"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top"
                   />
                 </div>
                 <div className="text-center sm:text-left space-y-1">
@@ -810,22 +814,28 @@ export default function AboutPage() {
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Founder Direct</div>
                 <div className="text-base font-bold text-slate-900 dark:text-white">Subham Das</div>
-                <a href="mailto:contact@apnatrip.app" className="text-xs text-blue-600 dark:text-blue-400 hover:underline block">
-                  contact@apnatrip.app
+                <a href="mailto:subhamdas26e@gmail.com" className="text-xs text-blue-600 dark:text-blue-400 hover:underline block">
+                  subhamdas26e@gmail.com
+                </a>
+                <a href="tel:+919954060000" className="text-xs text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 block">
+                  +91 9954060000
                 </a>
               </div>
 
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Traveler Support</div>
                 <div className="text-base font-bold text-slate-900 dark:text-white">24×7 Concierge</div>
-                <a href="mailto:support@apnatrip.app" className="text-xs text-blue-600 dark:text-blue-400 hover:underline block">
-                  support@apnatrip.app
+                <a href="mailto:subhamdas26e@gmail.com" className="text-xs text-blue-600 dark:text-blue-400 hover:underline block">
+                  subhamdas26e@gmail.com
+                </a>
+                <a href="tel:+919954060000" className="text-xs text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 block">
+                  +91 9954060000
                 </a>
               </div>
 
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400">HQ Location</div>
-                <div className="text-base font-bold text-slate-900 dark:text-white">Dibrugarh, Assam</div>
+                <div className="text-base font-bold text-slate-900 dark:text-white">Dibrugarh, Assam 786001</div>
                 <div className="text-xs text-slate-500">India</div>
               </div>
             </div>

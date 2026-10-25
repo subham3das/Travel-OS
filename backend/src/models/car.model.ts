@@ -169,7 +169,18 @@ export interface ICar extends Document {
     vehiclesCount?: number;
     totalRevenue?: number;
   };
-  status?: 'available' | 'booked' | 'maintenance' | 'inactive';
+  status?: 'available' | 'booked' | 'maintenance' | 'inactive' | 'AVAILABLE' | 'HELD' | 'BOOKED' | 'held';
+  holdDetails?: {
+    heldBy?: mongoose.Types.ObjectId;
+    holdCreatedAt?: Date;
+    holdExpiresAt?: Date;
+    holdBookingId?: string;
+    paymentStatus?: 'PENDING' | 'SUCCESS' | 'FAILED';
+    bookedAt?: Date;
+    bookedBy?: mongoose.Types.ObjectId;
+    bookingId?: string;
+    paymentId?: string;
+  };
   totalTrips?: number;
   totalRevenue?: number;
   createdAt: Date;
@@ -395,9 +406,26 @@ const CarSchema = new Schema<ICar>(
     },
     status: {
       type: String,
-      enum: ['available', 'booked', 'maintenance', 'inactive'],
+      enum: ['available', 'booked', 'maintenance', 'inactive', 'AVAILABLE', 'HELD', 'BOOKED', 'held'],
       default: 'available',
       index: true,
+    },
+    holdDetails: {
+      type: new Schema(
+        {
+          heldBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+          holdCreatedAt: { type: Date },
+          holdExpiresAt: { type: Date, index: true },
+          holdBookingId: { type: String, index: true },
+          paymentStatus: { type: String, enum: ['PENDING', 'SUCCESS', 'FAILED'], default: 'PENDING' },
+          bookedAt: { type: Date },
+          bookedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+          bookingId: { type: String },
+          paymentId: { type: String },
+        },
+        { _id: false }
+      ),
+      required: false,
     },
     totalTrips: { type: Number, default: 0 },
     totalRevenue: { type: Number, default: 0 },
@@ -418,5 +446,6 @@ CarSchema.index({ 'rentalPricing.dailyRate': 1 });
 CarSchema.index({ 'bookedSlots.startDate': 1, 'bookedSlots.endDate': 1 });
 CarSchema.index({ 'routes.pickup': 1, 'routes.destination': 1, 'routes.status': 1 });
 CarSchema.index({ 'routes.price': 1 });
+CarSchema.index({ status: 1, 'holdDetails.holdExpiresAt': 1 });
 
 export const CarModel = mongoose.model<ICar>('Car', CarSchema);

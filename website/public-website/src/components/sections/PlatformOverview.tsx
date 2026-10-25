@@ -35,9 +35,9 @@ const pillars: Pillar[] = [
     headline: 'Travel Smarter. Everything in One App.',
     tagline: 'Personalized Journeys & Seamless Trips',
     description:
-      'Discover destinations, book verified travel packages, complete KYC, manage bookings, earn rewards and stay connected throughout your journey.',
+      'Discover destinations, view itineraries from verified local operators, complete one-time digital KYC, and coordinate trips with peace of mind.',
     features: [
-      'Live Booking Engine & instant voucher issuance',
+      'Itinerary viewer & digital boarding vouchers',
       'One-time Unified Digital KYC verification',
       'Milestone payment escrow — released post check-in',
       'Emergency SOS & 24×7 live on-trip concierge',
@@ -80,7 +80,7 @@ const pillars: Pillar[] = [
     ],
     mockupUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&q=80',
     path: 'route-booking',
-    badge: '45+ Active Routes',
+    badge: 'Verified Intercity Routes',
   },
   {
     id: 'rental',
@@ -89,7 +89,7 @@ const pillars: Pillar[] = [
     headline: 'Rent Cars & Bikes With Confidence.',
     tagline: 'Explore India on Your Own Wheels',
     description:
-      'Browse verified vehicles, compare pricing, upload documents once and enjoy a seamless pickup experience.',
+      'Browse verified vehicles, compare features, upload documents once and enjoy a seamless pickup experience.',
     features: [
       'Verified fleets: SUVs, 4x4s, Himalayans & city sedans',
       '100% digital checklist inspection at handover',
@@ -98,7 +98,7 @@ const pillars: Pillar[] = [
     ],
     mockupUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&q=80',
     path: 'self-drive',
-    badge: '120+ Fleet Hubs',
+    badge: 'Verified Fleet Network',
   },
   {
     id: 'community',
@@ -134,7 +134,7 @@ const pillars: Pillar[] = [
     ],
     mockupUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80',
     path: 'admin-governance',
-    badge: '99.98% Resolution',
+    badge: 'Compliance & Governance',
   },
 ];
 
@@ -390,12 +390,12 @@ export default function PlatformOverview() {
                 {/* CTA Action */}
                 <div className="pt-2">
                   <a
-                    href={`https://app.apnatrip.in/${activePillar.path}`}
+                    href="https://app.apnatrip.in"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-600/20 hover:shadow-lg transition-all duration-200 group"
                   >
-                    <span>Launch {activePillar.name}</span>
+                    <span>View Site to Explore</span>
                     <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                   </a>
                 </div>

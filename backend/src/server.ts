@@ -5,6 +5,7 @@ import { dbConnection } from './config/db.config.js';
 import { logger } from './config/logger.config.js';
 import { socketService } from './services/socket.service.js';
 import { couponService } from './services/coupon.service.js';
+import { vehicleHoldService } from './services/vehicleHold.service.js';
 
 let httpServer: http.Server | null = null;
 
@@ -30,6 +31,14 @@ const startServer = async () => {
       logger.warn('⚠ Could not seed default coupons: %s', seedErr?.message || seedErr);
     }
 
+    // 3.2. Server Crash Recovery: Clean up expired vehicle holds and start background sweeper
+    try {
+      await vehicleHoldService.recoverExpiredHoldsOnStartup();
+      vehicleHoldService.startHoldSweeper(30000); // Check every 30s
+    } catch (holdErr: any) {
+      logger.warn('⚠ Could not initialize vehicle hold recovery: %s', holdErr?.message || holdErr);
+    }
+
     // 4. Start HTTP Server only after DB is healthy and ready
     httpServer = app.listen(envConfig.PORT, () => {
       logger.info('✓ Express Server Started on port %d', envConfig.PORT);
@@ -47,6 +56,8 @@ const startServer = async () => {
     // 5. Graceful Shutdown Handler
     const gracefulShutdown = async (signal: string) => {
       logger.info(`Received ${signal}. Initiating graceful shutdown...`);
+
+      vehicleHoldService.stopHoldSweeper();
 
       if (httpServer) {
         httpServer.close(async () => {
